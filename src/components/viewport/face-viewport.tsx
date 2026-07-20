@@ -8,6 +8,7 @@ import {
 import { OrbitControls as OrbitControlsImpl } from 'three/examples/jsm/controls/OrbitControls.js';
 
 import { useGltfHeadAsset, type HeadAssetState } from './gltf-head-loader';
+import KinematicProviderRuntime from './kinematic-provider-runtime';
 
 type FaceViewportProps = {
   activePoseLabel: string;
@@ -138,9 +139,11 @@ function HeadAssetLayer({
 
 function ViewportScene({
   assetUrl,
+  asset,
   onAssetStateChange,
 }: {
   assetUrl: string;
+  asset: HeadAssetState['asset'];
   onAssetStateChange: (state: HeadAssetState) => void;
 }) {
   return (
@@ -160,6 +163,7 @@ function ViewportScene({
         assetUrl={assetUrl}
         onAssetStateChange={onAssetStateChange}
       />
+      <KinematicProviderRuntime asset={asset} assetUrl={assetUrl} />
       <OrbitCameraControls />
     </>
   );
@@ -205,6 +209,7 @@ export default function FaceViewport({
       >
         <ViewportScene
           assetUrl={assetUrl}
+          asset={headAsset.asset}
           onAssetStateChange={handleAssetStateChange}
         />
       </Canvas>

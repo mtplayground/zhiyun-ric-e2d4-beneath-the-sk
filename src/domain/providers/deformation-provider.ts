@@ -73,5 +73,6 @@ export type ProviderRegistryEntry = {
   label: string;
   description: string;
   capabilities: DeformationProviderCapability;
+  createProvider: () => DeformationProvider;
   selection: ProviderSelectionPolicy;
 };
