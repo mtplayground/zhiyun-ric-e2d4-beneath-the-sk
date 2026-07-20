@@ -1,11 +1,13 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ACESFilmicToneMapping,
   SRGBColorSpace,
   type ColorRepresentation,
 } from 'three';
 import { OrbitControls as OrbitControlsImpl } from 'three/examples/jsm/controls/OrbitControls.js';
+
+import { useGltfHeadAsset, type HeadAssetState } from './gltf-head-loader';
 
 type FaceViewportProps = {
   activePoseLabel: string;
@@ -105,7 +107,42 @@ function EmptyScenePlaceholder() {
   );
 }
 
-function ViewportScene() {
+function LoadedHead({
+  asset,
+}: {
+  asset: NonNullable<HeadAssetState['asset']>;
+}) {
+  return <primitive object={asset.scene} />;
+}
+
+function HeadAssetLayer({
+  assetUrl,
+  onAssetStateChange,
+}: {
+  assetUrl: string;
+  onAssetStateChange: (state: HeadAssetState) => void;
+}) {
+  const gl = useThree((state) => state.gl);
+  const headAsset = useGltfHeadAsset(assetUrl, gl);
+
+  useEffect(() => {
+    onAssetStateChange(headAsset);
+  }, [headAsset, onAssetStateChange]);
+
+  return headAsset.asset ? (
+    <LoadedHead asset={headAsset.asset} />
+  ) : (
+    <EmptyScenePlaceholder />
+  );
+}
+
+function ViewportScene({
+  assetUrl,
+  onAssetStateChange,
+}: {
+  assetUrl: string;
+  onAssetStateChange: (state: HeadAssetState) => void;
+}) {
   return (
     <>
       <color attach="background" args={['#07070a']} />
@@ -119,7 +156,10 @@ function ViewportScene() {
         intensity={2.1}
       />
       <pointLight position={[0, 1.2, -2.8]} intensity={0.8} color="#38bdf8" />
-      <EmptyScenePlaceholder />
+      <HeadAssetLayer
+        assetUrl={assetUrl}
+        onAssetStateChange={onAssetStateChange}
+      />
       <OrbitCameraControls />
     </>
   );
@@ -129,6 +169,25 @@ export default function FaceViewport({
   activePoseLabel,
   assetUrl,
 }: FaceViewportProps) {
+  const [headAsset, setHeadAsset] = useState<HeadAssetState>({
+    status: 'idle',
+    progress: 0,
+    asset: null,
+    errorMessage: null,
+  });
+  const handleAssetStateChange = useCallback((state: HeadAssetState) => {
+    setHeadAsset(state);
+  }, []);
+  const morphTargetCount = headAsset.asset?.morphTargetNames.length ?? 0;
+  const statusLabel =
+    headAsset.status === 'loading'
+      ? `Loading ${Math.round(headAsset.progress * 100)}%`
+      : headAsset.status === 'loaded'
+        ? `${morphTargetCount} blendshapes`
+        : headAsset.status === 'error'
+          ? 'Asset load failed'
+          : 'Scene standby';
+
   return (
     <div
       className="relative h-[23rem] min-h-[23rem] overflow-hidden rounded-md bg-background md:h-[27rem] xl:h-[30rem]"
@@ -144,13 +203,29 @@ export default function FaceViewport({
           gl.toneMappingExposure = 1.05;
         }}
       >
-        <ViewportScene />
+        <ViewportScene
+          assetUrl={assetUrl}
+          onAssetStateChange={handleAssetStateChange}
+        />
       </Canvas>
       <div className="pointer-events-none absolute left-3 top-3 grid gap-1 rounded-md border border-border bg-background/75 px-3 py-2 font-mono text-xs backdrop-blur">
-        <span className="text-telemetry-cyan">Scene standby</span>
+        <span
+          className={
+            headAsset.status === 'error'
+              ? 'text-destructive'
+              : 'text-telemetry-cyan'
+          }
+        >
+          {statusLabel}
+        </span>
         <span className="max-w-72 truncate text-muted-foreground">
           {activePoseLabel} | {assetUrl}
         </span>
+        {headAsset.errorMessage ? (
+          <span className="max-w-72 truncate text-muted-foreground">
+            {headAsset.errorMessage}
+          </span>
+        ) : null}
       </div>
     </div>
   );
