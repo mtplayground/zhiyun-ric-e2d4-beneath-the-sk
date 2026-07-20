@@ -14,6 +14,10 @@ export type {
   VertexDeltaFrame,
 } from './deformation-provider';
 export {
+  createKinematicBlendshapeProvider,
+  interpolateBlendshapeWeights,
+} from './kinematic-blendshape-provider';
+export {
   deformationProviderIds,
   getProviderRegistryEntry,
   isDeformationProviderId,

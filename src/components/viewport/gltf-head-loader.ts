@@ -20,6 +20,8 @@ export type HeadAssetStatus = 'idle' | 'loading' | 'loaded' | 'error';
 export type LoadedHeadAsset = {
   scene: Object3D;
   morphTargetNames: string[];
+  applyBlendshapeWeights: (weights: Record<string, number>) => void;
+  readBlendshapeWeights: () => Record<string, number>;
 };
 
 export type HeadAssetState = {
@@ -36,6 +38,11 @@ const emptyHeadAssetState: HeadAssetState = {
   errorMessage: null,
 };
 const basisTranscoderPath = 'https://threejs.org/examples/jsm/libs/basis/';
+
+type MorphTargetBinding = {
+  dictionary: Record<string, number>;
+  influences: number[];
+};
 
 function isMorphTargetMesh(object: Object3D): object is Mesh {
   const candidate = object as Mesh;
@@ -63,8 +70,17 @@ function forEachMaterial(
   callback(material);
 }
 
+function clampInfluence(value: number) {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.min(1, Math.max(0, value));
+}
+
 function prepareNeutralHeadAsset(gltf: GLTF): LoadedHeadAsset {
   const morphTargetNames = new Set<string>();
+  const morphTargetBindings: MorphTargetBinding[] = [];
 
   gltf.scene.traverse((object) => {
     if (!isMorphTargetMesh(object)) {
@@ -72,6 +88,13 @@ function prepareNeutralHeadAsset(gltf: GLTF): LoadedHeadAsset {
     }
 
     object.morphTargetInfluences?.fill(0);
+
+    if (object.morphTargetInfluences) {
+      morphTargetBindings.push({
+        dictionary: object.morphTargetDictionary ?? {},
+        influences: object.morphTargetInfluences,
+      });
+    }
 
     Object.keys(object.morphTargetDictionary ?? {}).forEach((name) => {
       morphTargetNames.add(name);
@@ -104,6 +127,30 @@ function prepareNeutralHeadAsset(gltf: GLTF): LoadedHeadAsset {
   return {
     scene: gltf.scene,
     morphTargetNames: [...morphTargetNames].sort((a, b) => a.localeCompare(b)),
+    applyBlendshapeWeights: (weights) => {
+      morphTargetBindings.forEach(({ dictionary, influences }) => {
+        Object.entries(dictionary).forEach(([name, index]) => {
+          influences[index] = clampInfluence(weights[name] ?? 0);
+        });
+      });
+    },
+    readBlendshapeWeights: () => {
+      const weights = new Map<string, number>();
+
+      morphTargetBindings.forEach(({ dictionary, influences }) => {
+        Object.entries(dictionary).forEach(([name, index]) => {
+          const value = clampInfluence(influences[index] ?? 0);
+          const current = weights.get(name) ?? 0;
+          weights.set(name, Math.max(current, value));
+        });
+      });
+
+      return Object.fromEntries(
+        [...weights.entries()]
+          .filter(([, value]) => value > 0.0001)
+          .sort(([left], [right]) => left.localeCompare(right)),
+      );
+    },
   };
 }
 

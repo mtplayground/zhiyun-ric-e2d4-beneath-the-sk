@@ -1,4 +1,5 @@
 import type { ProviderRegistryEntry } from './deformation-provider';
+import { createKinematicBlendshapeProvider } from './kinematic-blendshape-provider';
 
 export const providerRegistry = {
   'kinematic-blendshape': {
@@ -11,12 +12,13 @@ export const providerRegistry = {
       vertexDeltas: false,
       precompute: false,
     },
+    createProvider: createKinematicBlendshapeProvider,
     selection: {
       envName: 'VITE_DEFORMATION_PROVIDER',
       defaultProvider: true,
       notes: [
         'The env loader validates VITE_DEFORMATION_PROVIDER against this registry before the app boots.',
-        'Viewport code should ask the registry for the selected provider id, then instantiate the matching implementation when provider factories are introduced.',
+        'Viewport code asks the registry for the selected provider id, then instantiates the matching implementation through createProvider.',
         'Controls dispatch target poses and normalized progress only; they do not branch on provider implementation details.',
       ],
     },
