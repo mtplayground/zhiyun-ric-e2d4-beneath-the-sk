@@ -6,6 +6,7 @@ import {
   DataPanelHeader,
   DataPanelTitle,
 } from '@/components/ui/data-panel';
+import FaceViewport from '@/components/viewport/face-viewport';
 import type { AppConfig } from '@/config/env';
 import { cn } from '@/lib/utils';
 import {
@@ -82,16 +83,11 @@ function ViewportRegion({ config }: RegionProps) {
         <DataPanelTitle>3D Viewport</DataPanelTitle>
         <StatusPill tone="cyan">{activePoseLabel}</StatusPill>
       </DataPanelHeader>
-      <DataPanelBody className="grid min-h-[23rem] place-items-center p-6">
-        <div className="grid w-full max-w-md gap-5 text-center">
-          <div className="mx-auto aspect-square w-44 rounded-full border border-dashed border-telemetry-cyan/35 bg-accent/20" />
-          <div className="grid gap-2">
-            <p className="text-lg font-semibold">Neutral viewport region</p>
-            <p className="truncate font-mono text-xs text-muted-foreground">
-              Mesh asset: {config.assets.faceMeshUrl}
-            </p>
-          </div>
-        </div>
+      <DataPanelBody className="min-h-[23rem] p-0">
+        <FaceViewport
+          activePoseLabel={activePoseLabel}
+          assetUrl={config.assets.faceMeshUrl}
+        />
       </DataPanelBody>
     </DataPanel>
   );
