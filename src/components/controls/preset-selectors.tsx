@@ -1,13 +1,12 @@
-import { appConfig } from '@/config/env';
+import { applyControlPose } from '@/components/controls/apply-control-pose';
 import {
   actionUnitPoseMappings,
   expressionPoseMappings,
-  getPoseWeights,
   phonemePoseMappings,
   type PoseMapping,
 } from '@/domain/poses';
 import { cn } from '@/lib/utils';
-import { controlActions, useActivePoseLabel } from '@/state';
+import { useActivePoseLabel } from '@/state';
 
 type PresetDropdownProps = {
   label: string;
@@ -18,14 +17,6 @@ type PresetDropdownProps = {
 
 function activePoseId(poses: readonly PoseMapping[], activePoseLabel: string) {
   return poses.find((pose) => pose.label === activePoseLabel)?.id ?? '';
-}
-
-function applyPresetPose(pose: PoseMapping) {
-  controlActions.setActivePose(pose.label, {
-    mode: 'preset',
-    frameIndex: 0,
-    activationValues: getPoseWeights(pose, appConfig.deformationProvider),
-  });
 }
 
 function PresetDropdown({
@@ -54,7 +45,7 @@ function PresetDropdown({
           );
 
           if (pose) {
-            applyPresetPose(pose);
+            applyControlPose(pose, 'preset');
           }
         }}
       >
