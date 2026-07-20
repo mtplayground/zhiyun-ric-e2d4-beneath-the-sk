@@ -1,0 +1,53 @@
+# Beneath the Skin Architecture Plan
+
+## Product Scope
+
+The app is a React + TypeScript single-page research dashboard for the "Beneath the Skin" project by Zhiyun Peng, Eugene Fiume, and Michael Tao. It visualizes a rigged blendshape head, lets users trigger phoneme/FACS/expression poses through dropdowns, hotkeys, reset, and sliders, and keeps the viewport, numeric readout, and deformation curve synchronized.
+
+## Module Structure
+
+- `src/main.tsx`, `src/App.tsx`: Vite entry point and top-level dashboard composition.
+- `src/config/`: typed environment loader for asset URLs, pose data path, provider selection, and optional feature flags.
+- `src/layout/`: responsive dashboard shell with hero, viewport region, control column, readout region, curve region, and footer placeholders.
+- `src/components/ui/`: shadcn/ui primitives plus local panel/control wrappers for the research-dashboard theme.
+- `src/components/hero/`, `src/components/footer/`: project info and citation/credits surfaces.
+- `src/components/viewport/`: react-three-fiber canvas, camera/orbit controls, lighting, asset loading states, and mesh binding.
+- `src/components/controls/`: preset dropdowns, keyboard-mode panel, reset action, warm-up/precompute controls, and AU/muscle slider panel.
+- `src/components/readout/`: live activation values and current-pose/frame status line.
+- `src/components/curve/`: uPlot-backed canvas chart synchronized to animation state.
+- `src/state/`: Zustand store, selectors, and actions for active pose, active mode, frame index, activation values, warm-up status, and errors.
+- `src/domain/poses/`: structured phoneme, FACS AU, named expression, keyboard, and provider-specific blendshape mapping data.
+- `src/domain/providers/`: deformation-provider interface, registry, kinematic blendshape provider, and future provider adapters.
+- `src/domain/assets/`: glTF loader helpers and blendshape-name validation/mapping utilities.
+- `src/test/` or colocated `*.test.ts(x)`: unit tests for provider interpolation, mapping resolution, and state transitions.
+- `tests/e2e/`: Playwright core-flow coverage.
+
+## Shared Types
+
+- `PoseId`, `PoseCategory`, `PoseDefinition`: stable identifiers, labels, category metadata, and target blendshape weights.
+- `BlendshapeName`, `BlendshapeWeights`: provider-agnostic morph target activation map.
+- `ControlMode`: `preset | keyboard | slider`.
+- `ActivationState`: active pose label, normalized activation values, current frame, transition progress, and source mode.
+- `DeformationProvider`: provider contract for initialization, target pose application, per-frame updates, warm-up/precompute, and diagnostics.
+- `ProviderRegistryEntry`: provider id, display label, factory, capability flags, and env-selection metadata.
+- `AssetLoadState` and `WarmupState`: loading/progress/error/completed state for UI feedback.
+
+## Dependency Flow
+
+1. Foundation: Issue #1 creates the Vite React TypeScript shell. Issues #2 and #3 add styling primitives and typed runtime configuration.
+2. App frame and state: Issues #4 and #5 establish the dashboard regions and shared Zustand state consumed by later features.
+3. Visualization and provider core: Issues #6, #7, #8, and #9 add the R3F scene, asset loading, provider interface/registry, and v1 kinematic blendshape provider.
+4. Domain data: Issue #10 defines pose and mapping data consumed by presets, keyboard, sliders, provider tests, and readouts.
+5. Controls: Issues #11 through #16 add dropdowns, keyboard mode, reset, warm-up/precompute, sliders, and cross-mode coordination.
+6. Telemetry UI: Issues #17 and #18 render live numeric activation state and the deformation curve from the same store/provider updates.
+7. Project surfaces: Issues #19 and #20 add the project information and citation/footer components.
+8. Quality and release: Issues #21 and #22 add unit and E2E test coverage; Issue #23 polishes failures and edge cases; Issue #24 prepares static self-hosted deployment.
+
+## Key Design Decisions
+
+- Keep controls provider-agnostic. UI components dispatch pose/control intents to the Zustand store; providers consume normalized `PoseDefinition` and `BlendshapeWeights`.
+- Use structured pose data rather than hard-coded component conditionals, so phonemes, FACS AUs, expressions, and keyboard mappings remain testable and swappable.
+- Treat the kinematic provider as the first implementation behind a registry. Future precomputed or Maya-exported providers should replace it without changes to controls, readouts, or charting.
+- Make the animation loop the single source of frame-synced updates. The provider applies mesh weights and emits current frame/progress/activation values into state for readout and curve panels.
+- Validate blendshape availability when the glTF loads. Missing or mismatched morph targets should surface graceful diagnostics and fallbacks instead of silently failing.
+- Keep deploy output static. Runtime asset paths and feature flags come from Vite env variables and `.env.example`; no server assumptions are required for the SPA.
