@@ -1,6 +1,8 @@
-const deformationProviders = ['kinematic-blendshape'] as const;
-
-export type DeformationProviderId = (typeof deformationProviders)[number];
+import {
+  deformationProviderIds,
+  isDeformationProviderId,
+  type DeformationProviderId,
+} from '@/domain/providers';
 
 export type FeatureFlags = {
   readoutPanel: boolean;
@@ -44,12 +46,12 @@ function normalizePath(value: string | undefined, fallback: string) {
 function parseProvider(value: string | undefined): DeformationProviderId {
   const provider = normalizePath(value, defaultConfig.deformationProvider);
 
-  if (deformationProviders.includes(provider as DeformationProviderId)) {
-    return provider as DeformationProviderId;
+  if (isDeformationProviderId(provider)) {
+    return provider;
   }
 
   throw new Error(
-    `Unsupported VITE_DEFORMATION_PROVIDER "${provider}". Expected one of: ${deformationProviders.join(
+    `Unsupported VITE_DEFORMATION_PROVIDER "${provider}". Expected one of: ${deformationProviderIds.join(
       ', ',
     )}.`,
   );
