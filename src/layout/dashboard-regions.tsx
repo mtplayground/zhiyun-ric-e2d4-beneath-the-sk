@@ -6,6 +6,7 @@ import {
   DataPanelHeader,
   DataPanelTitle,
 } from '@/components/ui/data-panel';
+import KeyboardModePanel from '@/components/controls/keyboard-mode-panel';
 import PresetSelectors from '@/components/controls/preset-selectors';
 import FaceViewport from '@/components/viewport/face-viewport';
 import type { AppConfig } from '@/config/env';
@@ -116,10 +117,7 @@ function ControlPanelRegion({ config }: RegionProps) {
             <PresetSelectors />
           </div>
           <div className="rounded-md border border-border bg-secondary/50 p-3">
-            <p className="text-sm font-medium">Keyboard and slider controls</p>
-            <p className="font-mono text-xs text-muted-foreground">
-              Activations tracked: {activationCount}
-            </p>
+            <KeyboardModePanel activationCount={activationCount} />
           </div>
         </div>
         <div className="grid gap-2">
