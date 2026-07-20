@@ -120,6 +120,11 @@ export const useControlState = create<ControlState>((set) => ({
     set({ currentFrameIndex: normalizeFrameIndex(frameIndex) });
   },
   resetToNeutral: () => {
-    set(initialControlState);
+    set({
+      activePoseLabel: neutralPoseLabel,
+      activeControlMode: initialControlMode,
+      currentFrameIndex: initialFrameIndex,
+      activationValues: {},
+    });
   },
 }));
