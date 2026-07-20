@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import {
   DataPanel,
   DataPanelBody,
@@ -6,6 +8,12 @@ import {
 } from '@/components/ui/data-panel';
 import type { AppConfig } from '@/config/env';
 import { cn } from '@/lib/utils';
+import {
+  useActivationValues,
+  useActiveControlMode,
+  useActivePoseLabel,
+  useControlReadout,
+} from '@/state';
 
 type RegionProps = {
   config: AppConfig;
@@ -15,7 +23,7 @@ function StatusPill({
   children,
   tone = 'default',
 }: {
-  children: string;
+  children: ReactNode;
   tone?: 'default' | 'cyan' | 'green' | 'amber';
 }) {
   return (
@@ -66,11 +74,13 @@ function DashboardHeader({ config }: RegionProps) {
 }
 
 function ViewportRegion({ config }: RegionProps) {
+  const activePoseLabel = useActivePoseLabel();
+
   return (
     <DataPanel tone="cyan" className="min-h-[28rem] overflow-hidden">
       <DataPanelHeader className="border-b border-border/70">
         <DataPanelTitle>3D Viewport</DataPanelTitle>
-        <StatusPill tone="cyan">Standby</StatusPill>
+        <StatusPill tone="cyan">{activePoseLabel}</StatusPill>
       </DataPanelHeader>
       <DataPanelBody className="grid min-h-[23rem] place-items-center p-6">
         <div className="grid w-full max-w-md gap-5 text-center">
@@ -88,17 +98,20 @@ function ViewportRegion({ config }: RegionProps) {
 }
 
 function ControlPanelRegion({ config }: RegionProps) {
+  const activeControlMode = useActiveControlMode();
+  const activationValues = useActivationValues();
   const featureRows = [
     ['Readout', config.features.readoutPanel],
     ['Curve', config.features.deformationCurvePanel],
     ['Precompute', config.features.precomputePanel],
   ] as const;
+  const activationCount = Object.keys(activationValues).length;
 
   return (
     <DataPanel tone="green" className="min-h-[18rem]">
       <DataPanelHeader className="border-b border-border/70">
         <DataPanelTitle>Control Panel</DataPanelTitle>
-        <StatusPill tone="green">Regions</StatusPill>
+        <StatusPill tone="green">{activeControlMode}</StatusPill>
       </DataPanelHeader>
       <DataPanelBody className="grid gap-4 p-4">
         <div className="grid gap-2">
@@ -111,7 +124,7 @@ function ControlPanelRegion({ config }: RegionProps) {
           <div className="rounded-md border border-border bg-secondary/50 p-3">
             <p className="text-sm font-medium">Keyboard and slider controls</p>
             <p className="font-mono text-xs text-muted-foreground">
-              Reserved panel area
+              Activations tracked: {activationCount}
             </p>
           </div>
         </div>
@@ -141,20 +154,34 @@ function ControlPanelRegion({ config }: RegionProps) {
 }
 
 function LiveReadoutRegion() {
+  const readout = useControlReadout();
+  const activationRows = Object.entries(readout.activationValues).slice(0, 3);
+
   return (
     <DataPanel tone="amber" className="min-h-40">
       <DataPanelHeader className="border-b border-border/70">
         <DataPanelTitle>Live Readout</DataPanelTitle>
-        <StatusPill tone="amber">Frame 0</StatusPill>
+        <StatusPill tone="amber">Frame {readout.currentFrameIndex}</StatusPill>
       </DataPanelHeader>
       <DataPanelBody className="grid gap-3 p-4">
         <p className="font-mono text-sm text-foreground">
-          Current Pose: Neutral | Frame: 0
+          Current Pose: {readout.activePoseLabel} | Frame:{' '}
+          {readout.currentFrameIndex}
         </p>
         <div className="grid grid-cols-3 gap-2 font-mono text-xs text-muted-foreground">
-          <span>AU 0</span>
-          <span>Jaw</span>
-          <span>Lip</span>
+          {activationRows.length > 0 ? (
+            activationRows.map(([label, value]) => (
+              <span key={label}>
+                {label}: {value.toFixed(2)}
+              </span>
+            ))
+          ) : (
+            <>
+              <span>AU 0: 0.00</span>
+              <span>Jaw: 0.00</span>
+              <span>Lip: 0.00</span>
+            </>
+          )}
         </div>
       </DataPanelBody>
     </DataPanel>
