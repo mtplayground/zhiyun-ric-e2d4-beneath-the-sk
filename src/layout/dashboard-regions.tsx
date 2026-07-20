@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/data-panel';
 import KeyboardModePanel from '@/components/controls/keyboard-mode-panel';
 import PresetSelectors from '@/components/controls/preset-selectors';
+import ResetToNeutralControl from '@/components/controls/reset-to-neutral-control';
 import FaceViewport from '@/components/viewport/face-viewport';
 import type { AppConfig } from '@/config/env';
 import { cn } from '@/lib/utils';
@@ -112,6 +113,7 @@ function ControlPanelRegion({ config }: RegionProps) {
         <StatusPill tone="green">{activeControlMode}</StatusPill>
       </DataPanelHeader>
       <DataPanelBody className="grid gap-4 p-4">
+        <ResetToNeutralControl />
         <div className="grid gap-2">
           <div className="rounded-md border border-border bg-secondary/50 p-3">
             <PresetSelectors />
