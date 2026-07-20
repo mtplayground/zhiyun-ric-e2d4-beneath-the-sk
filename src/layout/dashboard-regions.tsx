@@ -6,6 +6,7 @@ import {
   DataPanelHeader,
   DataPanelTitle,
 } from '@/components/ui/data-panel';
+import PresetSelectors from '@/components/controls/preset-selectors';
 import FaceViewport from '@/components/viewport/face-viewport';
 import type { AppConfig } from '@/config/env';
 import { cn } from '@/lib/utils';
@@ -112,10 +113,7 @@ function ControlPanelRegion({ config }: RegionProps) {
       <DataPanelBody className="grid gap-4 p-4">
         <div className="grid gap-2">
           <div className="rounded-md border border-border bg-secondary/50 p-3">
-            <p className="text-sm font-medium">Preset selectors</p>
-            <p className="font-mono text-xs text-muted-foreground">
-              Phoneme / FACS / Expression
-            </p>
+            <PresetSelectors />
           </div>
           <div className="rounded-md border border-border bg-secondary/50 p-3">
             <p className="text-sm font-medium">Keyboard and slider controls</p>
