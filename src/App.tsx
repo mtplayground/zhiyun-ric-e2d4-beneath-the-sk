@@ -11,6 +11,11 @@ import {
   DataPanelHeader,
   DataPanelTitle,
 } from '@/components/ui/data-panel';
+import { appConfig } from '@/config/env';
+
+const enabledPanelCount = Object.values(appConfig.features).filter(
+  Boolean,
+).length;
 
 export default function App() {
   return (
@@ -27,34 +32,34 @@ export default function App() {
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            Tailwind, shadcn/ui conventions, and shared dashboard primitives are
-            ready for feature modules.
+            Environment-driven asset paths, provider selection, and optional
+            panel flags are ready for feature modules.
           </CardContent>
         </Card>
 
         <div className="grid gap-4 md:grid-cols-3">
           <DataPanel tone="cyan">
             <DataPanelHeader>
-              <DataPanelTitle>Viewport</DataPanelTitle>
+              <DataPanelTitle>Face Mesh</DataPanelTitle>
             </DataPanelHeader>
-            <DataPanelBody className="text-2xl font-semibold">
-              Idle
+            <DataPanelBody className="truncate font-mono text-sm text-muted-foreground">
+              {appConfig.assets.faceMeshUrl}
             </DataPanelBody>
           </DataPanel>
           <DataPanel tone="green">
             <DataPanelHeader>
-              <DataPanelTitle>Controls</DataPanelTitle>
+              <DataPanelTitle>Provider</DataPanelTitle>
             </DataPanelHeader>
-            <DataPanelBody className="text-2xl font-semibold">
-              Ready
+            <DataPanelBody className="font-mono text-sm">
+              {appConfig.deformationProvider}
             </DataPanelBody>
           </DataPanel>
           <DataPanel tone="amber">
             <DataPanelHeader>
-              <DataPanelTitle>Telemetry</DataPanelTitle>
+              <DataPanelTitle>Optional Panels</DataPanelTitle>
             </DataPanelHeader>
             <DataPanelBody className="text-2xl font-semibold">
-              0.00
+              {enabledPanelCount}/3
             </DataPanelBody>
           </DataPanel>
         </div>
