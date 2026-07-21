@@ -6,10 +6,13 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 8080",
     "build": "tsc -b && vite build",
+    "build:static": "npm run build && npm run verify:static",
     "preview": "vite preview --host 0.0.0.0 --port 8080",
+    "preview:static": "npm run build:static && npm run preview",
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "verify:static": "node scripts/verify-static-build.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
