@@ -310,10 +310,12 @@ export const phonemePoseMappings = [
     category: 'phoneme',
     description: 'Tongue-forward closed stop pose.',
     weightsByProvider: weights({
-      mouthClose: 0.66,
-      tongueOut: 0.42,
-      jawOpen: 0.14,
-      mouthFunnel: 0.08,
+      mouthClose: 0.58,
+      tongueOut: 0.82,
+      jawOpen: 0.2,
+      mouthFunnel: 0.1,
+      mouthUpperUpLeft: 0.16,
+      mouthUpperUpRight: 0.16,
     }),
   },
   {

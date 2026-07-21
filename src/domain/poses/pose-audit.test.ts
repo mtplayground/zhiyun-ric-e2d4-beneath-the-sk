@@ -54,6 +54,8 @@ describe('pose morph-target audit', () => {
     expect(audit.missingBlendshapeNames).toEqual([
       'mouthClose',
       'mouthFunnel',
+      'mouthUpperUpLeft',
+      'mouthUpperUpRight',
       'tongueOut',
     ]);
     expect(audit.unsupportedBlendshapeNames).toEqual([]);
