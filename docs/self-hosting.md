@@ -18,6 +18,8 @@ npm run build:static
 - The default directory-safe asset URLs are valid.
 - Local configured assets such as `VITE_POSE_DATA_URL=./data/poses.json`
   resolve inside `dist/`.
+- The committed skin, eye, and oral diffuse texture defaults resolve inside
+  `dist/textures/` so static hosts include the viewport material assets.
 
 ## Environment
 
@@ -27,6 +29,16 @@ Set Vite variables before building. They are compiled into the static bundle.
 VITE_STATIC_BASE_PATH=./
 VITE_FACE_MESH_URL=https://threejs.org/examples/models/gltf/facecap.glb
 VITE_POSE_DATA_URL=./data/poses.json
+VITE_SKIN_TEXTURE_URL=./textures/skin-diffuse.png
+VITE_EYE_TEXTURE_URL=./textures/eye-diffuse.png
+VITE_ORAL_TEXTURE_URL=./textures/oral-diffuse.png
+VITE_SKIN_COLOR=#f1b79f
+VITE_FACE_MATERIAL_TRANSFER=auto
+VITE_SKIN_PROJECTION_OFFSET_X=0
+VITE_SKIN_PROJECTION_OFFSET_Y=0
+VITE_SKIN_PROJECTION_SCALE=1
+VITE_SKIN_PROJECTION_ROTATION_Y=0
+VITE_HAIR_MESH_URL=
 VITE_DEFORMATION_PROVIDER=kinematic-blendshape
 VITE_ENABLE_READOUT_PANEL=true
 VITE_ENABLE_DEFORMATION_CURVE_PANEL=true
@@ -68,5 +80,6 @@ npm run preview:static
 ```
 
 Open `http://localhost:8080/` and confirm the viewport loads, the project header
-shows the configured asset paths, and the preset/keyboard/slider controls update
-the readout.
+shows the configured asset paths, the preset/keyboard/slider controls update
+the readout, and the provider-health overlay reports the selected texture
+transfer mode plus any skipped material slots.

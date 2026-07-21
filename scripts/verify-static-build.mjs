@@ -17,6 +17,9 @@ const envFiles = [
 const defaultEnv = {
   VITE_FACE_MESH_URL: 'https://threejs.org/examples/models/gltf/facecap.glb',
   VITE_POSE_DATA_URL: './data/poses.json',
+  VITE_SKIN_TEXTURE_URL: './textures/skin-diffuse.png',
+  VITE_EYE_TEXTURE_URL: './textures/eye-diffuse.png',
+  VITE_ORAL_TEXTURE_URL: './textures/oral-diffuse.png',
   VITE_STATIC_BASE_PATH: './',
 };
 
@@ -138,6 +141,9 @@ if (staticBasePath === './' && !indexHtml.includes('./assets/')) {
 for (const [envName, value] of [
   ['VITE_FACE_MESH_URL', env.VITE_FACE_MESH_URL],
   ['VITE_POSE_DATA_URL', env.VITE_POSE_DATA_URL],
+  ['VITE_SKIN_TEXTURE_URL', env.VITE_SKIN_TEXTURE_URL],
+  ['VITE_EYE_TEXTURE_URL', env.VITE_EYE_TEXTURE_URL],
+  ['VITE_ORAL_TEXTURE_URL', env.VITE_ORAL_TEXTURE_URL],
 ]) {
   const resolvedUrl = resolveAssetUrl(value, staticBasePath);
 
