@@ -10,7 +10,7 @@ export const providerRegistry = {
     capabilities: {
       blendshapeWeights: true,
       vertexDeltas: false,
-      precompute: false,
+      precompute: true,
     },
     createProvider: createKinematicBlendshapeProvider,
     selection: {

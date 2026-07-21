@@ -3,6 +3,10 @@ import { useEffect, useMemo, useRef } from 'react';
 
 import { appConfig } from '@/config/env';
 import {
+  cachedTransitionFrameCount,
+  getCachedTransitionFrame,
+} from '@/domain/precompute';
+import {
   getProviderRegistryEntry,
   type BlendshapeWeights,
   type DeformationProvider,
@@ -24,11 +28,11 @@ type KinematicProviderRuntimeProps = {
 type BlendshapeTransition = {
   fromWeights: BlendshapeWeights;
   targetWeights: BlendshapeWeights;
+  fromPoseLabel: string;
   poseLabel: string;
   startFrameIndex: number;
 };
 
-const transitionFrameCount = 18;
 const weightEpsilon = 0.0001;
 
 function weightsNearlyEqual(
@@ -69,6 +73,7 @@ export default function KinematicProviderRuntime({
   const frameIndexRef = useRef(0);
   const currentWeightsRef = useRef<BlendshapeWeights>({});
   const providerLastWeightsRef = useRef<BlendshapeWeights>({});
+  const currentPoseLabelRef = useRef(activePoseLabel);
   const latestPoseLabelRef = useRef(activePoseLabel);
   const latestControlModeRef = useRef(activeControlMode);
   const latestActivationValuesRef = useRef(activationValues);
@@ -89,6 +94,7 @@ export default function KinematicProviderRuntime({
     transitionRef.current = {
       fromWeights: currentWeightsRef.current,
       targetWeights: activationValues,
+      fromPoseLabel: currentPoseLabelRef.current,
       poseLabel: activePoseLabel,
       startFrameIndex: frameIndexRef.current,
     };
@@ -116,6 +122,7 @@ export default function KinematicProviderRuntime({
       });
       currentWeightsRef.current = initialBlendshapeWeights;
       providerLastWeightsRef.current = initialBlendshapeWeights;
+      currentPoseLabelRef.current = latestPoseLabelRef.current;
       initializedRef.current = true;
       transitionRef.current = weightsNearlyEqual(
         latestActivationValuesRef.current,
@@ -125,6 +132,7 @@ export default function KinematicProviderRuntime({
         : {
             fromWeights: initialBlendshapeWeights,
             targetWeights: latestActivationValuesRef.current,
+            fromPoseLabel: currentPoseLabelRef.current,
             poseLabel: latestPoseLabelRef.current,
             startFrameIndex: frameIndexRef.current,
           };
@@ -154,28 +162,42 @@ export default function KinematicProviderRuntime({
     const elapsedFrames = frameIndex - transition.startFrameIndex;
     const progress = Math.min(
       1,
-      Math.max(0, elapsedFrames / transitionFrameCount),
+      Math.max(0, elapsedFrames / cachedTransitionFrameCount),
     );
-    const frame = provider.evaluateFrame({
-      targetPose: {
-        id: poseIdFromLabel(transition.poseLabel),
-        label: transition.poseLabel,
-        blendshapeWeights: transition.targetWeights,
-      },
-      progress,
-      frameIndex,
-      previousBlendshapeWeights: transition.fromWeights,
+    const cachedFrame = getCachedTransitionFrame({
+      providerId: appConfig.deformationProvider,
+      fromPoseLabel: transition.fromPoseLabel,
+      toPoseLabel: transition.poseLabel,
+      fromWeights: transition.fromWeights,
+      frameOffset: elapsedFrames,
     });
+    const evaluatedFrame = cachedFrame
+      ? {
+          ...cachedFrame,
+          frameIndex,
+          progress,
+        }
+      : provider.evaluateFrame({
+          targetPose: {
+            id: poseIdFromLabel(transition.poseLabel),
+            label: transition.poseLabel,
+            blendshapeWeights: transition.targetWeights,
+          },
+          progress,
+          frameIndex,
+          previousBlendshapeWeights: transition.fromWeights,
+        });
 
-    asset.applyBlendshapeWeights(frame.blendshapeWeights);
-    currentWeightsRef.current = frame.blendshapeWeights;
-    providerLastWeightsRef.current = frame.blendshapeWeights;
-    controlActions.setActivationValues(frame.blendshapeWeights, {
-      frameIndex: frame.frameIndex,
+    asset.applyBlendshapeWeights(evaluatedFrame.blendshapeWeights);
+    currentWeightsRef.current = evaluatedFrame.blendshapeWeights;
+    providerLastWeightsRef.current = evaluatedFrame.blendshapeWeights;
+    controlActions.setActivationValues(evaluatedFrame.blendshapeWeights, {
+      frameIndex: evaluatedFrame.frameIndex,
       mode: latestControlModeRef.current,
     });
 
     if (progress >= 1) {
+      currentPoseLabelRef.current = transition.poseLabel;
       transitionRef.current = null;
     }
   });

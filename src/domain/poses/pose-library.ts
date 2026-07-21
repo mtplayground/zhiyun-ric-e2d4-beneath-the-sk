@@ -25,6 +25,18 @@ export type PoseLibrary = {
   phonemes: readonly PoseMapping[];
 };
 
+export type KeyboardPoseMapping = {
+  key: string;
+  label: string;
+  poseId: string;
+};
+
+export type KeyboardPoseEntry = {
+  key: string;
+  label: string;
+  pose: PoseMapping;
+};
+
 const kinematicProviderId =
   'kinematic-blendshape' satisfies DeformationProviderId;
 
@@ -359,4 +371,41 @@ export function getPoseWeights(
 
 export function findPoseMappingById(poseId: string) {
   return allPoseMappings.find((pose) => pose.id === poseId) ?? null;
+}
+
+export const keyboardPoseMappings = [
+  { key: '0', label: 'Neu', poseId: 'au-0-neutral' },
+  { key: 'n', label: 'N', poseId: 'phoneme-n' },
+  { key: 'a', label: 'AA', poseId: 'phoneme-aa' },
+  { key: 'i', label: 'IY', poseId: 'phoneme-iy' },
+  { key: 't', label: 'T', poseId: 'phoneme-t' },
+  { key: 'e', label: 'EH', poseId: 'phoneme-eh' },
+  { key: 'u', label: 'UW', poseId: 'phoneme-uw' },
+  { key: 'v', label: 'V', poseId: 'phoneme-v' },
+  { key: 'y', label: 'Y', poseId: 'phoneme-y' },
+  { key: 's', label: 'Smile', poseId: 'expression-smile' },
+  { key: 'f', label: 'Frown', poseId: 'expression-frown' },
+  { key: 'b', label: 'Brow', poseId: 'expression-brow' },
+  { key: 'm', label: 'Mouth', poseId: 'expression-mouth' },
+  { key: 'q', label: 'Squint', poseId: 'expression-squint' },
+  { key: 'c', label: 'Cheek', poseId: 'expression-cheek' },
+  { key: 'p', label: 'Pucker', poseId: 'expression-pucker' },
+] as const satisfies readonly KeyboardPoseMapping[];
+
+function requirePoseMapping(poseId: string) {
+  const pose = findPoseMappingById(poseId);
+
+  if (!pose) {
+    throw new Error(`Missing pose mapping for ${poseId}.`);
+  }
+
+  return pose;
+}
+
+export function getKeyboardPoseEntries(): readonly KeyboardPoseEntry[] {
+  return keyboardPoseMappings.map(({ key, label, poseId }) => ({
+    key,
+    label,
+    pose: requirePoseMapping(poseId),
+  }));
 }
