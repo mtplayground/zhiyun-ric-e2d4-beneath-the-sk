@@ -19,11 +19,13 @@ describe('loadAppConfig texture settings', () => {
         rotationYDegrees: 0,
       },
     });
+    expect(config.assets.hairMeshUrl).toBeNull();
   });
 
   it('parses texture overrides, skin tint, transfer mode, and projection alignment', () => {
     const config = loadAppConfig({
       VITE_SKIN_TEXTURE_URL: '/textures/custom-skin.png',
+      VITE_HAIR_MESH_URL: '/models/hair.glb',
       VITE_EYE_TEXTURE_URL: '/textures/custom-eye.png',
       VITE_ORAL_TEXTURE_URL: '/textures/custom-oral.png',
       VITE_SKIN_COLOR: '#d8a48f',
@@ -47,6 +49,7 @@ describe('loadAppConfig texture settings', () => {
         rotationYDegrees: 7.5,
       },
     });
+    expect(config.assets.hairMeshUrl).toBe('/models/hair.glb');
   });
 
   it('rejects unsupported face material transfer modes', () => {

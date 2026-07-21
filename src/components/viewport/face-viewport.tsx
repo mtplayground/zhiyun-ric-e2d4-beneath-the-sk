@@ -11,6 +11,7 @@ import type { FaceTextureConfig } from '@/config/env';
 import { cn } from '@/lib/utils';
 
 import { useGltfHeadAsset, type HeadAssetState } from './gltf-head-loader';
+import { HairAssetLayer, type HairAssetState } from './hair-asset-layer';
 import KinematicProviderRuntime, {
   type ProviderRuntimeDiagnostic,
   type ProviderRuntimeDiagnosticTone,
@@ -19,6 +20,7 @@ import KinematicProviderRuntime, {
 type FaceViewportProps = {
   activePoseLabel: string;
   assetUrl: string;
+  hairMeshUrl: string | null;
   textureConfig: FaceTextureConfig;
 };
 
@@ -148,15 +150,19 @@ function HeadAssetLayer({
 
 function ViewportScene({
   assetUrl,
+  hairMeshUrl,
   textureConfig,
   asset,
   onAssetStateChange,
+  onHairAssetStateChange,
   onDiagnosticChange,
 }: {
   assetUrl: string;
+  hairMeshUrl: string | null;
   textureConfig: FaceTextureConfig;
   asset: HeadAssetState['asset'];
   onAssetStateChange: (state: HeadAssetState) => void;
+  onHairAssetStateChange: (state: HairAssetState) => void;
   onDiagnosticChange: (diagnostic: ProviderRuntimeDiagnostic | null) => void;
 }) {
   return (
@@ -176,6 +182,10 @@ function ViewportScene({
         assetUrl={assetUrl}
         textureConfig={textureConfig}
         onAssetStateChange={onAssetStateChange}
+      />
+      <HairAssetLayer
+        assetUrl={hairMeshUrl}
+        onStatusChange={onHairAssetStateChange}
       />
       <KinematicProviderRuntime
         asset={asset}
@@ -206,6 +216,7 @@ function toneClass(tone: ProviderRuntimeDiagnosticTone) {
 export default function FaceViewport({
   activePoseLabel,
   assetUrl,
+  hairMeshUrl,
   textureConfig,
 }: FaceViewportProps) {
   const [headAsset, setHeadAsset] = useState<HeadAssetState>({
@@ -216,6 +227,9 @@ export default function FaceViewport({
   });
   const [providerDiagnostic, setProviderDiagnostic] =
     useState<ProviderRuntimeDiagnostic | null>(null);
+  const [hairAssetState, setHairAssetState] = useState<HairAssetState | null>(
+    null,
+  );
   const handleAssetStateChange = useCallback((state: HeadAssetState) => {
     setHeadAsset(state);
   }, []);
@@ -225,6 +239,9 @@ export default function FaceViewport({
     },
     [],
   );
+  const handleHairAssetStateChange = useCallback((state: HairAssetState) => {
+    setHairAssetState(state);
+  }, []);
   const morphTargetCount = headAsset.asset?.morphTargetNames.length ?? 0;
   const textureDiagnostic = headAsset.asset?.textureDiagnostic ?? null;
   const statusLabel =
@@ -253,9 +270,11 @@ export default function FaceViewport({
       >
         <ViewportScene
           assetUrl={assetUrl}
+          hairMeshUrl={hairMeshUrl}
           textureConfig={textureConfig}
           asset={headAsset.asset}
           onAssetStateChange={handleAssetStateChange}
+          onHairAssetStateChange={handleHairAssetStateChange}
           onDiagnosticChange={handleProviderDiagnosticChange}
         />
       </Canvas>
@@ -275,6 +294,18 @@ export default function FaceViewport({
         {headAsset.errorMessage ? (
           <span className="max-w-72 truncate text-muted-foreground">
             {headAsset.errorMessage}
+          </span>
+        ) : null}
+        {hairAssetState ? (
+          <span className="max-w-72 truncate text-muted-foreground">
+            Hair:{' '}
+            {hairAssetState.status === 'procedural'
+              ? 'procedural cap'
+              : hairAssetState.status === 'loaded'
+                ? 'loaded mesh'
+                : hairAssetState.status === 'loading'
+                  ? 'loading mesh'
+                  : `fallback cap (${hairAssetState.errorMessage ?? 'load failed'})`}
           </span>
         ) : null}
       </div>
