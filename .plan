@@ -1,62 +1,27 @@
-# Architecture plan for issues #49-#62
+Architecture plan for issues #77-#85
 
-## Current app shape
-- Static Vite/React/TypeScript dashboard rooted at `src/App.tsx` and `src/layout/dashboard-layout.tsx`.
-- Three.js rendering is isolated in `src/components/viewport/`:
-  - `gltf-head-loader.ts` loads/normalizes the face glTF, discovers morph targets, and applies weights.
-  - `kinematic-provider-runtime.tsx` bridges Zustand control state to the selected deformation provider each frame.
-  - `face-viewport.tsx` owns the Canvas, lighting, overlays, and viewport diagnostics.
-- Pose data lives in `src/domain/poses/pose-library.ts`; provider abstractions live in `src/domain/providers/`.
-- Global UI/control readout state lives in `src/state/control-state.ts` with selector helpers in `src/state/selectors.ts`.
-- UI panels are grouped under `src/components/controls/`, `src/components/readout/`, and `src/components/ui/`.
-- Build/test tooling: Vite, React 19, Tailwind CSS 4, Zustand, Three.js, Vitest, Playwright.
+Current structure
+- React/Vite/TypeScript SPA with React Three Fiber and Three.js for the face viewport.
+- src/layout composes the dashboard regions; src/components contains controls, viewport, readout, footer/hero, and shared UI.
+- src/state owns the global Zustand control readout: active pose label, control mode, frame index, and activation values.
+- src/domain/poses contains preset definitions, keyboard mappings, morph target aliasing, and compatibility audits.
+- src/domain/providers defines the deformation provider interface and the current kinematic blendshape provider.
+- src/domain/precompute contains keyboard transition warmup/cache logic.
 
-## Proposed module structure
-Keep the current separation, but add focused modules rather than expanding viewport/runtime files too much:
+Issue dependency order
+1. #77 should remove runtime hair and procedural tongue rendering from src/components/viewport/face-viewport.tsx and related props/state usage.
+2. #78 should simplify src/components/viewport/gltf-head-loader.ts by removing texture loading, material transfer, projection UV generation, and tongue-geometry diagnostics, leaving only glTF loading, morph target discovery, normalization, and blendshape apply/read methods.
+3. #79 should remove texture/projection env configuration and UI wiring from src/config/env.ts, src/layout/dashboard-layout.tsx, src/layout/dashboard-regions.tsx, and controls; this depends on #77/#78 removing consumers.
+4. #80 should delete orphaned texture/projection/hair/tongue modules, public texture assets, and obsolete tests after imports are gone.
+5. #81 should update pose data by removing tongueOut from the T phoneme and clearing any partial preset state caused by the removed tongue dependency.
+6. #82 should manually/automatically verify all presets deform visibly on the default facecap mesh and adjust weights/aliases where needed.
+7. #83 should strengthen E2E/unit tests so preset assertions check visible/live deformation, not only readout text.
+8. #84 should update docs/system-overleaf.tex to match the simplified no-texture/no-material-transfer architecture.
+9. #85 should run full regression and visual verification after all removals and test updates land.
 
-- `src/domain/morph-targets/`
-  - `aliases.ts`: canonical morph-target names and fallback alias map.
-  - `audit.ts`: compare every pose weight key with mesh morph targets and alias resolution.
-  - `coverage.ts`: pure helpers used by unit tests for per-preset coverage.
-- `src/domain/materials/`
-  - `texture-config.ts`: typed texture URL/config loader using Vite env defaults.
-  - `projection.ts`: UV-independent projected skin-map transfer math and diagnostics.
-  - `uv-assignment.ts`: direct UV assignment path plus automatic mode selection.
-- `src/domain/accessories/`
-  - `hair.ts`: optional hair mesh config and procedural fallback parameters.
-  - `tongue.ts`: tongue mesh/pose integration data and phoneme influence helpers.
-- `src/components/controls/projection-controls.tsx`
-  - Alignment/tuning controls for projected transfer and diagnostics.
-- `src/components/viewport/mesh-diagnostics.tsx` or existing overlay extension
-  - Show morph-target audit, texture/projection mode, UV path, hair/tongue availability.
-- `docs/`
-  - `rollback.md`: release/rollback procedure for v1.0.
-  - `overleaf-system-math.tex`: Overleaf-format system/math document.
-
-Shared types should be exported from domain-level `index.ts` files so UI components do not import implementation internals directly.
-
-## Issue dependency plan
-1. #49 can be done independently: tag current release `v1.0`, document rollback.
-2. #50 is a small content-only update; update all author-order surfaces consistently: hero, footer/citation, docs.
-3. #51 should come before pose tuning: implement morph-target audit against the loaded mesh.
-4. #52 depends on #51 concepts: add fallback aliases, then make audit report canonical/alias/missing states.
-5. #53 depends on #51/#52: retune weak/non-functioning phoneme/expression weights using alias-aware compatibility.
-6. #54 depends on #51-#53: add automated coverage for every pose and assert no unintended missing targets.
-7. #55 introduces committed texture assets and config; keep config typed and static-host safe.
-8. #56 depends on #55: implement projected skin-map transfer independent of source UVs.
-9. #57 depends on #55/#56: add direct UV assignment path and automatic mode selection with diagnostics.
-10. #58 depends on #56/#57: expose projection alignment controls only after transfer diagnostics exist.
-11. #59 can mostly run after viewport/material structure is stable: optional hair mesh with procedural fallback.
-12. #60 touches phoneme integration and viewport accessories; do after #53 and alongside/after #59 patterns.
-13. #61 should document the final architecture/math after projection, UV, hair, tongue decisions settle.
-14. #62 is last: full regression across unit, build, and e2e suites.
-
-## Key design decisions
-- Keep deformation provider API stable. New aliasing/audit/tuning should feed normalized `BlendshapeWeights` to providers rather than making providers know about UI controls.
-- Add alias resolution as a pure domain transform before runtime application. The loader should report available target names; the domain resolver should map canonical pose weights to mesh-specific names.
-- Preserve static deployment: all assets must work with `VITE_STATIC_BASE_PATH=./`; texture config should accept relative URLs and be validated by the static verifier when local.
-- Avoid hard-coding the default demo mesh as the only supported topology. Diagnostics should distinguish supported, alias-resolved, missing, and ignored targets.
-- Prefer small, tested math utilities for projection/UV decisions; Three.js-facing code should mainly adapt geometries/materials and display diagnostics.
-- Keep controls reactive through Zustand; add projection/texture/accessory state slices only if existing control state would become overloaded.
-- Ensure all visual features have graceful fallbacks: missing textures, missing UVs, missing hair/tongue assets, or no morph targets should show diagnostics instead of crashing.
-- Tests should include pure unit coverage for pose aliases, audit outcomes, projection mode selection, and e2e smoke for visible diagnostics and core interactions.
+Key design decisions
+- Keep the deformation provider contract stable: controls dispatch normalized blendshape weights; viewport runtime evaluates provider frames and applies weights to mesh morph targets.
+- Do not replace removed hair/tongue/texture features with placeholders unless a later issue explicitly asks; the simplified viewport should focus on the loaded head mesh and blendshape deformation.
+- Treat config removals as breaking changes to env parsing only after all consumers are removed, so intermediate branches remain buildable.
+- Preserve the pose library, alias resolver, audit system, keyboard precompute cache, and readout/curve panels as the core product surface.
+- Tests should favor user-observable deformation state: active non-zero morph influences, canvas/runtime diagnostics, or numeric activation rows tied to actual default mesh compatibility.
