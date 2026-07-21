@@ -63,7 +63,7 @@ export const actionUnitPoseMappings = [
     category: 'action-unit',
     description: 'Raises the inner brows using ARKit-style browInnerUp weight.',
     weightsByProvider: weights({
-      browInnerUp: 0.85,
+      browInnerUp: 0.92,
     }),
   },
   {
@@ -73,8 +73,8 @@ export const actionUnitPoseMappings = [
     category: 'action-unit',
     description: 'Raises both outer brows.',
     weightsByProvider: weights({
-      browOuterUpLeft: 0.78,
-      browOuterUpRight: 0.78,
+      browOuterUpLeft: 0.86,
+      browOuterUpRight: 0.86,
     }),
   },
   {
@@ -84,8 +84,8 @@ export const actionUnitPoseMappings = [
     category: 'action-unit',
     description: 'Lowers both brows toward the orbital ridge.',
     weightsByProvider: weights({
-      browDownLeft: 0.82,
-      browDownRight: 0.82,
+      browDownLeft: 0.9,
+      browDownRight: 0.9,
     }),
   },
   {
@@ -95,10 +95,10 @@ export const actionUnitPoseMappings = [
     category: 'action-unit',
     description: 'Raises the cheeks and subtly tightens the eyes.',
     weightsByProvider: weights({
-      cheekSquintLeft: 0.72,
-      cheekSquintRight: 0.72,
-      eyeSquintLeft: 0.2,
-      eyeSquintRight: 0.2,
+      cheekSquintLeft: 0.86,
+      cheekSquintRight: 0.86,
+      eyeSquintLeft: 0.32,
+      eyeSquintRight: 0.32,
     }),
   },
   {
@@ -108,8 +108,10 @@ export const actionUnitPoseMappings = [
     category: 'action-unit',
     description: 'Tightens the eyelids without a full blink.',
     weightsByProvider: weights({
-      eyeSquintLeft: 0.74,
-      eyeSquintRight: 0.74,
+      eyeSquintLeft: 0.9,
+      eyeSquintRight: 0.9,
+      cheekSquintLeft: 0.18,
+      cheekSquintRight: 0.18,
     }),
   },
   {
@@ -130,8 +132,9 @@ export const actionUnitPoseMappings = [
     category: 'action-unit',
     description: 'Funnels the lips forward.',
     weightsByProvider: weights({
-      mouthFunnel: 0.86,
-      mouthPucker: 0.28,
+      mouthFunnel: 0.94,
+      mouthPucker: 0.4,
+      jawOpen: 0.08,
     }),
   },
   {
@@ -141,7 +144,8 @@ export const actionUnitPoseMappings = [
     category: 'action-unit',
     description: 'Parts the lips through a relaxed jaw opening.',
     weightsByProvider: weights({
-      jawOpen: 0.46,
+      jawOpen: 0.58,
+      mouthFunnel: 0.08,
       mouthClose: 0,
     }),
   },
@@ -155,10 +159,12 @@ export const expressionPoseMappings = [
     keyboardKey: 'S',
     description: 'Symmetric friendly smile with cheek support.',
     weightsByProvider: weights({
-      mouthSmileLeft: 0.88,
-      mouthSmileRight: 0.88,
-      cheekSquintLeft: 0.28,
-      cheekSquintRight: 0.28,
+      mouthSmileLeft: 1,
+      mouthSmileRight: 1,
+      cheekSquintLeft: 0.62,
+      cheekSquintRight: 0.62,
+      eyeSquintLeft: 0.3,
+      eyeSquintRight: 0.3,
     }),
   },
   {
@@ -168,10 +174,11 @@ export const expressionPoseMappings = [
     keyboardKey: 'F',
     description: 'Downturned mouth corners with lowered brows.',
     weightsByProvider: weights({
-      mouthFrownLeft: 0.78,
-      mouthFrownRight: 0.78,
-      browDownLeft: 0.34,
-      browDownRight: 0.34,
+      mouthFrownLeft: 0.9,
+      mouthFrownRight: 0.9,
+      browDownLeft: 0.52,
+      browDownRight: 0.52,
+      jawOpen: 0.08,
     }),
   },
   {
@@ -181,9 +188,9 @@ export const expressionPoseMappings = [
     keyboardKey: 'B',
     description: 'Brow emphasis combining inner and outer raisers.',
     weightsByProvider: weights({
-      browInnerUp: 0.78,
-      browOuterUpLeft: 0.55,
-      browOuterUpRight: 0.55,
+      browInnerUp: 0.94,
+      browOuterUpLeft: 0.72,
+      browOuterUpRight: 0.72,
     }),
   },
   {
@@ -193,11 +200,12 @@ export const expressionPoseMappings = [
     keyboardKey: 'M',
     description: 'Open mouth pose for coarse jaw and lip activation.',
     weightsByProvider: weights({
-      jawOpen: 0.58,
-      mouthUpperUpLeft: 0.2,
-      mouthUpperUpRight: 0.2,
-      mouthLowerDownLeft: 0.24,
-      mouthLowerDownRight: 0.24,
+      jawOpen: 0.76,
+      mouthUpperUpLeft: 0.34,
+      mouthUpperUpRight: 0.34,
+      mouthLowerDownLeft: 0.38,
+      mouthLowerDownRight: 0.38,
+      mouthFunnel: 0.12,
     }),
   },
   {
@@ -207,8 +215,12 @@ export const expressionPoseMappings = [
     keyboardKey: 'Q',
     description: 'Symmetric lid tightening.',
     weightsByProvider: weights({
-      eyeSquintLeft: 0.78,
-      eyeSquintRight: 0.78,
+      eyeSquintLeft: 0.94,
+      eyeSquintRight: 0.94,
+      cheekSquintLeft: 0.24,
+      cheekSquintRight: 0.24,
+      browDownLeft: 0.18,
+      browDownRight: 0.18,
     }),
   },
   {
@@ -218,10 +230,12 @@ export const expressionPoseMappings = [
     keyboardKey: 'C',
     description: 'Cheek lift with slight eye narrowing.',
     weightsByProvider: weights({
-      cheekSquintLeft: 0.82,
-      cheekSquintRight: 0.82,
-      eyeSquintLeft: 0.18,
-      eyeSquintRight: 0.18,
+      cheekSquintLeft: 0.94,
+      cheekSquintRight: 0.94,
+      eyeSquintLeft: 0.34,
+      eyeSquintRight: 0.34,
+      mouthSmileLeft: 0.14,
+      mouthSmileRight: 0.14,
     }),
   },
   {
@@ -231,8 +245,9 @@ export const expressionPoseMappings = [
     keyboardKey: 'P',
     description: 'Forward rounded lips.',
     weightsByProvider: weights({
-      mouthPucker: 0.86,
-      mouthFunnel: 0.5,
+      mouthPucker: 0.98,
+      mouthFunnel: 0.76,
+      jawOpen: 0.12,
     }),
   },
 ] as const satisfies readonly PoseMapping[];
@@ -253,8 +268,10 @@ export const phonemePoseMappings = [
     category: 'phoneme',
     description: 'Closed alveolar nasal pose.',
     weightsByProvider: weights({
-      mouthClose: 0.7,
-      jawOpen: 0.08,
+      mouthClose: 0.88,
+      jawOpen: 0.22,
+      mouthFunnel: 0.18,
+      mouthPucker: 0.12,
     }),
   },
   {
@@ -264,8 +281,10 @@ export const phonemePoseMappings = [
     category: 'phoneme',
     description: 'Open vowel with lowered jaw.',
     weightsByProvider: weights({
-      jawOpen: 0.72,
-      mouthFunnel: 0.12,
+      jawOpen: 0.9,
+      mouthFunnel: 0.18,
+      mouthLowerDownLeft: 0.18,
+      mouthLowerDownRight: 0.18,
     }),
   },
   {
@@ -275,11 +294,13 @@ export const phonemePoseMappings = [
     category: 'phoneme',
     description: 'Wide close-front vowel.',
     weightsByProvider: weights({
-      jawOpen: 0.2,
-      mouthSmileLeft: 0.32,
-      mouthSmileRight: 0.32,
-      mouthStretchLeft: 0.34,
-      mouthStretchRight: 0.34,
+      jawOpen: 0.26,
+      mouthSmileLeft: 0.42,
+      mouthSmileRight: 0.42,
+      mouthStretchLeft: 0.58,
+      mouthStretchRight: 0.58,
+      cheekSquintLeft: 0.12,
+      cheekSquintRight: 0.12,
     }),
   },
   {
@@ -289,9 +310,10 @@ export const phonemePoseMappings = [
     category: 'phoneme',
     description: 'Tongue-forward closed stop pose.',
     weightsByProvider: weights({
-      mouthClose: 0.58,
-      tongueOut: 0.24,
-      jawOpen: 0.06,
+      mouthClose: 0.66,
+      tongueOut: 0.42,
+      jawOpen: 0.14,
+      mouthFunnel: 0.08,
     }),
   },
   {
@@ -301,9 +323,11 @@ export const phonemePoseMappings = [
     category: 'phoneme',
     description: 'Mid-front vowel with modest jaw opening and stretch.',
     weightsByProvider: weights({
-      jawOpen: 0.42,
-      mouthStretchLeft: 0.28,
-      mouthStretchRight: 0.28,
+      jawOpen: 0.56,
+      mouthStretchLeft: 0.42,
+      mouthStretchRight: 0.42,
+      mouthSmileLeft: 0.14,
+      mouthSmileRight: 0.14,
     }),
   },
   {
@@ -313,9 +337,10 @@ export const phonemePoseMappings = [
     category: 'phoneme',
     description: 'Rounded close-back vowel.',
     weightsByProvider: weights({
-      mouthPucker: 0.74,
-      mouthFunnel: 0.54,
-      jawOpen: 0.16,
+      mouthPucker: 0.92,
+      mouthFunnel: 0.72,
+      jawOpen: 0.24,
+      mouthClose: 0.12,
     }),
   },
   {
@@ -325,10 +350,11 @@ export const phonemePoseMappings = [
     category: 'phoneme',
     description: 'Labiodental contact pose.',
     weightsByProvider: weights({
-      mouthClose: 0.36,
-      mouthLowerDownLeft: 0.22,
-      mouthLowerDownRight: 0.22,
-      jawOpen: 0.12,
+      mouthClose: 0.5,
+      mouthLowerDownLeft: 0.38,
+      mouthLowerDownRight: 0.38,
+      jawOpen: 0.18,
+      mouthFunnel: 0.12,
     }),
   },
   {
@@ -338,11 +364,13 @@ export const phonemePoseMappings = [
     category: 'phoneme',
     description: 'Palatal glide with a narrow smile-like spread.',
     weightsByProvider: weights({
-      jawOpen: 0.18,
-      mouthSmileLeft: 0.22,
-      mouthSmileRight: 0.22,
-      mouthStretchLeft: 0.22,
-      mouthStretchRight: 0.22,
+      jawOpen: 0.24,
+      mouthSmileLeft: 0.34,
+      mouthSmileRight: 0.34,
+      mouthStretchLeft: 0.38,
+      mouthStretchRight: 0.38,
+      cheekSquintLeft: 0.12,
+      cheekSquintRight: 0.12,
     }),
   },
 ] as const satisfies readonly PoseMapping[];
