@@ -28,6 +28,7 @@ export type HeadAssetStatus = 'idle' | 'loading' | 'loaded' | 'error';
 export type LoadedHeadAsset = {
   scene: Object3D;
   morphTargetNames: string[];
+  textureDiagnostic: TextureTransferDiagnostic | null;
   applyBlendshapeWeights: (weights: Record<string, number>) => void;
   readBlendshapeWeights: () => Record<string, number>;
 };
@@ -55,10 +56,33 @@ type LoadedFaceTextures = {
 };
 
 type FaceMaterialIntent = 'skin' | 'eye' | 'oral';
+type SkinTransferMode = 'uv' | 'projected' | 'procedural';
+
+export type TextureTransferDiagnostic = {
+  requestedMode: FaceTextureConfig['faceMaterialTransfer'];
+  selectedSkinMode: SkinTransferMode;
+  skinSlots: string[];
+  directSkinSlots: string[];
+  projectedSkinMeshCount: number;
+  eyeSlots: string[];
+  oralSlots: string[];
+  skippedSlots: string[];
+  mismatchedSlots: string[];
+};
 
 type MorphTargetBinding = {
   dictionary: Record<string, number>;
   influences: number[];
+};
+
+type MaterialSlot = {
+  mesh: Mesh;
+  material: Material;
+  intent: FaceMaterialIntent;
+  label: string;
+  hasUv: boolean;
+  isStandardMaterial: boolean;
+  directSkinCandidate: boolean;
 };
 
 function isMorphTargetMesh(object: Object3D): object is Mesh {
@@ -67,6 +91,11 @@ function isMorphTargetMesh(object: Object3D): object is Mesh {
     Array.isArray(candidate.morphTargetInfluences) &&
     candidate.morphTargetDictionary !== undefined
   );
+}
+
+function isRenderableMesh(object: Object3D): object is Mesh {
+  const candidate = object as Mesh;
+  return candidate.isMesh === true && candidate.geometry !== undefined;
 }
 
 function isMeshStandardMaterial(
@@ -118,51 +147,243 @@ function materialIntent(
   return 'skin';
 }
 
-function applyMaterialTexture(
-  object: Object3D,
-  material: Material,
-  textures: LoadedFaceTextures,
+function slotLabel(object: Object3D, material: Material) {
+  return `${object.name || 'unnamed mesh'} / ${material.name || 'unnamed material'}`;
+}
+
+function isDirectSkinAtlasCandidate(object: Object3D, material: Material) {
+  const searchable = `${object.name} ${material.name}`.toLowerCase();
+
+  return (
+    /\b(face|head|skin|body|neck|shoulder|chest|torso)\b/.test(searchable) ||
+    searchable.includes('facecap')
+  );
+}
+
+function createMaterialSlot(mesh: Mesh, material: Material): MaterialSlot {
+  const intent = materialIntent(mesh, material);
+  const hasUv = mesh.geometry.getAttribute('uv') !== undefined;
+
+  return {
+    mesh,
+    material,
+    intent,
+    label: slotLabel(mesh, material),
+    hasUv,
+    isStandardMaterial: isMeshStandardMaterial(material),
+    directSkinCandidate:
+      intent === 'skin' && hasUv && isDirectSkinAtlasCandidate(mesh, material),
+  };
+}
+
+function prepareMaterialLighting(
+  slot: MaterialSlot,
   textureConfig?: FaceTextureConfig,
-): FaceMaterialIntent {
-  const intent = materialIntent(object, material);
+) {
+  slot.material.needsUpdate = true;
 
-  material.needsUpdate = true;
-
-  if (!isMeshStandardMaterial(material)) {
-    return intent;
+  if (!isMeshStandardMaterial(slot.material)) {
+    return;
   }
 
-  const texture =
-    intent === 'eye'
-      ? textures.eye
-      : intent === 'oral'
-        ? textures.oral
-        : textures.skin;
-
-  material.color = new Color(
-    intent === 'skin'
+  slot.material.color = new Color(
+    slot.intent === 'skin'
       ? (textureConfig?.skinColor ?? defaultSkinColor)
       : '#ffffff',
   );
-  material.roughness = Math.max(material.roughness, texture ? 0.56 : 0.48);
-  material.metalness = Math.min(material.metalness, 0.08);
-
-  if (texture) {
-    material.map = texture;
-  }
-
-  return intent;
+  slot.material.roughness = Math.max(slot.material.roughness, 0.48);
+  slot.material.metalness = Math.min(slot.material.metalness, 0.08);
 }
 
-function shouldUseProjectedSkinTransfer(
-  textures: LoadedFaceTextures,
-  textureConfig?: FaceTextureConfig,
-) {
+function assignDirectTexture(slot: MaterialSlot, texture: Texture) {
+  if (!isMeshStandardMaterial(slot.material)) {
+    return false;
+  }
+
+  slot.material.map = texture;
+  slot.material.roughness = Math.max(slot.material.roughness, 0.56);
+  slot.material.needsUpdate = true;
+
+  return true;
+}
+
+function hasOnlySkinMaterials(mesh: Mesh, slots: MaterialSlot[]) {
+  const meshSlots = slots.filter((slot) => slot.mesh === mesh);
+
   return (
-    Boolean(textures.skin) &&
-    (textureConfig?.faceMaterialTransfer === 'projected' ||
-      textureConfig?.faceMaterialTransfer === 'auto')
+    meshSlots.length > 0 &&
+    meshSlots.every((slot) => slot.intent === 'skin' && slot.isStandardMaterial)
   );
+}
+
+function selectSkinTransferMode({
+  textureConfig,
+  textures,
+  skinSlots,
+  directSkinSlots,
+  projectedSkinTargets,
+}: {
+  textureConfig?: FaceTextureConfig;
+  textures: LoadedFaceTextures;
+  skinSlots: MaterialSlot[];
+  directSkinSlots: MaterialSlot[];
+  projectedSkinTargets: Mesh[];
+}): SkinTransferMode {
+  if (!textures.skin || skinSlots.length === 0) {
+    return 'procedural';
+  }
+
+  const requestedMode = textureConfig?.faceMaterialTransfer ?? 'auto';
+
+  if (requestedMode === 'uv' && directSkinSlots.length > 0) {
+    return 'uv';
+  }
+
+  if (requestedMode === 'projected' && projectedSkinTargets.length > 0) {
+    return 'projected';
+  }
+
+  if (requestedMode === 'auto' && directSkinSlots.length === skinSlots.length) {
+    return 'uv';
+  }
+
+  if (projectedSkinTargets.length > 0) {
+    return 'projected';
+  }
+
+  if (directSkinSlots.length > 0) {
+    return 'uv';
+  }
+
+  return 'procedural';
+}
+
+function applyTextureTransfers({
+  box,
+  textureConfig,
+  textures,
+  slots,
+}: {
+  box: Box3;
+  textureConfig?: FaceTextureConfig;
+  textures: LoadedFaceTextures;
+  slots: MaterialSlot[];
+}): TextureTransferDiagnostic {
+  const requestedMode = textureConfig?.faceMaterialTransfer ?? 'auto';
+  const skippedSlots: string[] = [];
+  const mismatchedSlots: string[] = [];
+  const skinSlots = slots.filter((slot) => slot.intent === 'skin');
+  const directSkinSlots = skinSlots.filter(
+    (slot) => slot.isStandardMaterial && slot.directSkinCandidate,
+  );
+  const projectedSkinTargets = [
+    ...new Set(
+      skinSlots
+        .filter((slot) => slot.isStandardMaterial)
+        .map((slot) => slot.mesh)
+        .filter((mesh) => hasOnlySkinMaterials(mesh, slots)),
+    ),
+  ];
+  const selectedSkinMode = selectSkinTransferMode({
+    textureConfig,
+    textures,
+    skinSlots,
+    directSkinSlots,
+    projectedSkinTargets,
+  });
+
+  if (textures.skin && skinSlots.length === 0) {
+    skippedSlots.push('skin: no matching head/body material slot');
+  }
+
+  if (selectedSkinMode === 'uv' && textures.skin) {
+    directSkinSlots.forEach((slot) => {
+      assignDirectTexture(slot, textures.skin!);
+    });
+
+    skinSlots
+      .filter((slot) => !directSkinSlots.includes(slot))
+      .forEach((slot) => {
+        mismatchedSlots.push(`${slot.label}: skin slot is not UV-atlas ready`);
+      });
+  }
+
+  let projectedSkinMeshCount = 0;
+
+  if (selectedSkinMode === 'projected' && textures.skin) {
+    projectedSkinTargets.forEach((mesh) => {
+      const result = applyProjectedSkinTransfer(mesh, box);
+
+      if (result.applied) {
+        projectedSkinMeshCount += 1;
+      } else if (result.reason) {
+        mismatchedSlots.push(
+          `${mesh.name || 'unnamed mesh'}: ${result.reason}`,
+        );
+      }
+    });
+
+    skinSlots
+      .filter((slot) => projectedSkinTargets.includes(slot.mesh))
+      .forEach((slot) => {
+        assignDirectTexture(slot, textures.skin!);
+      });
+
+    skinSlots
+      .filter((slot) => !projectedSkinTargets.includes(slot.mesh))
+      .forEach((slot) => {
+        skippedSlots.push(`${slot.label}: mixed or non-standard skin slot`);
+      });
+  }
+
+  if (textures.skin && selectedSkinMode === 'procedural') {
+    mismatchedSlots.push('skin: no usable UV slot or projected skin mesh');
+  }
+
+  const directPartSlots = (
+    [
+      ['eye', textures.eye],
+      ['oral', textures.oral],
+    ] as const
+  ).flatMap(([intent, texture]) => {
+    const intentSlots = slots.filter((slot) => slot.intent === intent);
+
+    if (texture && intentSlots.length === 0) {
+      skippedSlots.push(`${intent}: no matching material slot`);
+    }
+
+    return intentSlots.filter((slot) => {
+      if (!texture) {
+        return false;
+      }
+
+      if (!slot.hasUv || !slot.isStandardMaterial) {
+        skippedSlots.push(
+          `${slot.label}: ${intent} texture requires direct UV`,
+        );
+        return false;
+      }
+
+      assignDirectTexture(slot, texture);
+      return true;
+    });
+  });
+
+  return {
+    requestedMode,
+    selectedSkinMode,
+    skinSlots: skinSlots.map((slot) => slot.label),
+    directSkinSlots: directSkinSlots.map((slot) => slot.label),
+    projectedSkinMeshCount,
+    eyeSlots: directPartSlots
+      .filter((slot) => slot.intent === 'eye')
+      .map((slot) => slot.label),
+    oralSlots: directPartSlots
+      .filter((slot) => slot.intent === 'oral')
+      .map((slot) => slot.label),
+    skippedSlots,
+    mismatchedSlots,
+  };
 }
 
 function prepareNeutralHeadAsset(
@@ -172,57 +393,39 @@ function prepareNeutralHeadAsset(
 ): LoadedHeadAsset {
   const morphTargetNames = new Set<string>();
   const morphTargetBindings: MorphTargetBinding[] = [];
-  const projectedSkinTargets = new Set<Mesh>();
-  const projectSkinTexture = shouldUseProjectedSkinTransfer(
-    textures,
-    textureConfig,
-  );
+  const materialSlots: MaterialSlot[] = [];
 
   gltf.scene.traverse((object) => {
-    if (!isMorphTargetMesh(object)) {
+    if (!isRenderableMesh(object)) {
       return;
     }
 
-    object.morphTargetInfluences?.fill(0);
-
-    if (object.morphTargetInfluences) {
+    if (isMorphTargetMesh(object)) {
+      const influences = object.morphTargetInfluences ?? [];
+      influences.fill(0);
       morphTargetBindings.push({
         dictionary: object.morphTargetDictionary ?? {},
-        influences: object.morphTargetInfluences,
+        influences,
+      });
+
+      Object.keys(object.morphTargetDictionary ?? {}).forEach((name) => {
+        morphTargetNames.add(name);
       });
     }
 
-    Object.keys(object.morphTargetDictionary ?? {}).forEach((name) => {
-      morphTargetNames.add(name);
-    });
-
-    const intents = new Set<FaceMaterialIntent>();
-
     forEachMaterial(object.material, (material) => {
-      const intent = applyMaterialTexture(
-        object,
-        material,
-        textures,
-        textureConfig,
-      );
-
-      intents.add(intent);
+      const slot = createMaterialSlot(object, material);
+      prepareMaterialLighting(slot, textureConfig);
+      materialSlots.push(slot);
     });
-
-    if (
-      projectSkinTexture &&
-      intents.has('skin') &&
-      !intents.has('eye') &&
-      !intents.has('oral')
-    ) {
-      projectedSkinTargets.add(object);
-    }
   });
 
   const box = new Box3().setFromObject(gltf.scene);
-
-  projectedSkinTargets.forEach((mesh) => {
-    applyProjectedSkinTransfer(mesh, box);
+  const textureDiagnostic = applyTextureTransfers({
+    box,
+    textureConfig,
+    textures,
+    slots: materialSlots,
   });
 
   const size = box.getSize(new Vector3());
@@ -242,6 +445,7 @@ function prepareNeutralHeadAsset(
   return {
     scene: gltf.scene,
     morphTargetNames: [...morphTargetNames].sort((a, b) => a.localeCompare(b)),
+    textureDiagnostic,
     applyBlendshapeWeights: (weights) => {
       morphTargetBindings.forEach(({ dictionary, influences }) => {
         Object.entries(dictionary).forEach(([name, index]) => {
