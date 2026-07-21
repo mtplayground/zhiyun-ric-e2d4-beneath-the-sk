@@ -349,6 +349,15 @@ export default function FaceViewport({
             {textureDiagnostic.oralSlots.length}
           </p>
         ) : null}
+        {textureDiagnostic?.projectionAlignment ? (
+          <p className="text-muted-foreground">
+            Projection alignment: offset{' '}
+            {textureDiagnostic.projectionAlignment.offsetX.toFixed(3)},{' '}
+            {textureDiagnostic.projectionAlignment.offsetY.toFixed(3)} | scale{' '}
+            {textureDiagnostic.projectionAlignment.scale.toFixed(3)} | y{' '}
+            {textureDiagnostic.projectionAlignment.rotationYDegrees.toFixed(1)}°
+          </p>
+        ) : null}
         {textureDiagnostic && textureDiagnostic.mismatchedSlots.length > 0 ? (
           <p className="truncate text-muted-foreground">
             Texture mismatch:{' '}

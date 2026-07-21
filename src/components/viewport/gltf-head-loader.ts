@@ -61,6 +61,7 @@ type SkinTransferMode = 'uv' | 'projected' | 'procedural';
 export type TextureTransferDiagnostic = {
   requestedMode: FaceTextureConfig['faceMaterialTransfer'];
   selectedSkinMode: SkinTransferMode;
+  projectionAlignment: FaceTextureConfig['projectionAlignment'] | null;
   skinSlots: string[];
   directSkinSlots: string[];
   projectedSkinMeshCount: number;
@@ -312,7 +313,11 @@ function applyTextureTransfers({
 
   if (selectedSkinMode === 'projected' && textures.skin) {
     projectedSkinTargets.forEach((mesh) => {
-      const result = applyProjectedSkinTransfer(mesh, box);
+      const result = applyProjectedSkinTransfer(
+        mesh,
+        box,
+        textureConfig?.projectionAlignment,
+      );
 
       if (result.applied) {
         projectedSkinMeshCount += 1;
@@ -372,6 +377,10 @@ function applyTextureTransfers({
   return {
     requestedMode,
     selectedSkinMode,
+    projectionAlignment:
+      selectedSkinMode === 'projected'
+        ? (textureConfig?.projectionAlignment ?? null)
+        : null,
     skinSlots: skinSlots.map((slot) => slot.label),
     directSkinSlots: directSkinSlots.map((slot) => slot.label),
     projectedSkinMeshCount,
