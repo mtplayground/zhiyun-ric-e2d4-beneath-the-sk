@@ -40,7 +40,7 @@
 \maketitle
 
 \begin{abstract}
-This document describes the implemented system architecture and mathematical model for \emph{Beneath the Skin}, an interactive facial deformation dashboard for inspecting pose-driven blendshape activation, material transfer, and deformation telemetry.  The document is Overleaf-ready: it uses a self-contained LaTeX preamble, embeds diagrams with TikZ, and requires no external build tooling or generated figures.
+This document describes the implemented system architecture and mathematical model for \emph{Beneath the Skin}, an interactive facial deformation dashboard for inspecting pose-driven blendshape activation and deformation telemetry.  The document is Overleaf-ready: it uses a self-contained LaTeX preamble, embeds diagrams with TikZ, and requires no external build tooling or generated figures.
 \end{abstract}
 
 \tableofcontents
@@ -51,8 +51,8 @@ This document describes the implemented system architecture and mathematical mod
 \emph{Beneath the Skin} is a Vite application written in React and TypeScript.  The user-facing application starts at \code{src/main.tsx}, mounts \code{App}, and immediately enters \code{DashboardLayout}.  The dashboard composes five persistent regions:
 \begin{enumerate}[leftmargin=*]
   \item the project hero, which identifies the research dashboard and selected provider;
-  \item the Three.js viewport, which loads the glTF face mesh, textures, hair layer, tongue layer, and deformation runtime;
-  \item the control panel, which emits preset, keyboard, slider, precompute, and optional projection-alignment commands;
+  \item the Three.js viewport, which loads the glTF face mesh, lighting, orbit controls, and deformation runtime;
+  \item the control panel, which emits preset, keyboard, slider, and precompute commands;
   \item the live numeric readout, which displays current pose, frame, mode, and blendshape activations;
   \item the deformation curve panel, which samples activation energy over time using uPlot.
 \end{enumerate}
@@ -103,9 +103,9 @@ The footer exposes citation and credit text for the project.
 Layer & Responsibility \\
 \midrule
 React & Declares the dashboard regions, control surfaces, overlays, and lifecycle hooks for asset loading and frame updates. \\
-TypeScript & Defines shared types for poses, provider frames, texture configuration, runtime diagnostics, and normalized control state. \\
+TypeScript & Defines shared types for poses, provider frames, runtime diagnostics, and normalized control state. \\
 Vite & Provides the browser build, static asset serving, environment-variable injection, and development server on port 8080. \\
-Three.js & Owns glTF loading, materials, textures, geometry, morph-target influence arrays, lights, cameras, and procedural meshes. \\
+Three.js & Owns glTF loading, geometry, morph-target influence arrays, lights, cameras, and orbit-control integration. \\
 react-three-fiber & Bridges React components to Three.js objects and supplies the per-frame \code{useFrame} loop used by the deformation runtime. \\
 Zustand & Stores the canonical UI state: active pose label, active control mode, current frame index, and sparse activation weights. \\
 uPlot & Renders the activation-energy time series in the deformation curve panel. \\
@@ -252,89 +252,18 @@ The deformation curve panel samples the current activation map and computes a bo
 \end{equation}
 where $\mathcal{A}$ is the set of currently active blendshapes.  Samples are keyed by frame index.  If a new value arrives for the current frame, the existing sample is updated; otherwise a new sample is appended.  The panel retains a rolling window of at most 160 samples and plots energy in the range $[0,1]$ with uPlot.
 
-\section{Texture and Material Handling}
 
-The app supports three separate diffuse maps:
-\begin{itemize}[leftmargin=*]
-  \item \code{VITE\_SKIN\_TEXTURE\_URL}: skin/head/body atlas;
-  \item \code{VITE\_EYE\_TEXTURE\_URL}: eye, iris, pupil, and sclera texture;
-  \item \code{VITE\_ORAL\_TEXTURE\_URL}: teeth, gums, palate, oral cavity, and tongue texture.
-\end{itemize}
-Each defaults to a committed asset under \code{public/textures}.  Diffuse textures are loaded with sRGB color space and \code{flipY=false} to match glTF UV orientation.  Load failures resolve to \code{null}, emit a warning, and leave procedural material settings in place rather than breaking the viewport.
+\section{Viewport Asset Loading and Runtime Diagnostics}
 
-Material slots are classified by mesh and material names.  Eye and oral textures are direct-assignment only: the loader assigns them only to matching standard-material slots that expose UVs.  If those slots are absent or unsuitable, the app reports skipped slots and does not project the texture onto unrelated geometry.
+The viewport now keeps asset loading intentionally narrow.  The head loader fetches a single configured glTF face mesh, wires KTX2 and Meshopt decoders into \code{GLTFLoader}, traverses the loaded scene for morph-target dictionaries, resets every discovered influence to neutral, and normalizes the scene scale and center for the default camera framing.  It does not load auxiliary image maps, infer visual slot intent, remap surface coordinates, assign alternate visual assets to named slots, or add separate anatomical or accessory layers.
 
-\subsection{Direct Skin Assignment}
-The direct skin path is used when skin material slots appear to match the supplied atlas layout.  A slot is considered a direct candidate when it is skin-intent, uses a standard material, has a UV attribute, and the mesh/material naming indicates a head, face, skin, body, neck, shoulder, chest, torso, or FaceCap-style slot.  Direct assignment provides highest fidelity because it uses artist-authored UVs.
+At runtime, the viewport contains only the lighting rig, the loaded head asset, orbit controls, the selected deformation provider runtime, and the existing empty-state placeholder used while the mesh is loading or unavailable.  This preserves the V1.0 contract: deformation is driven by the mesh's own morph targets, not by extra geometry or rendering-layer side effects.  The runtime can therefore reason about a single authoritative morph-target list and can apply pose weights without coordinating secondary scene objects.
 
-\subsection{UV-Independent Projected Transfer}
-When direct UV assignment is not reliable, the projected transfer path builds a replacement UV channel from world-space positions.  Let the loaded head's bounding box be
-\begin{equation}
-  B = [x_{\min},x_{\max}]\times[y_{\min},y_{\max}]\times[z_{\min},z_{\max}],
-\end{equation}
-with center $(x_c,y_c,z_c)$.  For a vertex position $\mathbf{q}=(x,y,z)$ transformed to world space, the projection first rotates the horizontal coordinates about the vertical axis by configurable angle $\theta$:
-\begin{align}
-  x' &= (x-x_c)\cos\theta - (z-z_c)\sin\theta.
-\end{align}
-Then it computes atlas coordinates
-\begin{align}
-  u_0 &= \frac{x'}{\max(x_{\max}-x_{\min},\,z_{\max}-z_{\min})}+\frac{1}{2},\\
-  v_0 &= 1 - \frac{y-y_{\min}}{y_{\max}-y_{\min}}.
-\end{align}
-Projection alignment applies scale $\sigma$ and offsets $(o_u,o_v)$ around the center:
-\begin{align}
-  u &= \clamp((u_0-1/2)\sigma + 1/2 + o_u,0,1),\\
-  v &= \clamp((v_0-1/2)\sigma + 1/2 + o_v,0,1).
-\end{align}
-The generated UVs are attached to a cloned geometry, preserving morph targets and blendshape influence arrays.  The texture map is then assigned to the same standard material, so normal lighting, roughness, and metalness behavior remain material-driven.
-
-\begin{figure}[ht]
-\centering
-\begin{tikzpicture}[
-  scale=0.95,
-  box/.style={draw=ink!50, rounded corners, fill=panelbg, align=center, minimum width=34mm, minimum height=10mm, font=\small},
-  decision/.style={diamond, draw=panelamber!90!black, fill=panelamber!10, aspect=2.2, align=center, inner sep=1.5pt, font=\small},
-  arrow/.style={-{Latex[length=2.1mm]}, thick, draw=ink!70}
-]
-\node[box] (load) {Load glTF + textures};
-\node[box, right=14mm of load] (slots) {Classify material slots};
-\node[decision, right=15mm of slots] (mode) {Mode?};
-\node[box, above right=10mm and 12mm of mode] (uv) {Direct UV assignment};
-\node[box, right=18mm of mode] (proj) {Projected skin transfer};
-\node[box, below right=10mm and 12mm of mode] (proc) {Procedural fallback};
-\node[box, below=17mm of proj] (diag) {Overlay diagnostics\\selected / skipped / mismatched};
-
-\draw[arrow] (load) -- (slots);
-\draw[arrow] (slots) -- (mode);
-\draw[arrow] (mode) -- node[above, sloped, font=\scriptsize]{atlas UVs} (uv);
-\draw[arrow] (mode) -- node[above, font=\scriptsize]{auto/projected} (proj);
-\draw[arrow] (mode) -- node[below, sloped, font=\scriptsize]{no usable skin texture path} (proc);
-\draw[arrow] (uv) |- (diag);
-\draw[arrow] (proj) -- (diag);
-\draw[arrow] (proc) |- (diag);
-\end{tikzpicture}
-\caption{Texture-transfer selection and diagnostics.  Eye and oral textures bypass projected transfer and use direct UV slots only.}
-\label{fig:texture-transfer}
-\end{figure}
-
-\subsection{Mode Selection and Accuracy Trade-offs}
-The configured transfer mode is \code{auto}, \code{projected}, or \code{uv}.  In \code{auto}, the loader selects direct UV assignment when all skin slots are direct candidates; otherwise it prefers projected transfer for eligible standard-material skin meshes.  Explicit \code{uv} or \code{projected} requests are honored when their required slots exist.  If neither path is usable, the system leaves the procedural material in place and reports the mismatch.
-
-Projected transfer is robust to unknown UV layouts and makes the committed atlas visible on arbitrary head meshes, but it is approximate.  Because it derives atlas coordinates from a bounding box, local features such as brows, lip edges, and eye openings can drift relative to the mesh topology.  The projection-alignment panel exposes horizontal offset, vertical offset, scale, and vertical-axis rotation behind the same feature-flag pattern as optional panels.  These controls allow interactive registration tuning, but they do not replace the fidelity of offline texture baking or mesh-specific UV authoring.
-
-\section{Hair, Tongue, and Oral Integration}
-
-Hair is optional.  If \code{VITE\_HAIR\_MESH\_URL} is configured, the viewport loads a separate glTF hair mesh, normalizes it to the head, and applies dark rough material settings.  If no asset is configured or the load fails, a procedural dark hair cap is rendered.  Hair is a separate scene object and does not touch the face mesh's morph targets.
-
-Tongue rendering is tied to oral texture support and phoneme activation.  During head loading, material and morph-target names are inspected for tongue geometry or tongue-related morph targets.  When a loaded mesh already provides tongue geometry, the system leaves that geometry under the mesh's own morph-target deformation.  When no tongue geometry is detected, the viewport adds a small procedural tongue mesh inside the mouth cavity.  It samples the tongue region of the oral atlas when available, falls back to a procedural pink material if the oral texture fails, and remains hidden except when a tongue activation is present.  The T phoneme includes a strong \code{tongueOut} target with complementary mouth and jaw weights so tongue movement reads as part of the articulation.
-
-\section{Runtime Diagnostics}
-
-The viewport overlays combine asset status, provider health, texture transfer, hair status, and tongue status.  The diagnostics are intentionally visible in the shipped dashboard because the same UI is used both as a demo and as a regression inspection surface.  The provider-health panel reports active blendshape compatibility, missing and unsupported targets, library-level support counts, selected texture transfer mode, projection alignment values, and skipped or mismatched material slots.
+Diagnostics focus on deformation compatibility rather than rendering-layer configuration.  The provider-health overlay reports the asset load state, the number of discovered blendshape targets, the active-pose audit, and the library-level supported/partial/unsupported counts.  It also surfaces missing or unsupported blendshape names when the pose library references targets not exposed by the loaded mesh.  There are no diagnostics for removed rendering-layer configuration, coordinate alignment, skipped visual slots, or auxiliary mesh visibility because those systems are no longer part of the application.
 
 \section{Conclusion}
 
-The implemented system separates control intent, provider evaluation, mesh application, and telemetry.  This separation keeps the current kinematic blendshape provider simple while leaving a clear route for future precomputed or biomechanical deformation providers.  The material-transfer layer similarly offers a direct high-fidelity path, a robust projected path, and explicit diagnostics for mesh mismatches.
+The implemented system separates control intent, provider evaluation, mesh application, and telemetry.  This separation keeps the current kinematic blendshape provider simple while leaving a clear route for future precomputed or biomechanical deformation providers.
 
 \begin{thebibliography}{9}
 
