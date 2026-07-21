@@ -46,8 +46,11 @@ describe('applyProjectedSkinTransfer', () => {
     expect(Array.from(uv.array)).toEqual([0, 1, 1, 1, 0.5, 0]);
   });
 
-  it('preserves morph target attributes while swapping projected UVs', () => {
+  it('preserves morph target attributes and live influence values while swapping projected UVs', () => {
     const mesh = new Mesh(makeTriangleGeometry(), new MeshStandardMaterial());
+    mesh.morphTargetDictionary = { mouthSmileLeft: 0 };
+    mesh.morphTargetInfluences = [0.73];
+    const morphInfluences = mesh.morphTargetInfluences;
     const morphAttributeValues = Array.from(
       mesh.geometry.morphAttributes.position?.[0]?.array ?? [],
     );
@@ -61,6 +64,9 @@ describe('applyProjectedSkinTransfer', () => {
     expect(
       Array.from(mesh.geometry.morphAttributes.position?.[0]?.array ?? []),
     ).toEqual(morphAttributeValues);
+    expect(mesh.morphTargetDictionary).toEqual({ mouthSmileLeft: 0 });
+    expect(mesh.morphTargetInfluences).toBe(morphInfluences);
+    expect(mesh.morphTargetInfluences).toEqual([0.73]);
   });
 
   it('applies offset, scale, and vertical-axis rotation to projected UVs', () => {
