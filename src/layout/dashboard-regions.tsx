@@ -7,6 +7,7 @@ import {
   DataPanelTitle,
 } from '@/components/ui/data-panel';
 import KeyboardModePanel from '@/components/controls/keyboard-mode-panel';
+import MuscleSliderPanel from '@/components/controls/muscle-slider-panel';
 import PrecomputeController from '@/components/controls/precompute-controller';
 import PresetSelectors from '@/components/controls/preset-selectors';
 import ResetToNeutralControl from '@/components/controls/reset-to-neutral-control';
@@ -121,6 +122,9 @@ function ControlPanelRegion({ config }: RegionProps) {
           </div>
           <div className="rounded-md border border-border bg-secondary/50 p-3">
             <KeyboardModePanel activationCount={activationCount} />
+          </div>
+          <div className="rounded-md border border-border bg-secondary/50 p-3">
+            <MuscleSliderPanel />
           </div>
         </div>
         {config.features.precomputePanel ? <PrecomputeController /> : null}
