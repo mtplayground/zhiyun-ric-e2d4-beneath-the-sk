@@ -1,53 +1,62 @@
-# Beneath the Skin Architecture Plan
+# Architecture plan for issues #49-#62
 
-## Product Scope
+## Current app shape
+- Static Vite/React/TypeScript dashboard rooted at `src/App.tsx` and `src/layout/dashboard-layout.tsx`.
+- Three.js rendering is isolated in `src/components/viewport/`:
+  - `gltf-head-loader.ts` loads/normalizes the face glTF, discovers morph targets, and applies weights.
+  - `kinematic-provider-runtime.tsx` bridges Zustand control state to the selected deformation provider each frame.
+  - `face-viewport.tsx` owns the Canvas, lighting, overlays, and viewport diagnostics.
+- Pose data lives in `src/domain/poses/pose-library.ts`; provider abstractions live in `src/domain/providers/`.
+- Global UI/control readout state lives in `src/state/control-state.ts` with selector helpers in `src/state/selectors.ts`.
+- UI panels are grouped under `src/components/controls/`, `src/components/readout/`, and `src/components/ui/`.
+- Build/test tooling: Vite, React 19, Tailwind CSS 4, Zustand, Three.js, Vitest, Playwright.
 
-The app is a React + TypeScript single-page research dashboard for the "Beneath the Skin" project by Zhiyun Peng, Eugene Fiume, and Michael Tao. It visualizes a rigged blendshape head, lets users trigger phoneme/FACS/expression poses through dropdowns, hotkeys, reset, and sliders, and keeps the viewport, numeric readout, and deformation curve synchronized.
+## Proposed module structure
+Keep the current separation, but add focused modules rather than expanding viewport/runtime files too much:
 
-## Module Structure
+- `src/domain/morph-targets/`
+  - `aliases.ts`: canonical morph-target names and fallback alias map.
+  - `audit.ts`: compare every pose weight key with mesh morph targets and alias resolution.
+  - `coverage.ts`: pure helpers used by unit tests for per-preset coverage.
+- `src/domain/materials/`
+  - `texture-config.ts`: typed texture URL/config loader using Vite env defaults.
+  - `projection.ts`: UV-independent projected skin-map transfer math and diagnostics.
+  - `uv-assignment.ts`: direct UV assignment path plus automatic mode selection.
+- `src/domain/accessories/`
+  - `hair.ts`: optional hair mesh config and procedural fallback parameters.
+  - `tongue.ts`: tongue mesh/pose integration data and phoneme influence helpers.
+- `src/components/controls/projection-controls.tsx`
+  - Alignment/tuning controls for projected transfer and diagnostics.
+- `src/components/viewport/mesh-diagnostics.tsx` or existing overlay extension
+  - Show morph-target audit, texture/projection mode, UV path, hair/tongue availability.
+- `docs/`
+  - `rollback.md`: release/rollback procedure for v1.0.
+  - `overleaf-system-math.tex`: Overleaf-format system/math document.
 
-- `src/main.tsx`, `src/App.tsx`: Vite entry point and top-level dashboard composition.
-- `src/config/`: typed environment loader for asset URLs, pose data path, provider selection, and optional feature flags.
-- `src/layout/`: responsive dashboard shell with hero, viewport region, control column, readout region, curve region, and footer placeholders.
-- `src/components/ui/`: shadcn/ui primitives plus local panel/control wrappers for the research-dashboard theme.
-- `src/components/hero/`, `src/components/footer/`: project info and citation/credits surfaces.
-- `src/components/viewport/`: react-three-fiber canvas, camera/orbit controls, lighting, asset loading states, and mesh binding.
-- `src/components/controls/`: preset dropdowns, keyboard-mode panel, reset action, warm-up/precompute controls, and AU/muscle slider panel.
-- `src/components/readout/`: live activation values and current-pose/frame status line.
-- `src/components/curve/`: uPlot-backed canvas chart synchronized to animation state.
-- `src/state/`: Zustand store, selectors, and actions for active pose, active mode, frame index, activation values, warm-up status, and errors.
-- `src/domain/poses/`: structured phoneme, FACS AU, named expression, keyboard, and provider-specific blendshape mapping data.
-- `src/domain/providers/`: deformation-provider interface, registry, kinematic blendshape provider, and future provider adapters.
-- `src/domain/assets/`: glTF loader helpers and blendshape-name validation/mapping utilities.
-- `src/test/` or colocated `*.test.ts(x)`: unit tests for provider interpolation, mapping resolution, and state transitions.
-- `tests/e2e/`: Playwright core-flow coverage.
+Shared types should be exported from domain-level `index.ts` files so UI components do not import implementation internals directly.
 
-## Shared Types
+## Issue dependency plan
+1. #49 can be done independently: tag current release `v1.0`, document rollback.
+2. #50 is a small content-only update; update all author-order surfaces consistently: hero, footer/citation, docs.
+3. #51 should come before pose tuning: implement morph-target audit against the loaded mesh.
+4. #52 depends on #51 concepts: add fallback aliases, then make audit report canonical/alias/missing states.
+5. #53 depends on #51/#52: retune weak/non-functioning phoneme/expression weights using alias-aware compatibility.
+6. #54 depends on #51-#53: add automated coverage for every pose and assert no unintended missing targets.
+7. #55 introduces committed texture assets and config; keep config typed and static-host safe.
+8. #56 depends on #55: implement projected skin-map transfer independent of source UVs.
+9. #57 depends on #55/#56: add direct UV assignment path and automatic mode selection with diagnostics.
+10. #58 depends on #56/#57: expose projection alignment controls only after transfer diagnostics exist.
+11. #59 can mostly run after viewport/material structure is stable: optional hair mesh with procedural fallback.
+12. #60 touches phoneme integration and viewport accessories; do after #53 and alongside/after #59 patterns.
+13. #61 should document the final architecture/math after projection, UV, hair, tongue decisions settle.
+14. #62 is last: full regression across unit, build, and e2e suites.
 
-- `PoseId`, `PoseCategory`, `PoseDefinition`: stable identifiers, labels, category metadata, and target blendshape weights.
-- `BlendshapeName`, `BlendshapeWeights`: provider-agnostic morph target activation map.
-- `ControlMode`: `preset | keyboard | slider`.
-- `ActivationState`: active pose label, normalized activation values, current frame, transition progress, and source mode.
-- `DeformationProvider`: provider contract for initialization, target pose application, per-frame updates, warm-up/precompute, and diagnostics.
-- `ProviderRegistryEntry`: provider id, display label, factory, capability flags, and env-selection metadata.
-- `AssetLoadState` and `WarmupState`: loading/progress/error/completed state for UI feedback.
-
-## Dependency Flow
-
-1. Foundation: Issue #1 creates the Vite React TypeScript shell. Issues #2 and #3 add styling primitives and typed runtime configuration.
-2. App frame and state: Issues #4 and #5 establish the dashboard regions and shared Zustand state consumed by later features.
-3. Visualization and provider core: Issues #6, #7, #8, and #9 add the R3F scene, asset loading, provider interface/registry, and v1 kinematic blendshape provider.
-4. Domain data: Issue #10 defines pose and mapping data consumed by presets, keyboard, sliders, provider tests, and readouts.
-5. Controls: Issues #11 through #16 add dropdowns, keyboard mode, reset, warm-up/precompute, sliders, and cross-mode coordination.
-6. Telemetry UI: Issues #17 and #18 render live numeric activation state and the deformation curve from the same store/provider updates.
-7. Project surfaces: Issues #19 and #20 add the project information and citation/footer components.
-8. Quality and release: Issues #21 and #22 add unit and E2E test coverage; Issue #23 polishes failures and edge cases; Issue #24 prepares static self-hosted deployment.
-
-## Key Design Decisions
-
-- Keep controls provider-agnostic. UI components dispatch pose/control intents to the Zustand store; providers consume normalized `PoseDefinition` and `BlendshapeWeights`.
-- Use structured pose data rather than hard-coded component conditionals, so phonemes, FACS AUs, expressions, and keyboard mappings remain testable and swappable.
-- Treat the kinematic provider as the first implementation behind a registry. Future precomputed or Maya-exported providers should replace it without changes to controls, readouts, or charting.
-- Make the animation loop the single source of frame-synced updates. The provider applies mesh weights and emits current frame/progress/activation values into state for readout and curve panels.
-- Validate blendshape availability when the glTF loads. Missing or mismatched morph targets should surface graceful diagnostics and fallbacks instead of silently failing.
-- Keep deploy output static. Runtime asset paths and feature flags come from Vite env variables and `.env.example`; no server assumptions are required for the SPA.
+## Key design decisions
+- Keep deformation provider API stable. New aliasing/audit/tuning should feed normalized `BlendshapeWeights` to providers rather than making providers know about UI controls.
+- Add alias resolution as a pure domain transform before runtime application. The loader should report available target names; the domain resolver should map canonical pose weights to mesh-specific names.
+- Preserve static deployment: all assets must work with `VITE_STATIC_BASE_PATH=./`; texture config should accept relative URLs and be validated by the static verifier when local.
+- Avoid hard-coding the default demo mesh as the only supported topology. Diagnostics should distinguish supported, alias-resolved, missing, and ignored targets.
+- Prefer small, tested math utilities for projection/UV decisions; Three.js-facing code should mainly adapt geometries/materials and display diagnostics.
+- Keep controls reactive through Zustand; add projection/texture/accessory state slices only if existing control state would become overloaded.
+- Ensure all visual features have graceful fallbacks: missing textures, missing UVs, missing hair/tongue assets, or no morph targets should show diagnostics instead of crashing.
+- Tests should include pure unit coverage for pose aliases, audit outcomes, projection mode selection, and e2e smoke for visible diagnostics and core interactions.
