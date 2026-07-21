@@ -7,6 +7,13 @@ import {
   getCachedTransitionFrame,
 } from '@/domain/precompute';
 import {
+  auditBlendshapeWeights,
+  auditPoseLibrary,
+  findPoseAuditByLabel,
+  type PoseAuditResult,
+  type PoseLibraryAuditSummary,
+} from '@/domain/poses';
+import {
   getProviderRegistryEntry,
   type BlendshapeWeights,
   type DeformationProvider,
@@ -44,6 +51,9 @@ export type ProviderRuntimeDiagnostic = {
   requestedCount: number;
   compatibleCount: number;
   missingBlendshapeNames: string[];
+  unsupportedBlendshapeNames: string[];
+  activePoseAudit: PoseAuditResult | null;
+  libraryAudit: PoseLibraryAuditSummary | null;
 };
 
 const weightEpsilon = 0.0001;
@@ -83,72 +93,100 @@ function createCompatibilityDiagnostic({
   poseLabel: string;
   targetWeights: BlendshapeWeights;
 }): ProviderRuntimeDiagnostic {
-  const availableBlendshapeNames = new Set(asset.morphTargetNames);
-  const requestedBlendshapeNames = Object.entries(targetWeights)
-    .filter(([, value]) => Math.abs(value) > weightEpsilon)
-    .map(([name]) => name)
-    .sort((left, right) => left.localeCompare(right));
-  const missingBlendshapeNames = requestedBlendshapeNames.filter(
-    (name) => !availableBlendshapeNames.has(name),
-  );
-  const compatibleCount =
-    requestedBlendshapeNames.length - missingBlendshapeNames.length;
+  const libraryAudit = auditPoseLibrary({
+    providerId: appConfig.deformationProvider,
+    availableBlendshapes: asset.morphTargetNames,
+  });
+  const activePoseAudit =
+    findPoseAuditByLabel(libraryAudit, poseLabel) ??
+    auditBlendshapeWeights({
+      poseId: poseIdFromLabel(poseLabel),
+      label: poseLabel,
+      weights: targetWeights,
+      availableBlendshapes: asset.morphTargetNames,
+    });
+  const requestedCount =
+    activePoseAudit.activeCount + activePoseAudit.missingCount;
+  const compatibleCount = activePoseAudit.activeCount;
+  const missingBlendshapeNames = [...activePoseAudit.missingBlendshapeNames];
+  const unsupportedBlendshapeNames = [
+    ...activePoseAudit.unsupportedBlendshapeNames,
+  ];
+  const auditSummary = `${libraryAudit.supportedPoseCount} supported / ${libraryAudit.partialPoseCount} partial / ${libraryAudit.unsupportedPoseCount} unsupported presets`;
 
   if (asset.morphTargetNames.length === 0) {
     return {
       label: 'No Morph Targets',
-      message:
-        'Loaded mesh has no morph targets; the rest-pose reference remains visible.',
+      message: `Loaded mesh has no morph targets; pose audit found ${libraryAudit.totalPoseCount} presets with no compatible targets.`,
       tone: 'destructive',
-      requestedCount: requestedBlendshapeNames.length,
+      requestedCount,
       compatibleCount: 0,
       missingBlendshapeNames,
+      unsupportedBlendshapeNames,
+      activePoseAudit,
+      libraryAudit,
     };
   }
 
-  if (requestedBlendshapeNames.length === 0) {
+  if (activePoseAudit.status === 'neutral') {
     return {
       label: 'Rest Pose',
-      message:
-        'Neutral pose active; all compatible blendshape influences clear.',
+      message: `Neutral pose active; all compatible blendshape influences clear. Library audit: ${auditSummary}.`,
       tone: 'green',
       requestedCount: 0,
       compatibleCount: 0,
       missingBlendshapeNames: [],
+      unsupportedBlendshapeNames,
+      activePoseAudit,
+      libraryAudit,
     };
   }
 
-  if (compatibleCount === 0) {
+  if (activePoseAudit.status === 'unsupported') {
     return {
-      label: 'No Compatible Weights',
-      message: `${poseLabel} targets ${requestedBlendshapeNames.length} blendshapes that are not present on this mesh.`,
+      label: 'Unsupported Preset',
+      message: `${poseLabel} has no active morph-target matches on this mesh. Library audit: ${auditSummary}.`,
       tone: 'amber',
-      requestedCount: requestedBlendshapeNames.length,
+      requestedCount,
       compatibleCount,
       missingBlendshapeNames,
+      unsupportedBlendshapeNames,
+      activePoseAudit,
+      libraryAudit,
     };
   }
 
-  if (missingBlendshapeNames.length > 0) {
+  if (activePoseAudit.status === 'partial') {
     const sampleMissingNames = missingBlendshapeNames.slice(0, 4).join(', ');
+    const sampleUnsupportedNames = unsupportedBlendshapeNames
+      .slice(0, 4)
+      .join(', ');
+    const sampleIssue =
+      sampleMissingNames || sampleUnsupportedNames || 'inactive weights';
 
     return {
       label: 'Partial Blendshape Match',
-      message: `${compatibleCount}/${requestedBlendshapeNames.length} blendshape targets available; missing ${sampleMissingNames}.`,
+      message: `${compatibleCount}/${activePoseAudit.referencedCount} referenced targets active for ${poseLabel}; check ${sampleIssue}. Library audit: ${auditSummary}.`,
       tone: 'amber',
-      requestedCount: requestedBlendshapeNames.length,
+      requestedCount,
       compatibleCount,
       missingBlendshapeNames,
+      unsupportedBlendshapeNames,
+      activePoseAudit,
+      libraryAudit,
     };
   }
 
   return {
     label: 'Blendshape Match',
-    message: `${compatibleCount} compatible blendshape targets driving the mesh.`,
+    message: `${compatibleCount} compatible blendshape targets driving ${poseLabel}. Library audit: ${auditSummary}.`,
     tone: 'green',
-    requestedCount: requestedBlendshapeNames.length,
+    requestedCount,
     compatibleCount,
     missingBlendshapeNames: [],
+    unsupportedBlendshapeNames,
+    activePoseAudit,
+    libraryAudit,
   };
 }
 
@@ -270,6 +308,9 @@ export default function KinematicProviderRuntime({
         requestedCount: 0,
         compatibleCount: 0,
         missingBlendshapeNames: [],
+        unsupportedBlendshapeNames: [],
+        activePoseAudit: null,
+        libraryAudit: null,
       });
       console.error('Failed to initialize deformation provider', error);
     }
