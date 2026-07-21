@@ -67,6 +67,7 @@ function ViewportRegion({ config }: RegionProps) {
         <FaceViewport
           activePoseLabel={activePoseLabel}
           assetUrl={config.assets.faceMeshUrl}
+          textureConfig={config.assets.textures}
         />
       </DataPanelBody>
     </DataPanel>

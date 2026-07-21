@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
 import {
   Box3,
+  Color,
   Mesh,
   Object3D,
+  SRGBColorSpace,
+  Texture,
+  TextureLoader,
   Vector3,
   type Material,
   type MeshStandardMaterial,
@@ -14,6 +18,8 @@ import {
 } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+
+import type { FaceTextureConfig } from '@/config/env';
 
 export type HeadAssetStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
@@ -38,6 +44,13 @@ const emptyHeadAssetState: HeadAssetState = {
   errorMessage: null,
 };
 const basisTranscoderPath = 'https://threejs.org/examples/jsm/libs/basis/';
+const defaultSkinColor = '#f1b79f';
+
+type LoadedFaceTextures = {
+  skin: Texture | null;
+  eye: Texture | null;
+  oral: Texture | null;
+};
 
 type MorphTargetBinding = {
   dictionary: Record<string, number>;
@@ -78,7 +91,64 @@ function clampInfluence(value: number) {
   return Math.min(1, Math.max(0, value));
 }
 
-function prepareNeutralHeadAsset(gltf: GLTF): LoadedHeadAsset {
+function materialIntent(object: Object3D, material: Material) {
+  const searchable = `${object.name} ${material.name}`.toLowerCase();
+
+  if (
+    /\b(eye|iris|sclera|cornea|pupil)\b/.test(searchable) ||
+    searchable.includes('eyeball')
+  ) {
+    return 'eye';
+  }
+
+  if (
+    /\b(oral|mouth|teeth|tooth|gum|palate|tongue)\b/.test(searchable) ||
+    searchable.includes('cavity')
+  ) {
+    return 'oral';
+  }
+
+  return 'skin';
+}
+
+function applyMaterialTexture(
+  object: Object3D,
+  material: Material,
+  textures: LoadedFaceTextures,
+  textureConfig?: FaceTextureConfig,
+) {
+  material.needsUpdate = true;
+
+  if (!isMeshStandardMaterial(material)) {
+    return;
+  }
+
+  const intent = materialIntent(object, material);
+  const texture =
+    intent === 'eye'
+      ? textures.eye
+      : intent === 'oral'
+        ? textures.oral
+        : textures.skin;
+
+  material.color = new Color(
+    intent === 'skin'
+      ? (textureConfig?.skinColor ?? defaultSkinColor)
+      : '#ffffff',
+  );
+  material.roughness = Math.max(material.roughness, texture ? 0.56 : 0.48);
+  material.metalness = Math.min(material.metalness, 0.08);
+
+  if (texture) {
+    material.map = texture;
+  }
+}
+
+function prepareNeutralHeadAsset(
+  gltf: GLTF,
+  textures: LoadedFaceTextures,
+  textureConfig?: FaceTextureConfig,
+): LoadedHeadAsset {
   const morphTargetNames = new Set<string>();
   const morphTargetBindings: MorphTargetBinding[] = [];
 
@@ -100,13 +170,9 @@ function prepareNeutralHeadAsset(gltf: GLTF): LoadedHeadAsset {
       morphTargetNames.add(name);
     });
 
-    forEachMaterial(object.material, (material) => {
-      material.needsUpdate = true;
-      if (isMeshStandardMaterial(material)) {
-        material.roughness = Math.max(material.roughness, 0.48);
-        material.metalness = Math.min(material.metalness, 0.08);
-      }
-    });
+    forEachMaterial(object.material, (material) =>
+      applyMaterialTexture(object, material, textures, textureConfig),
+    );
   });
 
   const box = new Box3().setFromObject(gltf.scene);
@@ -162,9 +228,63 @@ function messageFromError(error: unknown) {
   return 'Unable to load the configured glTF face mesh.';
 }
 
+function loadTextureOrFallback(
+  loader: TextureLoader,
+  url: string,
+  label: string,
+): Promise<Texture | null> {
+  const normalizedUrl = url.trim();
+
+  if (!normalizedUrl) {
+    return Promise.resolve(null);
+  }
+
+  return new Promise((resolve) => {
+    loader.load(
+      normalizedUrl,
+      (texture) => {
+        texture.colorSpace = SRGBColorSpace;
+        texture.flipY = false;
+        texture.needsUpdate = true;
+        resolve(texture);
+      },
+      undefined,
+      (error) => {
+        console.warn(
+          `[texture] ${label} diffuse map failed to load; using procedural material fallback.`,
+          error,
+        );
+        resolve(null);
+      },
+    );
+  });
+}
+
+async function loadFaceTextures(
+  textureConfig?: FaceTextureConfig,
+): Promise<LoadedFaceTextures> {
+  if (!textureConfig) {
+    return {
+      skin: null,
+      eye: null,
+      oral: null,
+    };
+  }
+
+  const loader = new TextureLoader();
+  const [skin, eye, oral] = await Promise.all([
+    loadTextureOrFallback(loader, textureConfig.skinTextureUrl, 'skin'),
+    loadTextureOrFallback(loader, textureConfig.eyeTextureUrl, 'eye'),
+    loadTextureOrFallback(loader, textureConfig.oralTextureUrl, 'oral'),
+  ]);
+
+  return { skin, eye, oral };
+}
+
 export function useGltfHeadAsset(
   assetUrl: string,
   renderer: WebGLRenderer,
+  textureConfig?: FaceTextureConfig,
 ): HeadAssetState {
   const [state, setState] = useState<HeadAssetState>(emptyHeadAssetState);
 
@@ -196,15 +316,23 @@ export function useGltfHeadAsset(
       errorMessage: null,
     });
 
+    const textureLoadPromise = loadFaceTextures(textureConfig);
+
     loader.load(
       normalizedAssetUrl,
-      (gltf) => {
+      async (gltf) => {
         if (disposed) {
           return;
         }
 
         try {
-          const asset = prepareNeutralHeadAsset(gltf);
+          const textures = await textureLoadPromise;
+
+          if (disposed) {
+            return;
+          }
+
+          const asset = prepareNeutralHeadAsset(gltf, textures, textureConfig);
 
           setState({
             status: 'loaded',
@@ -258,7 +386,7 @@ export function useGltfHeadAsset(
       disposed = true;
       ktx2Loader.dispose();
     };
-  }, [assetUrl, renderer]);
+  }, [assetUrl, renderer, textureConfig]);
 
   return state;
 }
