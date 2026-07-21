@@ -19,6 +19,25 @@ const defaultEnv = {
   VITE_POSE_DATA_URL: './data/poses.json',
   VITE_STATIC_BASE_PATH: './',
 };
+const removedViewportEnvNames = [
+  'VITE_SKIN_TEXTURE_URL',
+  'VITE_EYE_TEXTURE_URL',
+  'VITE_ORAL_TEXTURE_URL',
+  'VITE_SKIN_COLOR',
+  'VITE_FACE_MATERIAL_TRANSFER',
+  'VITE_SKIN_PROJECTION_OFFSET_X',
+  'VITE_SKIN_PROJECTION_OFFSET_Y',
+  'VITE_SKIN_PROJECTION_SCALE',
+  'VITE_SKIN_PROJECTION_ROTATION_Y',
+  'VITE_ENABLE_PROJECTION_ALIGNMENT_PANEL',
+  'VITE_HAIR_MESH_URL',
+];
+const removedEnvSourceFiles = [
+  '.env.example',
+  'docs/self-hosting.md',
+  'docs/system-overleaf.tex',
+  'src/config/env.ts',
+];
 
 function parseEnvFile(filePath) {
   if (!existsSync(filePath)) {
@@ -129,6 +148,27 @@ if (!assetFiles.some((fileName) => fileName.endsWith('.js'))) {
 
 if (!assetFiles.some((fileName) => fileName.endsWith('.css'))) {
   fail('compiled assets directory has no CSS bundle');
+}
+
+for (const relativeFilePath of removedEnvSourceFiles) {
+  const sourcePath = path.resolve(projectRoot, relativeFilePath);
+
+  if (!existsSync(sourcePath)) {
+    continue;
+  }
+
+  const source = readFileSync(sourcePath, 'utf8');
+  const lingeringEnvNames = removedViewportEnvNames.filter((envName) =>
+    source.includes(envName),
+  );
+
+  if (lingeringEnvNames.length > 0) {
+    fail(
+      `${relativeFilePath} still references removed viewport env variables: ${lingeringEnvNames.join(
+        ', ',
+      )}`,
+    );
+  }
 }
 
 if (staticBasePath === './' && !indexHtml.includes('./assets/')) {
