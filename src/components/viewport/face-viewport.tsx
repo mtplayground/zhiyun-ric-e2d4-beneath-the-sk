@@ -7,6 +7,7 @@ import {
 } from 'three';
 import { OrbitControls as OrbitControlsImpl } from 'three/examples/jsm/controls/OrbitControls.js';
 
+import type { FaceTextureConfig } from '@/config/env';
 import { cn } from '@/lib/utils';
 
 import { useGltfHeadAsset, type HeadAssetState } from './gltf-head-loader';
@@ -18,6 +19,7 @@ import KinematicProviderRuntime, {
 type FaceViewportProps = {
   activePoseLabel: string;
   assetUrl: string;
+  textureConfig: FaceTextureConfig;
 };
 
 function OrbitCameraControls() {
@@ -123,13 +125,15 @@ function LoadedHead({
 
 function HeadAssetLayer({
   assetUrl,
+  textureConfig,
   onAssetStateChange,
 }: {
   assetUrl: string;
+  textureConfig: FaceTextureConfig;
   onAssetStateChange: (state: HeadAssetState) => void;
 }) {
   const gl = useThree((state) => state.gl);
-  const headAsset = useGltfHeadAsset(assetUrl, gl);
+  const headAsset = useGltfHeadAsset(assetUrl, gl, textureConfig);
 
   useEffect(() => {
     onAssetStateChange(headAsset);
@@ -144,11 +148,13 @@ function HeadAssetLayer({
 
 function ViewportScene({
   assetUrl,
+  textureConfig,
   asset,
   onAssetStateChange,
   onDiagnosticChange,
 }: {
   assetUrl: string;
+  textureConfig: FaceTextureConfig;
   asset: HeadAssetState['asset'];
   onAssetStateChange: (state: HeadAssetState) => void;
   onDiagnosticChange: (diagnostic: ProviderRuntimeDiagnostic | null) => void;
@@ -168,6 +174,7 @@ function ViewportScene({
       <pointLight position={[0, 1.2, -2.8]} intensity={0.8} color="#38bdf8" />
       <HeadAssetLayer
         assetUrl={assetUrl}
+        textureConfig={textureConfig}
         onAssetStateChange={onAssetStateChange}
       />
       <KinematicProviderRuntime
@@ -199,6 +206,7 @@ function toneClass(tone: ProviderRuntimeDiagnosticTone) {
 export default function FaceViewport({
   activePoseLabel,
   assetUrl,
+  textureConfig,
 }: FaceViewportProps) {
   const [headAsset, setHeadAsset] = useState<HeadAssetState>({
     status: 'idle',
@@ -244,6 +252,7 @@ export default function FaceViewport({
       >
         <ViewportScene
           assetUrl={assetUrl}
+          textureConfig={textureConfig}
           asset={headAsset.asset}
           onAssetStateChange={handleAssetStateChange}
           onDiagnosticChange={handleProviderDiagnosticChange}

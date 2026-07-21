@@ -10,10 +10,24 @@ export type FeatureFlags = {
   precomputePanel: boolean;
 };
 
+export const faceMaterialTransferModes = ['auto', 'projected', 'uv'] as const;
+
+export type FaceMaterialTransferMode =
+  (typeof faceMaterialTransferModes)[number];
+
+export type FaceTextureConfig = {
+  skinTextureUrl: string;
+  eyeTextureUrl: string;
+  oralTextureUrl: string;
+  skinColor: string;
+  faceMaterialTransfer: FaceMaterialTransferMode;
+};
+
 export type AppConfig = {
   assets: {
     faceMeshUrl: string;
     poseDataUrl: string;
+    textures: FaceTextureConfig;
   };
   deformationProvider: DeformationProviderId;
   features: FeatureFlags;
@@ -23,6 +37,11 @@ type RawEnv = Pick<
   ImportMetaEnv,
   | 'VITE_FACE_MESH_URL'
   | 'VITE_POSE_DATA_URL'
+  | 'VITE_SKIN_TEXTURE_URL'
+  | 'VITE_EYE_TEXTURE_URL'
+  | 'VITE_ORAL_TEXTURE_URL'
+  | 'VITE_SKIN_COLOR'
+  | 'VITE_FACE_MATERIAL_TRANSFER'
   | 'VITE_DEFORMATION_PROVIDER'
   | 'VITE_ENABLE_READOUT_PANEL'
   | 'VITE_ENABLE_DEFORMATION_CURVE_PANEL'
@@ -32,6 +51,11 @@ type RawEnv = Pick<
 const defaultConfig = {
   faceMeshUrl: 'https://threejs.org/examples/models/gltf/facecap.glb',
   poseDataUrl: './data/poses.json',
+  skinTextureUrl: './textures/skin-diffuse.png',
+  eyeTextureUrl: './textures/eye-diffuse.png',
+  oralTextureUrl: './textures/oral-diffuse.png',
+  skinColor: '#f1b79f',
+  faceMaterialTransfer: 'auto',
   deformationProvider: 'kinematic-blendshape',
   readoutPanel: true,
   deformationCurvePanel: true,
@@ -81,6 +105,36 @@ function parseBooleanFlag(
   );
 }
 
+function parseSkinColor(value: string | undefined) {
+  const color = normalizePath(value, defaultConfig.skinColor);
+
+  if (/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color)) {
+    return color;
+  }
+
+  throw new Error(
+    `Invalid VITE_SKIN_COLOR value "${value}". Use a CSS hex color such as #f1b79f.`,
+  );
+}
+
+function parseFaceMaterialTransfer(
+  value: string | undefined,
+): FaceMaterialTransferMode {
+  const mode = normalizePath(value, defaultConfig.faceMaterialTransfer)
+    .trim()
+    .toLowerCase();
+
+  if (faceMaterialTransferModes.includes(mode as FaceMaterialTransferMode)) {
+    return mode as FaceMaterialTransferMode;
+  }
+
+  throw new Error(
+    `Unsupported VITE_FACE_MATERIAL_TRANSFER "${value}". Expected one of: ${faceMaterialTransferModes.join(
+      ', ',
+    )}.`,
+  );
+}
+
 export function loadAppConfig(env: RawEnv = import.meta.env): AppConfig {
   return {
     assets: {
@@ -92,6 +146,24 @@ export function loadAppConfig(env: RawEnv = import.meta.env): AppConfig {
         env.VITE_POSE_DATA_URL,
         defaultConfig.poseDataUrl,
       ),
+      textures: {
+        skinTextureUrl: normalizePath(
+          env.VITE_SKIN_TEXTURE_URL,
+          defaultConfig.skinTextureUrl,
+        ),
+        eyeTextureUrl: normalizePath(
+          env.VITE_EYE_TEXTURE_URL,
+          defaultConfig.eyeTextureUrl,
+        ),
+        oralTextureUrl: normalizePath(
+          env.VITE_ORAL_TEXTURE_URL,
+          defaultConfig.oralTextureUrl,
+        ),
+        skinColor: parseSkinColor(env.VITE_SKIN_COLOR),
+        faceMaterialTransfer: parseFaceMaterialTransfer(
+          env.VITE_FACE_MATERIAL_TRANSFER,
+        ),
+      },
     },
     deformationProvider: parseProvider(env.VITE_DEFORMATION_PROVIDER),
     features: {

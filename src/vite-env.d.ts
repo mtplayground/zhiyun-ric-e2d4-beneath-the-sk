@@ -3,6 +3,11 @@
 interface ImportMetaEnv {
   readonly VITE_FACE_MESH_URL?: string;
   readonly VITE_POSE_DATA_URL?: string;
+  readonly VITE_SKIN_TEXTURE_URL?: string;
+  readonly VITE_EYE_TEXTURE_URL?: string;
+  readonly VITE_ORAL_TEXTURE_URL?: string;
+  readonly VITE_SKIN_COLOR?: string;
+  readonly VITE_FACE_MATERIAL_TRANSFER?: string;
   readonly VITE_DEFORMATION_PROVIDER?: string;
   readonly VITE_STATIC_BASE_PATH?: string;
   readonly VITE_ENABLE_READOUT_PANEL?: string;
