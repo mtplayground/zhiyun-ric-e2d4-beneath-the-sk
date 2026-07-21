@@ -1,3 +1,4 @@
+import ProjectFooter from '@/components/footer/project-footer';
 import { appConfig } from '@/config/env';
 import {
   ControlPanelRegion,
@@ -26,6 +27,8 @@ export default function DashboardLayout() {
             <LiveReadoutRegion />
           </aside>
         </div>
+
+        <ProjectFooter />
       </div>
     </main>
   );
