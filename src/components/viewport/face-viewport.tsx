@@ -303,6 +303,30 @@ export default function FaceViewport({
             {providerDiagnostic.missingBlendshapeNames.slice(0, 6).join(', ')}
           </p>
         ) : null}
+        {providerDiagnostic &&
+        providerDiagnostic.unsupportedBlendshapeNames.length > 0 ? (
+          <p className="truncate text-muted-foreground">
+            Unsupported:{' '}
+            {providerDiagnostic.unsupportedBlendshapeNames
+              .slice(0, 6)
+              .join(', ')}
+          </p>
+        ) : null}
+        {providerDiagnostic?.activePoseAudit ? (
+          <p className="text-muted-foreground">
+            Preset audit: {providerDiagnostic.activePoseAudit.activeCount}{' '}
+            active / {providerDiagnostic.activePoseAudit.missingCount} missing /{' '}
+            {providerDiagnostic.activePoseAudit.unsupportedCount} unsupported
+          </p>
+        ) : null}
+        {providerDiagnostic?.libraryAudit ? (
+          <p className="text-muted-foreground">
+            Library audit: {providerDiagnostic.libraryAudit.supportedPoseCount}{' '}
+            supported / {providerDiagnostic.libraryAudit.partialPoseCount}{' '}
+            partial / {providerDiagnostic.libraryAudit.unsupportedPoseCount}{' '}
+            unsupported
+          </p>
+        ) : null}
       </div>
     </div>
   );

@@ -1,4 +1,17 @@
 export {
+  auditBlendshapeWeights,
+  auditPoseLibrary,
+  auditPoseMapping,
+  findPoseAuditByLabel,
+} from './pose-audit';
+export type {
+  PoseAuditResult,
+  PoseAuditStatus,
+  PoseBlendshapeAuditEntry,
+  PoseBlendshapeAuditStatus,
+  PoseLibraryAuditSummary,
+} from './pose-audit';
+export {
   actionUnitPoseMappings,
   allPoseMappings,
   expressionPoseMappings,
