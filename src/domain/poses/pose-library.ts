@@ -146,7 +146,6 @@ export const actionUnitPoseMappings = [
     weightsByProvider: weights({
       jawOpen: 0.58,
       mouthFunnel: 0.08,
-      mouthClose: 0,
     }),
   },
 ] as const satisfies readonly PoseMapping[];
@@ -308,14 +307,16 @@ export const phonemePoseMappings = [
     code: 'T',
     label: 'T',
     category: 'phoneme',
-    description: 'Tongue-forward closed stop pose.',
+    description:
+      'Dental stop pose using firm lip closure and subtle jaw/lip shaping.',
     weightsByProvider: weights({
-      mouthClose: 0.58,
-      tongueOut: 0.82,
-      jawOpen: 0.2,
-      mouthFunnel: 0.1,
-      mouthUpperUpLeft: 0.16,
-      mouthUpperUpRight: 0.16,
+      mouthClose: 0.72,
+      jawOpen: 0.16,
+      mouthFunnel: 0.08,
+      mouthUpperUpLeft: 0.22,
+      mouthUpperUpRight: 0.22,
+      mouthLowerDownLeft: 0.12,
+      mouthLowerDownRight: 0.12,
     }),
   },
   {
