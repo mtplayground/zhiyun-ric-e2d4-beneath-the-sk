@@ -7,8 +7,13 @@ import {
 } from 'three';
 import { OrbitControls as OrbitControlsImpl } from 'three/examples/jsm/controls/OrbitControls.js';
 
+import { cn } from '@/lib/utils';
+
 import { useGltfHeadAsset, type HeadAssetState } from './gltf-head-loader';
-import KinematicProviderRuntime from './kinematic-provider-runtime';
+import KinematicProviderRuntime, {
+  type ProviderRuntimeDiagnostic,
+  type ProviderRuntimeDiagnosticTone,
+} from './kinematic-provider-runtime';
 
 type FaceViewportProps = {
   activePoseLabel: string;
@@ -141,10 +146,12 @@ function ViewportScene({
   assetUrl,
   asset,
   onAssetStateChange,
+  onDiagnosticChange,
 }: {
   assetUrl: string;
   asset: HeadAssetState['asset'];
   onAssetStateChange: (state: HeadAssetState) => void;
+  onDiagnosticChange: (diagnostic: ProviderRuntimeDiagnostic | null) => void;
 }) {
   return (
     <>
@@ -163,10 +170,30 @@ function ViewportScene({
         assetUrl={assetUrl}
         onAssetStateChange={onAssetStateChange}
       />
-      <KinematicProviderRuntime asset={asset} assetUrl={assetUrl} />
+      <KinematicProviderRuntime
+        asset={asset}
+        assetUrl={assetUrl}
+        onDiagnosticChange={onDiagnosticChange}
+      />
       <OrbitCameraControls />
     </>
   );
+}
+
+function toneClass(tone: ProviderRuntimeDiagnosticTone) {
+  if (tone === 'green') {
+    return 'border-telemetry-green/40 text-telemetry-green';
+  }
+
+  if (tone === 'amber') {
+    return 'border-telemetry-amber/40 text-telemetry-amber';
+  }
+
+  if (tone === 'destructive') {
+    return 'border-destructive/50 text-destructive';
+  }
+
+  return 'border-telemetry-cyan/40 text-telemetry-cyan';
 }
 
 export default function FaceViewport({
@@ -179,9 +206,17 @@ export default function FaceViewport({
     asset: null,
     errorMessage: null,
   });
+  const [providerDiagnostic, setProviderDiagnostic] =
+    useState<ProviderRuntimeDiagnostic | null>(null);
   const handleAssetStateChange = useCallback((state: HeadAssetState) => {
     setHeadAsset(state);
   }, []);
+  const handleProviderDiagnosticChange = useCallback(
+    (diagnostic: ProviderRuntimeDiagnostic | null) => {
+      setProviderDiagnostic(diagnostic);
+    },
+    [],
+  );
   const morphTargetCount = headAsset.asset?.morphTargetNames.length ?? 0;
   const statusLabel =
     headAsset.status === 'loading'
@@ -211,6 +246,7 @@ export default function FaceViewport({
           assetUrl={assetUrl}
           asset={headAsset.asset}
           onAssetStateChange={handleAssetStateChange}
+          onDiagnosticChange={handleProviderDiagnosticChange}
         />
       </Canvas>
       <div className="pointer-events-none absolute left-3 top-3 grid gap-1 rounded-md border border-border bg-background/75 px-3 py-2 font-mono text-xs backdrop-blur">
@@ -230,6 +266,42 @@ export default function FaceViewport({
           <span className="max-w-72 truncate text-muted-foreground">
             {headAsset.errorMessage}
           </span>
+        ) : null}
+      </div>
+      <div className="pointer-events-none absolute bottom-3 left-3 right-3 grid gap-2 rounded-md border border-border bg-background/80 p-3 font-mono text-xs shadow-lg shadow-black/25 backdrop-blur sm:left-auto sm:w-[24rem]">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[0.68rem] uppercase text-muted-foreground">
+            Provider Health
+          </span>
+          <span
+            className={cn(
+              'rounded-sm border px-2 py-1 text-[0.68rem] uppercase leading-none',
+              providerDiagnostic
+                ? toneClass(providerDiagnostic.tone)
+                : headAsset.status === 'error'
+                  ? toneClass('destructive')
+                  : toneClass('cyan'),
+            )}
+          >
+            {providerDiagnostic?.label ??
+              (headAsset.status === 'error' ? 'Asset Error' : 'Standby')}
+          </span>
+        </div>
+        <p className="text-muted-foreground">
+          {providerDiagnostic?.message ??
+            (headAsset.status === 'error'
+              ? (headAsset.errorMessage ??
+                'The configured face mesh could not be loaded.')
+              : headAsset.status === 'loading'
+                ? 'Loading the configured face mesh before activating blendshape telemetry.'
+                : 'Waiting for provider telemetry from the viewport runtime.')}
+        </p>
+        {providerDiagnostic &&
+        providerDiagnostic.missingBlendshapeNames.length > 0 ? (
+          <p className="truncate text-muted-foreground">
+            Missing:{' '}
+            {providerDiagnostic.missingBlendshapeNames.slice(0, 6).join(', ')}
+          </p>
         ) : null}
       </div>
     </div>

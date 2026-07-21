@@ -141,17 +141,21 @@ export const useControlState = create<ControlState>((set) => ({
     });
   },
   setActivationValues: (values, options) => {
-    set((state) => ({
-      activeControlMode:
-        options?.mode === state.activeControlMode
-          ? options.mode
-          : state.activeControlMode,
-      currentFrameIndex:
-        options?.frameIndex === undefined
-          ? state.currentFrameIndex
-          : normalizeFrameIndex(options.frameIndex),
-      activationValues: normalizeActivationValues(values),
-    }));
+    set((state) => {
+      const acceptsActivationValues =
+        options?.mode === undefined || options.mode === state.activeControlMode;
+
+      return {
+        activeControlMode: state.activeControlMode,
+        currentFrameIndex:
+          options?.frameIndex === undefined
+            ? state.currentFrameIndex
+            : normalizeFrameIndex(options.frameIndex),
+        activationValues: acceptsActivationValues
+          ? normalizeActivationValues(values)
+          : state.activationValues,
+      };
+    });
   },
   setCurrentFrameIndex: (frameIndex) => {
     set({ currentFrameIndex: normalizeFrameIndex(frameIndex) });
