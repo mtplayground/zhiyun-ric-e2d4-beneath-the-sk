@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { applyControlPose } from '@/components/controls/apply-control-pose';
-import { findPoseMappingById, type PoseMapping } from '@/domain/poses';
+import { getKeyboardPoseEntries, type KeyboardPoseEntry } from '@/domain/poses';
 import { cn } from '@/lib/utils';
 import {
   controlActions,
@@ -13,49 +13,8 @@ type KeyboardModePanelProps = {
   activationCount: number;
 };
 
-type KeyboardPoseMapping = {
-  key: string;
-  label: string;
-  pose: PoseMapping;
-};
-
 const helperLine = 'Type: n, a, i, t, e, u, v, y, s, f, b, m, q, c, p, 0';
-
-const keyboardPoseSource = [
-  ['0', 'Neu', 'au-0-neutral'],
-  ['n', 'N', 'phoneme-n'],
-  ['a', 'AA', 'phoneme-aa'],
-  ['i', 'IY', 'phoneme-iy'],
-  ['t', 'T', 'phoneme-t'],
-  ['e', 'EH', 'phoneme-eh'],
-  ['u', 'UW', 'phoneme-uw'],
-  ['v', 'V', 'phoneme-v'],
-  ['y', 'Y', 'phoneme-y'],
-  ['s', 'Smile', 'expression-smile'],
-  ['f', 'Frown', 'expression-frown'],
-  ['b', 'Brow', 'expression-brow'],
-  ['m', 'Mouth', 'expression-mouth'],
-  ['q', 'Squint', 'expression-squint'],
-  ['c', 'Cheek', 'expression-cheek'],
-  ['p', 'Pucker', 'expression-pucker'],
-] as const;
-
-function poseById(poseId: string) {
-  const pose = findPoseMappingById(poseId);
-
-  if (!pose) {
-    throw new Error(`Missing keyboard pose mapping for ${poseId}.`);
-  }
-
-  return pose;
-}
-
-const keyboardPoseMappings: readonly KeyboardPoseMapping[] =
-  keyboardPoseSource.map(([key, label, poseId]) => ({
-    key,
-    label,
-    pose: poseById(poseId),
-  }));
+const keyboardPoseEntries = getKeyboardPoseEntries();
 
 function isEditableTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) {
@@ -75,7 +34,7 @@ function isEditableTarget(target: EventTarget | null) {
   );
 }
 
-function applyKeyboardPose(mapping: KeyboardPoseMapping) {
+function applyKeyboardPose(mapping: KeyboardPoseEntry) {
   applyControlPose(mapping.pose, 'keyboard');
 }
 
@@ -89,7 +48,7 @@ export default function KeyboardModePanel({
   );
   const activeKey = useMemo(
     () =>
-      keyboardPoseMappings.find(
+      keyboardPoseEntries.find(
         (mapping) => mapping.pose.label === activePoseLabel,
       )?.key ?? null,
     [activePoseLabel],
@@ -115,7 +74,7 @@ export default function KeyboardModePanel({
         return;
       }
 
-      const mapping = keyboardPoseMappings.find(
+      const mapping = keyboardPoseEntries.find(
         (candidate) => candidate.key === event.key.toLowerCase(),
       );
 
@@ -153,7 +112,7 @@ export default function KeyboardModePanel({
       </label>
 
       <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-8 xl:grid-cols-4">
-        {keyboardPoseMappings.map((mapping) => {
+        {keyboardPoseEntries.map((mapping) => {
           const active = keyboardEnabled && activeKey === mapping.key;
 
           return (

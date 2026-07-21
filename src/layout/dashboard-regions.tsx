@@ -7,6 +7,7 @@ import {
   DataPanelTitle,
 } from '@/components/ui/data-panel';
 import KeyboardModePanel from '@/components/controls/keyboard-mode-panel';
+import PrecomputeController from '@/components/controls/precompute-controller';
 import PresetSelectors from '@/components/controls/preset-selectors';
 import ResetToNeutralControl from '@/components/controls/reset-to-neutral-control';
 import FaceViewport from '@/components/viewport/face-viewport';
@@ -122,6 +123,7 @@ function ControlPanelRegion({ config }: RegionProps) {
             <KeyboardModePanel activationCount={activationCount} />
           </div>
         </div>
+        {config.features.precomputePanel ? <PrecomputeController /> : null}
         <div className="grid gap-2">
           {featureRows.map(([label, enabled]) => (
             <div
