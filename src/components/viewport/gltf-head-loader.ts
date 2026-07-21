@@ -29,6 +29,8 @@ export type LoadedHeadAsset = {
   scene: Object3D;
   morphTargetNames: string[];
   textureDiagnostic: TextureTransferDiagnostic | null;
+  hasTongueGeometry: boolean;
+  hasTongueMorphTarget: boolean;
   applyBlendshapeWeights: (weights: Record<string, number>) => void;
   readBlendshapeWeights: () => Record<string, number>;
 };
@@ -146,6 +148,10 @@ function materialIntent(
   }
 
   return 'skin';
+}
+
+function isTongueSlot(object: Object3D, material: Material) {
+  return `${object.name} ${material.name}`.toLowerCase().includes('tongue');
 }
 
 function slotLabel(object: Object3D, material: Material) {
@@ -403,6 +409,7 @@ function prepareNeutralHeadAsset(
   const morphTargetNames = new Set<string>();
   const morphTargetBindings: MorphTargetBinding[] = [];
   const materialSlots: MaterialSlot[] = [];
+  let hasTongueGeometry = false;
 
   gltf.scene.traverse((object) => {
     if (!isRenderableMesh(object)) {
@@ -426,6 +433,10 @@ function prepareNeutralHeadAsset(
       const slot = createMaterialSlot(object, material);
       prepareMaterialLighting(slot, textureConfig);
       materialSlots.push(slot);
+
+      if (isTongueSlot(object, material)) {
+        hasTongueGeometry = true;
+      }
     });
   });
 
@@ -451,10 +462,18 @@ function prepareNeutralHeadAsset(
   gltf.scene.rotation.set(0, 0, 0);
   gltf.scene.updateMatrixWorld(true);
 
+  const sortedMorphTargetNames = [...morphTargetNames].sort((a, b) =>
+    a.localeCompare(b),
+  );
+
   return {
     scene: gltf.scene,
-    morphTargetNames: [...morphTargetNames].sort((a, b) => a.localeCompare(b)),
+    morphTargetNames: sortedMorphTargetNames,
     textureDiagnostic,
+    hasTongueGeometry,
+    hasTongueMorphTarget: sortedMorphTargetNames.some((name) =>
+      name.toLowerCase().includes('tongue'),
+    ),
     applyBlendshapeWeights: (weights) => {
       morphTargetBindings.forEach(({ dictionary, influences }) => {
         Object.entries(dictionary).forEach(([name, index]) => {

@@ -9,6 +9,7 @@ import { OrbitControls as OrbitControlsImpl } from 'three/examples/jsm/controls/
 
 import type { FaceTextureConfig } from '@/config/env';
 import { cn } from '@/lib/utils';
+import { useActivationValues } from '@/state';
 
 import { useGltfHeadAsset, type HeadAssetState } from './gltf-head-loader';
 import { HairAssetLayer, type HairAssetState } from './hair-asset-layer';
@@ -16,6 +17,7 @@ import KinematicProviderRuntime, {
   type ProviderRuntimeDiagnostic,
   type ProviderRuntimeDiagnosticTone,
 } from './kinematic-provider-runtime';
+import { ProceduralTongue } from './procedural-tongue';
 
 type FaceViewportProps = {
   activePoseLabel: string;
@@ -153,6 +155,7 @@ function ViewportScene({
   hairMeshUrl,
   textureConfig,
   asset,
+  tongueIntensity,
   onAssetStateChange,
   onHairAssetStateChange,
   onDiagnosticChange,
@@ -161,6 +164,7 @@ function ViewportScene({
   hairMeshUrl: string | null;
   textureConfig: FaceTextureConfig;
   asset: HeadAssetState['asset'];
+  tongueIntensity: number;
   onAssetStateChange: (state: HeadAssetState) => void;
   onHairAssetStateChange: (state: HairAssetState) => void;
   onDiagnosticChange: (diagnostic: ProviderRuntimeDiagnostic | null) => void;
@@ -187,6 +191,12 @@ function ViewportScene({
         assetUrl={hairMeshUrl}
         onStatusChange={onHairAssetStateChange}
       />
+      {asset && !asset.hasTongueGeometry ? (
+        <ProceduralTongue
+          intensity={tongueIntensity}
+          oralTextureUrl={textureConfig.oralTextureUrl}
+        />
+      ) : null}
       <KinematicProviderRuntime
         asset={asset}
         assetUrl={assetUrl}
@@ -230,6 +240,7 @@ export default function FaceViewport({
   const [hairAssetState, setHairAssetState] = useState<HairAssetState | null>(
     null,
   );
+  const activationValues = useActivationValues();
   const handleAssetStateChange = useCallback((state: HeadAssetState) => {
     setHeadAsset(state);
   }, []);
@@ -244,6 +255,11 @@ export default function FaceViewport({
   }, []);
   const morphTargetCount = headAsset.asset?.morphTargetNames.length ?? 0;
   const textureDiagnostic = headAsset.asset?.textureDiagnostic ?? null;
+  const tongueIntensity =
+    Object.entries(activationValues)
+      .filter(([name]) => name.toLowerCase().includes('tongue'))
+      .reduce((maxValue, [, value]) => Math.max(maxValue, value), 0) ||
+    (activePoseLabel === 'T' ? 0.8 : 0);
   const statusLabel =
     headAsset.status === 'loading'
       ? `Loading ${Math.round(headAsset.progress * 100)}%`
@@ -273,6 +289,7 @@ export default function FaceViewport({
           hairMeshUrl={hairMeshUrl}
           textureConfig={textureConfig}
           asset={headAsset.asset}
+          tongueIntensity={tongueIntensity}
           onAssetStateChange={handleAssetStateChange}
           onHairAssetStateChange={handleHairAssetStateChange}
           onDiagnosticChange={handleProviderDiagnosticChange}
@@ -306,6 +323,16 @@ export default function FaceViewport({
                 : hairAssetState.status === 'loading'
                   ? 'loading mesh'
                   : `fallback cap (${hairAssetState.errorMessage ?? 'load failed'})`}
+          </span>
+        ) : null}
+        {headAsset.asset ? (
+          <span className="max-w-72 truncate text-muted-foreground">
+            Tongue:{' '}
+            {headAsset.asset.hasTongueGeometry
+              ? `mesh${headAsset.asset.hasTongueMorphTarget ? ' + morph' : ''}`
+              : tongueIntensity > 0.01
+                ? `procedural active ${tongueIntensity.toFixed(2)}`
+                : 'procedural hidden'}
           </span>
         ) : null}
       </div>
