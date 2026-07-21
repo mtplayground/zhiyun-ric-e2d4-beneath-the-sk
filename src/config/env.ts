@@ -8,6 +8,7 @@ export type FeatureFlags = {
   readoutPanel: boolean;
   deformationCurvePanel: boolean;
   precomputePanel: boolean;
+  projectionAlignmentPanel: boolean;
 };
 
 export const faceMaterialTransferModes = ['auto', 'projected', 'uv'] as const;
@@ -15,12 +16,20 @@ export const faceMaterialTransferModes = ['auto', 'projected', 'uv'] as const;
 export type FaceMaterialTransferMode =
   (typeof faceMaterialTransferModes)[number];
 
+export type ProjectionAlignmentConfig = {
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+  rotationYDegrees: number;
+};
+
 export type FaceTextureConfig = {
   skinTextureUrl: string;
   eyeTextureUrl: string;
   oralTextureUrl: string;
   skinColor: string;
   faceMaterialTransfer: FaceMaterialTransferMode;
+  projectionAlignment: ProjectionAlignmentConfig;
 };
 
 export type AppConfig = {
@@ -42,10 +51,15 @@ type RawEnv = Pick<
   | 'VITE_ORAL_TEXTURE_URL'
   | 'VITE_SKIN_COLOR'
   | 'VITE_FACE_MATERIAL_TRANSFER'
+  | 'VITE_SKIN_PROJECTION_OFFSET_X'
+  | 'VITE_SKIN_PROJECTION_OFFSET_Y'
+  | 'VITE_SKIN_PROJECTION_SCALE'
+  | 'VITE_SKIN_PROJECTION_ROTATION_Y'
   | 'VITE_DEFORMATION_PROVIDER'
   | 'VITE_ENABLE_READOUT_PANEL'
   | 'VITE_ENABLE_DEFORMATION_CURVE_PANEL'
   | 'VITE_ENABLE_PRECOMPUTE_PANEL'
+  | 'VITE_ENABLE_PROJECTION_ALIGNMENT_PANEL'
 >;
 
 const defaultConfig = {
@@ -56,11 +70,16 @@ const defaultConfig = {
   oralTextureUrl: './textures/oral-diffuse.png',
   skinColor: '#f1b79f',
   faceMaterialTransfer: 'auto',
+  skinProjectionOffsetX: 0,
+  skinProjectionOffsetY: 0,
+  skinProjectionScale: 1,
+  skinProjectionRotationY: 0,
   deformationProvider: 'kinematic-blendshape',
   readoutPanel: true,
   deformationCurvePanel: true,
   precomputePanel: true,
-} satisfies Record<string, string | boolean>;
+  projectionAlignmentPanel: false,
+} satisfies Record<string, string | number | boolean>;
 
 function normalizePath(value: string | undefined, fallback: string) {
   const trimmed = value?.trim();
@@ -135,6 +154,36 @@ function parseFaceMaterialTransfer(
   );
 }
 
+function parseNumberSetting({
+  value,
+  fallback,
+  envName,
+  min,
+  max,
+}: {
+  value: string | undefined;
+  fallback: number;
+  envName: string;
+  min: number;
+  max: number;
+}) {
+  const normalized = value?.trim();
+
+  if (!normalized) {
+    return fallback;
+  }
+
+  const parsed = Number.parseFloat(normalized);
+
+  if (!Number.isFinite(parsed) || parsed < min || parsed > max) {
+    throw new Error(
+      `Invalid ${envName} value "${value}". Use a number from ${min} to ${max}.`,
+    );
+  }
+
+  return parsed;
+}
+
 export function loadAppConfig(env: RawEnv = import.meta.env): AppConfig {
   return {
     assets: {
@@ -163,6 +212,36 @@ export function loadAppConfig(env: RawEnv = import.meta.env): AppConfig {
         faceMaterialTransfer: parseFaceMaterialTransfer(
           env.VITE_FACE_MATERIAL_TRANSFER,
         ),
+        projectionAlignment: {
+          offsetX: parseNumberSetting({
+            value: env.VITE_SKIN_PROJECTION_OFFSET_X,
+            fallback: defaultConfig.skinProjectionOffsetX,
+            envName: 'VITE_SKIN_PROJECTION_OFFSET_X',
+            min: -0.5,
+            max: 0.5,
+          }),
+          offsetY: parseNumberSetting({
+            value: env.VITE_SKIN_PROJECTION_OFFSET_Y,
+            fallback: defaultConfig.skinProjectionOffsetY,
+            envName: 'VITE_SKIN_PROJECTION_OFFSET_Y',
+            min: -0.5,
+            max: 0.5,
+          }),
+          scale: parseNumberSetting({
+            value: env.VITE_SKIN_PROJECTION_SCALE,
+            fallback: defaultConfig.skinProjectionScale,
+            envName: 'VITE_SKIN_PROJECTION_SCALE',
+            min: 0.25,
+            max: 4,
+          }),
+          rotationYDegrees: parseNumberSetting({
+            value: env.VITE_SKIN_PROJECTION_ROTATION_Y,
+            fallback: defaultConfig.skinProjectionRotationY,
+            envName: 'VITE_SKIN_PROJECTION_ROTATION_Y',
+            min: -180,
+            max: 180,
+          }),
+        },
       },
     },
     deformationProvider: parseProvider(env.VITE_DEFORMATION_PROVIDER),
@@ -181,6 +260,11 @@ export function loadAppConfig(env: RawEnv = import.meta.env): AppConfig {
         env.VITE_ENABLE_PRECOMPUTE_PANEL,
         defaultConfig.precomputePanel,
         'VITE_ENABLE_PRECOMPUTE_PANEL',
+      ),
+      projectionAlignmentPanel: parseBooleanFlag(
+        env.VITE_ENABLE_PROJECTION_ALIGNMENT_PANEL,
+        defaultConfig.projectionAlignmentPanel,
+        'VITE_ENABLE_PROJECTION_ALIGNMENT_PANEL',
       ),
     },
   };

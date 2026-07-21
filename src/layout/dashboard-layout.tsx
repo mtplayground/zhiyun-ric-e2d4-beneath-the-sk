@@ -1,3 +1,5 @@
+import { useMemo, useState } from 'react';
+
 import ProjectFooter from '@/components/footer/project-footer';
 import { appConfig } from '@/config/env';
 import {
@@ -9,6 +11,19 @@ import {
 } from '@/layout/dashboard-regions';
 
 export default function DashboardLayout() {
+  const defaultProjectionAlignment =
+    appConfig.assets.textures.projectionAlignment;
+  const [projectionAlignment, setProjectionAlignment] = useState(
+    defaultProjectionAlignment,
+  );
+  const textureConfig = useMemo(
+    () => ({
+      ...appConfig.assets.textures,
+      projectionAlignment,
+    }),
+    [projectionAlignment],
+  );
+
   return (
     <main
       className="min-h-screen bg-background px-4 py-5 text-foreground sm:px-6 lg:px-8"
@@ -19,11 +34,18 @@ export default function DashboardLayout() {
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
           <div className="grid min-w-0 gap-5">
-            <ViewportRegion config={appConfig} />
+            <ViewportRegion config={appConfig} textureConfig={textureConfig} />
             <DeformationCurveRegion />
           </div>
           <aside className="grid content-start gap-5">
-            <ControlPanelRegion config={appConfig} />
+            <ControlPanelRegion
+              config={appConfig}
+              projectionAlignment={projectionAlignment}
+              onProjectionAlignmentChange={setProjectionAlignment}
+              onProjectionAlignmentReset={() => {
+                setProjectionAlignment(defaultProjectionAlignment);
+              }}
+            />
             <LiveReadoutRegion />
           </aside>
         </div>

@@ -62,4 +62,30 @@ describe('applyProjectedSkinTransfer', () => {
       Array.from(mesh.geometry.morphAttributes.position?.[0]?.array ?? []),
     ).toEqual(morphAttributeValues);
   });
+
+  it('applies offset, scale, and vertical-axis rotation to projected UVs', () => {
+    const geometry = new BufferGeometry();
+    geometry.setAttribute(
+      'position',
+      new BufferAttribute(new Float32Array([0, 0, 1]), 3),
+    );
+    const mesh = new Mesh(geometry, new MeshStandardMaterial());
+    mesh.updateWorldMatrix(true, false);
+
+    applyProjectedSkinTransfer(
+      mesh,
+      new Box3(new Vector3(-1, -1, -1), new Vector3(1, 1, 1)),
+      {
+        offsetX: 0.1,
+        offsetY: -0.1,
+        scale: 0.5,
+        rotationYDegrees: 90,
+      },
+    );
+
+    const uv = Array.from(mesh.geometry.getAttribute('uv').array);
+
+    expect(uv[0]).toBeCloseTo(0.35);
+    expect(uv[1]).toBeCloseTo(0.4);
+  });
 });

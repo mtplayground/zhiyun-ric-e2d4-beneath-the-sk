@@ -8,11 +8,16 @@ interface ImportMetaEnv {
   readonly VITE_ORAL_TEXTURE_URL?: string;
   readonly VITE_SKIN_COLOR?: string;
   readonly VITE_FACE_MATERIAL_TRANSFER?: string;
+  readonly VITE_SKIN_PROJECTION_OFFSET_X?: string;
+  readonly VITE_SKIN_PROJECTION_OFFSET_Y?: string;
+  readonly VITE_SKIN_PROJECTION_SCALE?: string;
+  readonly VITE_SKIN_PROJECTION_ROTATION_Y?: string;
   readonly VITE_DEFORMATION_PROVIDER?: string;
   readonly VITE_STATIC_BASE_PATH?: string;
   readonly VITE_ENABLE_READOUT_PANEL?: string;
   readonly VITE_ENABLE_DEFORMATION_CURVE_PANEL?: string;
   readonly VITE_ENABLE_PRECOMPUTE_PANEL?: string;
+  readonly VITE_ENABLE_PROJECTION_ALIGNMENT_PANEL?: string;
 }
 
 interface ImportMeta {

@@ -10,12 +10,17 @@ import KeyboardModePanel from '@/components/controls/keyboard-mode-panel';
 import MuscleSliderPanel from '@/components/controls/muscle-slider-panel';
 import PrecomputeController from '@/components/controls/precompute-controller';
 import PresetSelectors from '@/components/controls/preset-selectors';
+import ProjectionAlignmentPanel from '@/components/controls/projection-alignment-panel';
 import ResetToNeutralControl from '@/components/controls/reset-to-neutral-control';
 import ProjectHero from '@/components/hero/project-hero';
 import DeformationCurvePanel from '@/components/readout/deformation-curve-panel';
 import LiveNumericReadout from '@/components/readout/live-numeric-readout';
 import FaceViewport from '@/components/viewport/face-viewport';
-import type { AppConfig } from '@/config/env';
+import type {
+  AppConfig,
+  FaceTextureConfig,
+  ProjectionAlignmentConfig,
+} from '@/config/env';
 import { cn } from '@/lib/utils';
 import {
   useActivationValues,
@@ -26,6 +31,16 @@ import {
 
 type RegionProps = {
   config: AppConfig;
+};
+
+type ViewportRegionProps = RegionProps & {
+  textureConfig: FaceTextureConfig;
+};
+
+type ControlPanelRegionProps = RegionProps & {
+  projectionAlignment: ProjectionAlignmentConfig;
+  onProjectionAlignmentChange: (value: ProjectionAlignmentConfig) => void;
+  onProjectionAlignmentReset: () => void;
 };
 
 function StatusPill({
@@ -54,7 +69,7 @@ function DashboardHeader({ config }: RegionProps) {
   return <ProjectHero config={config} />;
 }
 
-function ViewportRegion({ config }: RegionProps) {
+function ViewportRegion({ config, textureConfig }: ViewportRegionProps) {
   const activePoseLabel = useActivePoseLabel();
 
   return (
@@ -67,20 +82,26 @@ function ViewportRegion({ config }: RegionProps) {
         <FaceViewport
           activePoseLabel={activePoseLabel}
           assetUrl={config.assets.faceMeshUrl}
-          textureConfig={config.assets.textures}
+          textureConfig={textureConfig}
         />
       </DataPanelBody>
     </DataPanel>
   );
 }
 
-function ControlPanelRegion({ config }: RegionProps) {
+function ControlPanelRegion({
+  config,
+  projectionAlignment,
+  onProjectionAlignmentChange,
+  onProjectionAlignmentReset,
+}: ControlPanelRegionProps) {
   const activeControlMode = useActiveControlMode();
   const activationValues = useActivationValues();
   const featureRows = [
     ['Readout', config.features.readoutPanel],
     ['Curve', config.features.deformationCurvePanel],
     ['Precompute', config.features.precomputePanel],
+    ['Projection', config.features.projectionAlignmentPanel],
   ] as const;
   const activationCount = Object.keys(activationValues).length;
 
@@ -102,6 +123,15 @@ function ControlPanelRegion({ config }: RegionProps) {
           <div className="rounded-md border border-border bg-secondary/50 p-3">
             <MuscleSliderPanel />
           </div>
+          {config.features.projectionAlignmentPanel ? (
+            <div className="rounded-md border border-border bg-secondary/50 p-3">
+              <ProjectionAlignmentPanel
+                value={projectionAlignment}
+                onChange={onProjectionAlignmentChange}
+                onReset={onProjectionAlignmentReset}
+              />
+            </div>
+          ) : null}
         </div>
         {config.features.precomputePanel ? <PrecomputeController /> : null}
         <div className="grid gap-2">
