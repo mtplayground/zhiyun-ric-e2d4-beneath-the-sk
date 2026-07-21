@@ -23,6 +23,7 @@ import type { LoadedHeadAsset } from './gltf-head-loader';
 type KinematicProviderRuntimeProps = {
   asset: LoadedHeadAsset | null;
   assetUrl: string;
+  onDiagnosticChange: (diagnostic: ProviderRuntimeDiagnostic | null) => void;
 };
 
 type BlendshapeTransition = {
@@ -31,6 +32,18 @@ type BlendshapeTransition = {
   fromPoseLabel: string;
   poseLabel: string;
   startFrameIndex: number;
+};
+
+export type ProviderRuntimeDiagnosticTone =
+  'cyan' | 'green' | 'amber' | 'destructive';
+
+export type ProviderRuntimeDiagnostic = {
+  label: string;
+  message: string;
+  tone: ProviderRuntimeDiagnosticTone;
+  requestedCount: number;
+  compatibleCount: number;
+  missingBlendshapeNames: string[];
 };
 
 const weightEpsilon = 0.0001;
@@ -61,9 +74,88 @@ function createSelectedProvider(): DeformationProvider {
   ).createProvider();
 }
 
+function createCompatibilityDiagnostic({
+  asset,
+  poseLabel,
+  targetWeights,
+}: {
+  asset: LoadedHeadAsset;
+  poseLabel: string;
+  targetWeights: BlendshapeWeights;
+}): ProviderRuntimeDiagnostic {
+  const availableBlendshapeNames = new Set(asset.morphTargetNames);
+  const requestedBlendshapeNames = Object.entries(targetWeights)
+    .filter(([, value]) => Math.abs(value) > weightEpsilon)
+    .map(([name]) => name)
+    .sort((left, right) => left.localeCompare(right));
+  const missingBlendshapeNames = requestedBlendshapeNames.filter(
+    (name) => !availableBlendshapeNames.has(name),
+  );
+  const compatibleCount =
+    requestedBlendshapeNames.length - missingBlendshapeNames.length;
+
+  if (asset.morphTargetNames.length === 0) {
+    return {
+      label: 'No Morph Targets',
+      message:
+        'Loaded mesh has no morph targets; the rest-pose reference remains visible.',
+      tone: 'destructive',
+      requestedCount: requestedBlendshapeNames.length,
+      compatibleCount: 0,
+      missingBlendshapeNames,
+    };
+  }
+
+  if (requestedBlendshapeNames.length === 0) {
+    return {
+      label: 'Rest Pose',
+      message:
+        'Neutral pose active; all compatible blendshape influences clear.',
+      tone: 'green',
+      requestedCount: 0,
+      compatibleCount: 0,
+      missingBlendshapeNames: [],
+    };
+  }
+
+  if (compatibleCount === 0) {
+    return {
+      label: 'No Compatible Weights',
+      message: `${poseLabel} targets ${requestedBlendshapeNames.length} blendshapes that are not present on this mesh.`,
+      tone: 'amber',
+      requestedCount: requestedBlendshapeNames.length,
+      compatibleCount,
+      missingBlendshapeNames,
+    };
+  }
+
+  if (missingBlendshapeNames.length > 0) {
+    const sampleMissingNames = missingBlendshapeNames.slice(0, 4).join(', ');
+
+    return {
+      label: 'Partial Blendshape Match',
+      message: `${compatibleCount}/${requestedBlendshapeNames.length} blendshape targets available; missing ${sampleMissingNames}.`,
+      tone: 'amber',
+      requestedCount: requestedBlendshapeNames.length,
+      compatibleCount,
+      missingBlendshapeNames,
+    };
+  }
+
+  return {
+    label: 'Blendshape Match',
+    message: `${compatibleCount} compatible blendshape targets driving the mesh.`,
+    tone: 'green',
+    requestedCount: requestedBlendshapeNames.length,
+    compatibleCount,
+    missingBlendshapeNames: [],
+  };
+}
+
 export default function KinematicProviderRuntime({
   asset,
   assetUrl,
+  onDiagnosticChange,
 }: KinematicProviderRuntimeProps) {
   const activePoseLabel = useActivePoseLabel();
   const activeControlMode = useActiveControlMode();
@@ -77,19 +169,39 @@ export default function KinematicProviderRuntime({
   const latestPoseLabelRef = useRef(activePoseLabel);
   const latestControlModeRef = useRef(activeControlMode);
   const latestActivationValuesRef = useRef(activationValues);
+  const latestDiagnosticPoseLabelRef = useRef(activePoseLabel);
+  const onDiagnosticChangeRef = useRef(onDiagnosticChange);
   const transitionRef = useRef<BlendshapeTransition | null>(null);
+
+  useEffect(() => {
+    onDiagnosticChangeRef.current = onDiagnosticChange;
+  }, [onDiagnosticChange]);
 
   useEffect(() => {
     latestPoseLabelRef.current = activePoseLabel;
     latestActivationValuesRef.current = activationValues;
+    const poseLabelChanged =
+      latestDiagnosticPoseLabelRef.current !== activePoseLabel;
 
     if (!asset || !initializedRef.current) {
       return;
     }
 
-    if (weightsNearlyEqual(activationValues, providerLastWeightsRef.current)) {
+    if (
+      !poseLabelChanged &&
+      weightsNearlyEqual(activationValues, providerLastWeightsRef.current)
+    ) {
       return;
     }
+
+    latestDiagnosticPoseLabelRef.current = activePoseLabel;
+    onDiagnosticChangeRef.current(
+      createCompatibilityDiagnostic({
+        asset,
+        poseLabel: activePoseLabel,
+        targetWeights: activationValues,
+      }),
+    );
 
     transitionRef.current = {
       fromWeights: currentWeightsRef.current,
@@ -110,6 +222,7 @@ export default function KinematicProviderRuntime({
       currentWeightsRef.current = {};
       providerLastWeightsRef.current = {};
       transitionRef.current = null;
+      onDiagnosticChangeRef.current(null);
       return;
     }
 
@@ -123,7 +236,15 @@ export default function KinematicProviderRuntime({
       currentWeightsRef.current = initialBlendshapeWeights;
       providerLastWeightsRef.current = initialBlendshapeWeights;
       currentPoseLabelRef.current = latestPoseLabelRef.current;
+      latestDiagnosticPoseLabelRef.current = latestPoseLabelRef.current;
       initializedRef.current = true;
+      onDiagnosticChangeRef.current(
+        createCompatibilityDiagnostic({
+          asset,
+          poseLabel: latestPoseLabelRef.current,
+          targetWeights: latestActivationValuesRef.current,
+        }),
+      );
       transitionRef.current = weightsNearlyEqual(
         latestActivationValuesRef.current,
         initialBlendshapeWeights,
@@ -139,6 +260,17 @@ export default function KinematicProviderRuntime({
     } catch (error) {
       initializedRef.current = false;
       transitionRef.current = null;
+      onDiagnosticChangeRef.current({
+        label: 'Provider Error',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Unable to initialize deformation provider.',
+        tone: 'destructive',
+        requestedCount: 0,
+        compatibleCount: 0,
+        missingBlendshapeNames: [],
+      });
       console.error('Failed to initialize deformation provider', error);
     }
 

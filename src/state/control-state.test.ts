@@ -70,7 +70,7 @@ describe('control state transitions', () => {
     });
   });
 
-  it('prevents animation feedback from overriding the active mode', () => {
+  it('prevents stale animation feedback from overriding the active mode or values', () => {
     actions().setActiveControlMode('keyboard');
 
     actions().setActivationValues(
@@ -86,9 +86,7 @@ describe('control state transitions', () => {
     expect(useControlState.getState()).toMatchObject({
       activeControlMode: 'keyboard',
       currentFrameIndex: 12,
-      activationValues: {
-        jawOpen: 0.7,
-      },
+      activationValues: {},
     });
   });
 });
