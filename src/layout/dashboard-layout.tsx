@@ -1,5 +1,3 @@
-import { useState } from 'react';
-
 import ProjectFooter from '@/components/footer/project-footer';
 import { appConfig } from '@/config/env';
 import {
@@ -11,11 +9,6 @@ import {
 } from '@/layout/dashboard-regions';
 
 export default function DashboardLayout() {
-  const defaultProjectionAlignment =
-    appConfig.assets.textures.projectionAlignment;
-  const [projectionAlignment, setProjectionAlignment] = useState(
-    defaultProjectionAlignment,
-  );
   return (
     <main
       className="min-h-screen bg-background px-4 py-5 text-foreground sm:px-6 lg:px-8"
@@ -30,14 +23,7 @@ export default function DashboardLayout() {
             <DeformationCurveRegion />
           </div>
           <aside className="grid content-start gap-5">
-            <ControlPanelRegion
-              config={appConfig}
-              projectionAlignment={projectionAlignment}
-              onProjectionAlignmentChange={setProjectionAlignment}
-              onProjectionAlignmentReset={() => {
-                setProjectionAlignment(defaultProjectionAlignment);
-              }}
-            />
+            <ControlPanelRegion config={appConfig} />
             <LiveReadoutRegion />
           </aside>
         </div>

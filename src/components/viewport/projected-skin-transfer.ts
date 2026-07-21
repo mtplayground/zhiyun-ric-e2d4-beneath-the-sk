@@ -6,7 +6,12 @@ import {
   type BufferGeometry,
 } from 'three';
 
-import type { ProjectionAlignmentConfig } from '@/config/env';
+type ProjectionAlignmentConfig = {
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+  rotationYDegrees: number;
+};
 
 export type ProjectedSkinTransferResult = {
   applied: boolean;
