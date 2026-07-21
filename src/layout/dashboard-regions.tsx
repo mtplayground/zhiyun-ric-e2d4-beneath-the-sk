@@ -11,6 +11,7 @@ import MuscleSliderPanel from '@/components/controls/muscle-slider-panel';
 import PrecomputeController from '@/components/controls/precompute-controller';
 import PresetSelectors from '@/components/controls/preset-selectors';
 import ResetToNeutralControl from '@/components/controls/reset-to-neutral-control';
+import ProjectHero from '@/components/hero/project-hero';
 import LiveNumericReadout from '@/components/readout/live-numeric-readout';
 import FaceViewport from '@/components/viewport/face-viewport';
 import type { AppConfig } from '@/config/env';
@@ -49,35 +50,7 @@ function StatusPill({
 }
 
 function DashboardHeader({ config }: RegionProps) {
-  return (
-    <header className="grid gap-5 border-b border-border pb-5 lg:grid-cols-[1fr_auto] lg:items-end">
-      <div className="grid gap-3">
-        <p className="font-mono text-xs uppercase text-telemetry-cyan">
-          Research dashboard
-        </p>
-        <div className="grid gap-2">
-          <h1
-            id="app-title"
-            className="text-3xl font-semibold leading-none tracking-normal text-foreground md:text-5xl"
-          >
-            Beneath the Skin
-          </h1>
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-            Responsive telemetry workspace for facial deformation research.
-          </p>
-        </div>
-      </div>
-      <div className="grid gap-2 text-left lg:min-w-72">
-        <div className="flex flex-wrap gap-2">
-          <StatusPill tone="green">{config.deformationProvider}</StatusPill>
-          <StatusPill tone="cyan">Layout ready</StatusPill>
-        </div>
-        <p className="truncate font-mono text-xs text-muted-foreground">
-          Pose data: {config.assets.poseDataUrl}
-        </p>
-      </div>
-    </header>
-  );
+  return <ProjectHero config={config} />;
 }
 
 function ViewportRegion({ config }: RegionProps) {
