@@ -241,6 +241,17 @@ export default function KinematicProviderRuntime({
       }),
     );
 
+    const isNeutralPose = activePoseLabel.toLowerCase().includes('neutral');
+
+    if (isNeutralPose || Object.keys(activationValues).length === 0) {
+      asset.applyBlendshapeWeights({});
+      currentWeightsRef.current = {};
+      providerLastWeightsRef.current = {};
+      currentPoseLabelRef.current = activePoseLabel;
+      transitionRef.current = null;
+      return;
+    }
+
     transitionRef.current = {
       fromWeights: currentWeightsRef.current,
       targetWeights: activationValues,
