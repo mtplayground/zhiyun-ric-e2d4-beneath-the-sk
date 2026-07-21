@@ -37,6 +37,8 @@ export type PoseAuditResult = {
   missingCount: number;
   unsupportedCount: number;
   referencedCount: number;
+  activeWeightTotal: number;
+  maxActiveWeight: number;
 };
 
 export type PoseLibraryAuditSummary = {
@@ -147,6 +149,9 @@ export function auditBlendshapeWeights({
   const unsupportedBlendshapeNames = entries
     .filter((entry) => entry.status === 'unsupported')
     .map((entry) => entry.name);
+  const activeWeights = entries
+    .filter((entry) => entry.status === 'active')
+    .map((entry) => entry.weight);
 
   return {
     poseId,
@@ -162,6 +167,8 @@ export function auditBlendshapeWeights({
     missingCount: missingBlendshapeNames.length,
     unsupportedCount: unsupportedBlendshapeNames.length,
     referencedCount: entries.length,
+    activeWeightTotal: activeWeights.reduce((sum, weight) => sum + weight, 0),
+    maxActiveWeight: Math.max(0, ...activeWeights),
   };
 }
 

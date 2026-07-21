@@ -66,6 +66,8 @@ export const morphTargetAliasMap = {
   mouthClose: ['mouth_close', 'MouthClose', 'Mouth_Close'],
   mouthFrownLeft: ['mouthFrown_L', 'mouth_frown_l', 'MouthFrown_L'],
   mouthFrownRight: ['mouthFrown_R', 'mouth_frown_r', 'MouthFrown_R'],
+  mouthDimpleLeft: ['mouthDimple_L', 'mouth_dimple_l', 'MouthDimple_L'],
+  mouthDimpleRight: ['mouthDimple_R', 'mouth_dimple_r', 'MouthDimple_R'],
   mouthFunnel: ['mouth_funnel', 'MouthFunnel', 'Mouth_Funnel'],
   mouthLowerDownLeft: [
     'mouthLowerDown_L',
@@ -78,6 +80,8 @@ export const morphTargetAliasMap = {
     'MouthLowerDown_R',
   ],
   mouthPucker: ['mouth_pucker', 'MouthPucker', 'Mouth_Pucker'],
+  mouthPressLeft: ['mouthPress_L', 'mouth_press_l', 'MouthPress_L'],
+  mouthPressRight: ['mouthPress_R', 'mouth_press_r', 'MouthPress_R'],
   mouthSmileLeft: ['mouthSmile_L', 'mouth_smile_l', 'MouthSmile_L'],
   mouthSmileRight: ['mouthSmile_R', 'mouth_smile_r', 'MouthSmile_R'],
   mouthStretchLeft: ['mouthStretch_L', 'mouth_stretch_l', 'MouthStretch_L'],

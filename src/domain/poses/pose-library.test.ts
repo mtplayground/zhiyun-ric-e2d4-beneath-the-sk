@@ -28,8 +28,12 @@ describe('pose library mappings', () => {
 
     expect(smile?.label).toBe('AU 12 Smile');
     expect(smile && getPoseWeights(smile, 'kinematic-blendshape')).toEqual({
-      mouthSmileLeft: 0.86,
-      mouthSmileRight: 0.86,
+      mouthSmileLeft: 0.9,
+      mouthSmileRight: 0.9,
+      mouthDimpleLeft: 0.28,
+      mouthDimpleRight: 0.28,
+      cheekSquintLeft: 0.22,
+      cheekSquintRight: 0.22,
     });
   });
 
