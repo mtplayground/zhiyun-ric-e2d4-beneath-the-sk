@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   actionUnitPoseMappings,
   allPoseMappings,
+  auditBlendshapeWeights,
   auditPoseLibrary,
   auditPoseMapping,
   expressionPoseMappings,
@@ -54,23 +55,22 @@ describe('pose morph-target audit', () => {
     expect(audit.missingBlendshapeNames).toEqual([
       'mouthClose',
       'mouthFunnel',
+      'mouthLowerDownLeft',
+      'mouthLowerDownRight',
       'mouthUpperUpLeft',
       'mouthUpperUpRight',
-      'tongueOut',
     ]);
     expect(audit.unsupportedBlendshapeNames).toEqual([]);
   });
 
   it('marks zero-weight entries as unsupported rather than active', () => {
-    const lipsPart = actionUnitPoseMappings.find(
-      (pose) => pose.id === 'au-25-lips-part',
-    );
-
-    expect(lipsPart).toBeDefined();
-
-    const audit = auditPoseMapping({
-      pose: lipsPart!,
-      providerId: 'kinematic-blendshape',
+    const audit = auditBlendshapeWeights({
+      poseId: 'custom-zero-weight',
+      label: 'Custom Zero Weight',
+      weights: {
+        jawOpen: 0.58,
+        mouthClose: 0,
+      },
       availableBlendshapes: ['jawOpen', 'mouthClose'],
     });
 

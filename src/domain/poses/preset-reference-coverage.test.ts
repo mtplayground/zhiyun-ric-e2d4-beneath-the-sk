@@ -32,7 +32,6 @@ const referenceMeshMorphTargets = [
   'mouthStretchRight',
   'mouthUpperUpLeft',
   'mouthUpperUpRight',
-  'tongueOut',
 ] as const;
 
 describe('reference mesh preset coverage', () => {
@@ -70,5 +69,7 @@ describe('reference mesh preset coverage', () => {
     expect(unsupportedPoses).toEqual([]);
     expect(missingTargets).toEqual([]);
     expect(nonNeutralWithoutActiveWeights).toEqual([]);
+    expect(summary.partialPoseCount).toBe(0);
+    expect(summary.unsupportedPoseCount).toBe(0);
   });
 });
