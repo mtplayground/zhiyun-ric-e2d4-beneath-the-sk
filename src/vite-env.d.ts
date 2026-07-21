@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_FACE_MESH_URL?: string;
+  readonly VITE_HAIR_MESH_URL?: string;
   readonly VITE_POSE_DATA_URL?: string;
   readonly VITE_SKIN_TEXTURE_URL?: string;
   readonly VITE_EYE_TEXTURE_URL?: string;

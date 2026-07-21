@@ -35,6 +35,7 @@ export type FaceTextureConfig = {
 export type AppConfig = {
   assets: {
     faceMeshUrl: string;
+    hairMeshUrl: string | null;
     poseDataUrl: string;
     textures: FaceTextureConfig;
   };
@@ -45,6 +46,7 @@ export type AppConfig = {
 type RawEnv = Pick<
   ImportMetaEnv,
   | 'VITE_FACE_MESH_URL'
+  | 'VITE_HAIR_MESH_URL'
   | 'VITE_POSE_DATA_URL'
   | 'VITE_SKIN_TEXTURE_URL'
   | 'VITE_EYE_TEXTURE_URL'
@@ -64,6 +66,7 @@ type RawEnv = Pick<
 
 const defaultConfig = {
   faceMeshUrl: 'https://threejs.org/examples/models/gltf/facecap.glb',
+  hairMeshUrl: '',
   poseDataUrl: './data/poses.json',
   skinTextureUrl: './textures/skin-diffuse.png',
   eyeTextureUrl: './textures/eye-diffuse.png',
@@ -84,6 +87,11 @@ const defaultConfig = {
 function normalizePath(value: string | undefined, fallback: string) {
   const trimmed = value?.trim();
   return trimmed && trimmed.length > 0 ? trimmed : fallback;
+}
+
+function normalizeOptionalPath(value: string | undefined) {
+  const trimmed = value?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : null;
 }
 
 function parseProvider(value: string | undefined): DeformationProviderId {
@@ -191,6 +199,7 @@ export function loadAppConfig(env: RawEnv = import.meta.env): AppConfig {
         env.VITE_FACE_MESH_URL,
         defaultConfig.faceMeshUrl,
       ),
+      hairMeshUrl: normalizeOptionalPath(env.VITE_HAIR_MESH_URL),
       poseDataUrl: normalizePath(
         env.VITE_POSE_DATA_URL,
         defaultConfig.poseDataUrl,
