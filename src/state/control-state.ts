@@ -36,8 +36,10 @@ export type ControlState = ControlReadout & {
 };
 
 const neutralPoseLabel = 'Neutral';
+const sliderPoseLabel = 'Slider Mix';
 const initialFrameIndex = 0;
 const initialControlMode: ControlMode = 'preset';
+const activationEpsilon = 0.001;
 
 export const initialControlState: ControlReadout = {
   activePoseLabel: neutralPoseLabel,
@@ -66,14 +68,30 @@ export function normalizeActivationValues(values: ActivationValues) {
   return Object.fromEntries(
     Object.entries(values)
       .filter(([key]) => key.trim().length > 0)
-      .map(([key, value]) => [key, clampActivation(value)]),
+      .map(([key, value]) => [key, clampActivation(value)] as const)
+      .filter(([, value]) => value > activationEpsilon),
   );
+}
+
+function neutralReadoutForMode(mode: ControlMode): ControlReadout {
+  return {
+    activePoseLabel: neutralPoseLabel,
+    activeControlMode: mode,
+    currentFrameIndex: initialFrameIndex,
+    activationValues: {},
+  };
 }
 
 export const useControlState = create<ControlState>((set) => ({
   ...initialControlState,
   setActiveControlMode: (mode) => {
-    set({ activeControlMode: mode });
+    set((state) => {
+      if (state.activeControlMode === mode) {
+        return state;
+      }
+
+      return neutralReadoutForMode(mode);
+    });
   },
   setActivePose: (poseLabel, options) => {
     const normalizedPoseLabel = poseLabel.trim() || neutralPoseLabel;
@@ -83,11 +101,15 @@ export const useControlState = create<ControlState>((set) => ({
       activeControlMode: options?.mode ?? state.activeControlMode,
       currentFrameIndex:
         options?.frameIndex === undefined
-          ? state.currentFrameIndex
+          ? options?.mode && options.mode !== state.activeControlMode
+            ? initialFrameIndex
+            : state.currentFrameIndex
           : normalizeFrameIndex(options.frameIndex),
       activationValues:
         options?.activationValues === undefined
-          ? state.activationValues
+          ? options?.mode && options.mode !== state.activeControlMode
+            ? {}
+            : state.activationValues
           : normalizeActivationValues(options.activationValues),
     }));
   },
@@ -98,17 +120,32 @@ export const useControlState = create<ControlState>((set) => ({
       return;
     }
 
-    set((state) => ({
-      activeControlMode: mode,
-      activationValues: {
-        ...state.activationValues,
-        [normalizedKey]: clampActivation(value),
-      },
-    }));
+    set((state) => {
+      const activationValues = normalizeActivationValues({
+        ...(mode === state.activeControlMode ? state.activationValues : {}),
+        [normalizedKey]: value,
+      });
+
+      return {
+        activePoseLabel:
+          mode === 'slider' && Object.keys(activationValues).length > 0
+            ? sliderPoseLabel
+            : neutralPoseLabel,
+        activeControlMode: mode,
+        currentFrameIndex:
+          mode === state.activeControlMode
+            ? state.currentFrameIndex
+            : initialFrameIndex,
+        activationValues,
+      };
+    });
   },
   setActivationValues: (values, options) => {
     set((state) => ({
-      activeControlMode: options?.mode ?? state.activeControlMode,
+      activeControlMode:
+        options?.mode === state.activeControlMode
+          ? options.mode
+          : state.activeControlMode,
       currentFrameIndex:
         options?.frameIndex === undefined
           ? state.currentFrameIndex
