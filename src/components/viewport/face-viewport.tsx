@@ -226,6 +226,7 @@ export default function FaceViewport({
     [],
   );
   const morphTargetCount = headAsset.asset?.morphTargetNames.length ?? 0;
+  const textureDiagnostic = headAsset.asset?.textureDiagnostic ?? null;
   const statusLabel =
     headAsset.status === 'loading'
       ? `Loading ${Math.round(headAsset.progress * 100)}%`
@@ -334,6 +335,30 @@ export default function FaceViewport({
             supported / {providerDiagnostic.libraryAudit.partialPoseCount}{' '}
             partial / {providerDiagnostic.libraryAudit.unsupportedPoseCount}{' '}
             unsupported
+          </p>
+        ) : null}
+        {textureDiagnostic ? (
+          <p className="text-muted-foreground">
+            Texture transfer: {textureDiagnostic.selectedSkinMode}
+            {textureDiagnostic.requestedMode !==
+            textureDiagnostic.selectedSkinMode
+              ? ` (requested ${textureDiagnostic.requestedMode})`
+              : ''}{' '}
+            | skin slots {textureDiagnostic.skinSlots.length} | eye slots{' '}
+            {textureDiagnostic.eyeSlots.length} | oral slots{' '}
+            {textureDiagnostic.oralSlots.length}
+          </p>
+        ) : null}
+        {textureDiagnostic && textureDiagnostic.mismatchedSlots.length > 0 ? (
+          <p className="truncate text-muted-foreground">
+            Texture mismatch:{' '}
+            {textureDiagnostic.mismatchedSlots.slice(0, 3).join(', ')}
+          </p>
+        ) : null}
+        {textureDiagnostic && textureDiagnostic.skippedSlots.length > 0 ? (
+          <p className="truncate text-muted-foreground">
+            Texture skipped:{' '}
+            {textureDiagnostic.skippedSlots.slice(0, 3).join(', ')}
           </p>
         ) : null}
       </div>
