@@ -1,4 +1,12 @@
 export {
+  createMorphTargetNameResolver,
+  getMorphTargetAliasCandidates,
+  morphTargetAliasMap,
+  normalizeMorphTargetName,
+  resolveMorphTargetName,
+} from './morph-target-aliases';
+export type { MorphTargetAliasMap } from './morph-target-aliases';
+export {
   auditBlendshapeWeights,
   auditPoseLibrary,
   auditPoseMapping,

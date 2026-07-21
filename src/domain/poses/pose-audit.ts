@@ -9,11 +9,13 @@ import {
   type PoseCategory,
   type PoseMapping,
 } from './pose-library';
+import { createMorphTargetNameResolver } from './morph-target-aliases';
 
 export type PoseBlendshapeAuditStatus = 'active' | 'missing' | 'unsupported';
 
 export type PoseBlendshapeAuditEntry = {
   name: string;
+  resolvedName: string | null;
   weight: number;
   status: PoseBlendshapeAuditStatus;
 };
@@ -66,19 +68,17 @@ function uniqueSorted(values: Iterable<string>) {
 }
 
 function classifyBlendshape({
-  name,
+  resolvedName,
   weight,
-  availableBlendshapes,
 }: {
-  name: string;
+  resolvedName: string | null;
   weight: number;
-  availableBlendshapes: ReadonlySet<string>;
 }): PoseBlendshapeAuditStatus {
   if (weight <= activationEpsilon) {
     return 'unsupported';
   }
 
-  return availableBlendshapes.has(name) ? 'active' : 'missing';
+  return resolvedName ? 'active' : 'missing';
 }
 
 function summarizePoseStatus(
@@ -118,29 +118,29 @@ export function auditBlendshapeWeights({
   weights: BlendshapeWeights;
   availableBlendshapes: readonly string[] | ReadonlySet<string>;
 }): PoseAuditResult {
-  const availableBlendshapeSet =
-    availableBlendshapes instanceof Set
-      ? availableBlendshapes
-      : new Set(availableBlendshapes);
+  const resolveBlendshapeName =
+    createMorphTargetNameResolver(availableBlendshapes);
   const entries = Object.entries(weights)
     .filter(([name]) => name.trim().length > 0)
     .map(([name, value]) => {
       const weight = normalizeWeight(value);
+      const resolvedName =
+        weight > activationEpsilon ? resolveBlendshapeName(name) : null;
 
       return {
         name,
+        resolvedName,
         weight,
         status: classifyBlendshape({
-          name,
+          resolvedName,
           weight,
-          availableBlendshapes: availableBlendshapeSet,
         }),
       } satisfies PoseBlendshapeAuditEntry;
     })
     .sort((left, right) => left.name.localeCompare(right.name));
   const activeBlendshapeNames = entries
     .filter((entry) => entry.status === 'active')
-    .map((entry) => entry.name);
+    .map((entry) => entry.resolvedName ?? entry.name);
   const missingBlendshapeNames = entries
     .filter((entry) => entry.status === 'missing')
     .map((entry) => entry.name);
