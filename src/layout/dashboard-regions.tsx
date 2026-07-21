@@ -12,6 +12,7 @@ import PrecomputeController from '@/components/controls/precompute-controller';
 import PresetSelectors from '@/components/controls/preset-selectors';
 import ResetToNeutralControl from '@/components/controls/reset-to-neutral-control';
 import ProjectHero from '@/components/hero/project-hero';
+import DeformationCurvePanel from '@/components/readout/deformation-curve-panel';
 import LiveNumericReadout from '@/components/readout/live-numeric-readout';
 import FaceViewport from '@/components/viewport/face-viewport';
 import type { AppConfig } from '@/config/env';
@@ -144,22 +145,16 @@ function LiveReadoutRegion() {
 }
 
 function DeformationCurveRegion() {
+  const currentFrameIndex = useCurrentFrameIndex();
+
   return (
     <DataPanel tone="cyan" className="min-h-56">
       <DataPanelHeader className="border-b border-border/70">
         <DataPanelTitle>Deformation Curve</DataPanelTitle>
-        <StatusPill>Idle</StatusPill>
+        <StatusPill tone="cyan">Frame {currentFrameIndex}</StatusPill>
       </DataPanelHeader>
       <DataPanelBody className="p-4">
-        <div className="grid h-36 grid-cols-8 items-end gap-2 rounded-md border border-border bg-background/70 p-3">
-          {[18, 32, 26, 48, 42, 64, 52, 70].map((height, index) => (
-            <div
-              key={index}
-              className="rounded-sm bg-telemetry-cyan/45"
-              style={{ height: `${height}%` }}
-            />
-          ))}
-        </div>
+        <DeformationCurvePanel />
       </DataPanelBody>
     </DataPanel>
   );

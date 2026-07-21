@@ -89,3 +89,20 @@ textarea,
 select {
   font: inherit;
 }
+
+.deformation-uplot {
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+}
+
+.deformation-uplot .u-over,
+.deformation-uplot .u-under {
+  border-radius: var(--radius-sm);
+}
+
+.deformation-uplot .u-axis path,
+.deformation-uplot .u-axis line {
+  stroke: hsl(var(--border));
+}
