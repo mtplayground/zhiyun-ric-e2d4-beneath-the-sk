@@ -21,6 +21,8 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 
 import type { FaceTextureConfig } from '@/config/env';
 
+import { applyProjectedSkinTransfer } from './projected-skin-transfer';
+
 export type HeadAssetStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
 export type LoadedHeadAsset = {
@@ -51,6 +53,8 @@ type LoadedFaceTextures = {
   eye: Texture | null;
   oral: Texture | null;
 };
+
+type FaceMaterialIntent = 'skin' | 'eye' | 'oral';
 
 type MorphTargetBinding = {
   dictionary: Record<string, number>;
@@ -91,7 +95,10 @@ function clampInfluence(value: number) {
   return Math.min(1, Math.max(0, value));
 }
 
-function materialIntent(object: Object3D, material: Material) {
+function materialIntent(
+  object: Object3D,
+  material: Material,
+): FaceMaterialIntent {
   const searchable = `${object.name} ${material.name}`.toLowerCase();
 
   if (
@@ -116,14 +123,15 @@ function applyMaterialTexture(
   material: Material,
   textures: LoadedFaceTextures,
   textureConfig?: FaceTextureConfig,
-) {
+): FaceMaterialIntent {
+  const intent = materialIntent(object, material);
+
   material.needsUpdate = true;
 
   if (!isMeshStandardMaterial(material)) {
-    return;
+    return intent;
   }
 
-  const intent = materialIntent(object, material);
   const texture =
     intent === 'eye'
       ? textures.eye
@@ -142,6 +150,19 @@ function applyMaterialTexture(
   if (texture) {
     material.map = texture;
   }
+
+  return intent;
+}
+
+function shouldUseProjectedSkinTransfer(
+  textures: LoadedFaceTextures,
+  textureConfig?: FaceTextureConfig,
+) {
+  return (
+    Boolean(textures.skin) &&
+    (textureConfig?.faceMaterialTransfer === 'projected' ||
+      textureConfig?.faceMaterialTransfer === 'auto')
+  );
 }
 
 function prepareNeutralHeadAsset(
@@ -151,6 +172,11 @@ function prepareNeutralHeadAsset(
 ): LoadedHeadAsset {
   const morphTargetNames = new Set<string>();
   const morphTargetBindings: MorphTargetBinding[] = [];
+  const projectedSkinTargets = new Set<Mesh>();
+  const projectSkinTexture = shouldUseProjectedSkinTransfer(
+    textures,
+    textureConfig,
+  );
 
   gltf.scene.traverse((object) => {
     if (!isMorphTargetMesh(object)) {
@@ -170,12 +196,35 @@ function prepareNeutralHeadAsset(
       morphTargetNames.add(name);
     });
 
-    forEachMaterial(object.material, (material) =>
-      applyMaterialTexture(object, material, textures, textureConfig),
-    );
+    const intents = new Set<FaceMaterialIntent>();
+
+    forEachMaterial(object.material, (material) => {
+      const intent = applyMaterialTexture(
+        object,
+        material,
+        textures,
+        textureConfig,
+      );
+
+      intents.add(intent);
+    });
+
+    if (
+      projectSkinTexture &&
+      intents.has('skin') &&
+      !intents.has('eye') &&
+      !intents.has('oral')
+    ) {
+      projectedSkinTargets.add(object);
+    }
   });
 
   const box = new Box3().setFromObject(gltf.scene);
+
+  projectedSkinTargets.forEach((mesh) => {
+    applyProjectedSkinTransfer(mesh, box);
+  });
+
   const size = box.getSize(new Vector3());
   const center = box.getCenter(new Vector3());
   const maxDimension = Math.max(size.x, size.y, size.z) || 1;

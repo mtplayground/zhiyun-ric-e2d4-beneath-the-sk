@@ -1,0 +1,65 @@
+import { describe, expect, it } from 'vitest';
+import {
+  Box3,
+  BufferAttribute,
+  BufferGeometry,
+  Mesh,
+  MeshStandardMaterial,
+  Vector3,
+} from 'three';
+
+import { applyProjectedSkinTransfer } from './projected-skin-transfer';
+
+function makeTriangleGeometry() {
+  const geometry = new BufferGeometry();
+  geometry.setAttribute(
+    'position',
+    new BufferAttribute(new Float32Array([-1, -1, 0, 1, -1, 0, 0, 1, 0]), 3),
+  );
+  geometry.setAttribute(
+    'uv',
+    new BufferAttribute(new Float32Array([0.2, 0.2, 0.4, 0.2, 0.3, 0.4]), 2),
+  );
+  geometry.morphAttributes.position = [
+    new BufferAttribute(
+      new Float32Array([-1, -0.8, 0, 1, -0.8, 0, 0, 1.2, 0]),
+      3,
+    ),
+  ];
+
+  return geometry;
+}
+
+describe('applyProjectedSkinTransfer', () => {
+  it('replaces mesh UVs with normalized world-space projection coordinates', () => {
+    const mesh = new Mesh(makeTriangleGeometry(), new MeshStandardMaterial());
+    mesh.position.set(1, 2, 0);
+    mesh.updateWorldMatrix(true, false);
+
+    const bounds = new Box3(new Vector3(0, 1, -1), new Vector3(2, 3, 1));
+    const originalGeometry = mesh.geometry;
+    const result = applyProjectedSkinTransfer(mesh, bounds);
+    const uv = mesh.geometry.getAttribute('uv');
+
+    expect(result).toEqual({ applied: true, vertexCount: 3, reason: null });
+    expect(mesh.geometry).not.toBe(originalGeometry);
+    expect(Array.from(uv.array)).toEqual([0, 1, 1, 1, 0.5, 0]);
+  });
+
+  it('preserves morph target attributes while swapping projected UVs', () => {
+    const mesh = new Mesh(makeTriangleGeometry(), new MeshStandardMaterial());
+    const morphAttributeValues = Array.from(
+      mesh.geometry.morphAttributes.position?.[0]?.array ?? [],
+    );
+
+    applyProjectedSkinTransfer(
+      mesh,
+      new Box3(new Vector3(-1, -1, -1), new Vector3(1, 1, 1)),
+    );
+
+    expect(mesh.geometry.morphAttributes.position).toHaveLength(1);
+    expect(
+      Array.from(mesh.geometry.morphAttributes.position?.[0]?.array ?? []),
+    ).toEqual(morphAttributeValues);
+  });
+});
