@@ -51,7 +51,11 @@ describe('pose morph-target audit', () => {
 
     expect(audit.status).toBe('partial');
     expect(audit.activeBlendshapeNames).toEqual(['jawOpen']);
-    expect(audit.missingBlendshapeNames).toEqual(['mouthClose', 'tongueOut']);
+    expect(audit.missingBlendshapeNames).toEqual([
+      'mouthClose',
+      'mouthFunnel',
+      'tongueOut',
+    ]);
     expect(audit.unsupportedBlendshapeNames).toEqual([]);
   });
 
@@ -88,7 +92,7 @@ describe('pose morph-target audit', () => {
 
     expect(audit.status).toBe('unsupported');
     expect(audit.activeCount).toBe(0);
-    expect(audit.missingCount).toBe(4);
+    expect(audit.missingCount).toBe(6);
   });
 
   it('resolves fallback morph-target aliases before marking a pose missing', () => {
@@ -113,6 +117,8 @@ describe('pose morph-target audit', () => {
       availableBlendshapes: [
         'cheek_squint_l',
         'cheek_squint_r',
+        'eye_squint_l',
+        'eye_squint_r',
         'mouthSmile_L',
         'mouthSmile_R',
       ],
@@ -122,6 +128,8 @@ describe('pose morph-target audit', () => {
     expect(audit.activeBlendshapeNames).toEqual([
       'cheek_squint_l',
       'cheek_squint_r',
+      'eye_squint_l',
+      'eye_squint_r',
       'mouthSmile_L',
       'mouthSmile_R',
     ]);
