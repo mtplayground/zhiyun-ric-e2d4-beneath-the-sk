@@ -31,7 +31,7 @@ type RawEnv = Pick<
 
 const defaultConfig = {
   faceMeshUrl: 'https://threejs.org/examples/models/gltf/facecap.glb',
-  poseDataUrl: '/data/poses.json',
+  poseDataUrl: './data/poses.json',
   deformationProvider: 'kinematic-blendshape',
   readoutPanel: true,
   deformationCurvePanel: true,
