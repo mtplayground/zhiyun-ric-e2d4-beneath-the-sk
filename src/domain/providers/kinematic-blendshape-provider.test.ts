@@ -41,6 +41,23 @@ describe('interpolateBlendshapeWeights', () => {
       jawOpen: 0.5,
     });
   });
+
+  it('resolves ARKit-style names to mesh-specific fallback aliases', () => {
+    const weights = interpolateBlendshapeWeights({
+      fromWeights: {},
+      targetWeights: {
+        jawOpen: 0.5,
+        mouthSmileLeft: 0.8,
+      },
+      progress: 1,
+      availableBlendshapes: new Set(['jaw_open', 'mouthSmile_L']),
+    });
+
+    expect(weights).toEqual({
+      jaw_open: 0.5,
+      mouthSmile_L: 0.8,
+    });
+  });
 });
 
 describe('createKinematicBlendshapeProvider', () => {
@@ -79,6 +96,32 @@ describe('createKinematicBlendshapeProvider', () => {
       blendshapeWeights: {
         jawOpen: 0.4,
       },
+    });
+  });
+
+  it('emits evaluated frames with mesh-specific alias names after initialization', () => {
+    const provider = createKinematicBlendshapeProvider();
+    provider.initialize({
+      assetUrl: '/assets/head.glb',
+      availableBlendshapes: ['jaw_open'],
+      initialBlendshapeWeights: {},
+    });
+
+    const frame = provider.evaluateFrame({
+      frameIndex: 1,
+      progress: 1,
+      previousBlendshapeWeights: {},
+      targetPose: {
+        id: 'mouth',
+        label: 'Mouth',
+        blendshapeWeights: {
+          jawOpen: 0.8,
+        },
+      },
+    });
+
+    expect(frame.blendshapeWeights).toEqual({
+      jaw_open: 0.8,
     });
   });
 });

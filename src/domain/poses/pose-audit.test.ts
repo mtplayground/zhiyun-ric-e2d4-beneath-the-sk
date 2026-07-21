@@ -6,7 +6,9 @@ import {
   auditPoseLibrary,
   auditPoseMapping,
   expressionPoseMappings,
+  getMorphTargetAliasCandidates,
   phonemePoseMappings,
+  resolveMorphTargetName,
 } from '@/domain/poses';
 
 describe('pose morph-target audit', () => {
@@ -87,5 +89,48 @@ describe('pose morph-target audit', () => {
     expect(audit.status).toBe('unsupported');
     expect(audit.activeCount).toBe(0);
     expect(audit.missingCount).toBe(4);
+  });
+
+  it('resolves fallback morph-target aliases before marking a pose missing', () => {
+    const smile = expressionPoseMappings.find(
+      (pose) => pose.id === 'expression-smile',
+    );
+
+    expect(smile).toBeDefined();
+    expect(getMorphTargetAliasCandidates('mouthSmileLeft')).toContain(
+      'mouthSmile_L',
+    );
+    expect(
+      resolveMorphTargetName({
+        requestedName: 'mouthSmileLeft',
+        availableBlendshapes: ['mouthSmile_L'],
+      }),
+    ).toBe('mouthSmile_L');
+
+    const audit = auditPoseMapping({
+      pose: smile!,
+      providerId: 'kinematic-blendshape',
+      availableBlendshapes: [
+        'cheek_squint_l',
+        'cheek_squint_r',
+        'mouthSmile_L',
+        'mouthSmile_R',
+      ],
+    });
+
+    expect(audit.status).toBe('supported');
+    expect(audit.activeBlendshapeNames).toEqual([
+      'cheek_squint_l',
+      'cheek_squint_r',
+      'mouthSmile_L',
+      'mouthSmile_R',
+    ]);
+    expect(
+      audit.entries.find((entry) => entry.name === 'mouthSmileLeft'),
+    ).toMatchObject({
+      resolvedName: 'mouthSmile_L',
+      status: 'active',
+    });
+    expect(audit.missingBlendshapeNames).toEqual([]);
   });
 });

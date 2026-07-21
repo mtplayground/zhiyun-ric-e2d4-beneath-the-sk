@@ -9,6 +9,7 @@ import type {
   DeformationTargetPose,
   DeformationWarmupResult,
 } from './deformation-provider';
+import { createMorphTargetNameResolver } from '@/domain/poses/morph-target-aliases';
 
 const providerId = 'kinematic-blendshape';
 const providerLabel = 'Kinematic blendshape provider';
@@ -36,44 +37,76 @@ function normalizeWeights(weights: BlendshapeWeights): BlendshapeWeights {
   );
 }
 
+function remapBlendshapeWeights(
+  weights: BlendshapeWeights,
+  resolveBlendshapeName:
+    ((name: BlendshapeName) => BlendshapeName | null) | null,
+): BlendshapeWeights {
+  const normalizedWeights = normalizeWeights(weights);
+
+  if (!resolveBlendshapeName) {
+    return normalizedWeights;
+  }
+
+  const remappedWeights = new Map<BlendshapeName, number>();
+
+  Object.entries(normalizedWeights).forEach(([name, value]) => {
+    const resolvedName = resolveBlendshapeName(name);
+
+    if (!resolvedName) {
+      return;
+    }
+
+    remappedWeights.set(
+      resolvedName,
+      Math.max(remappedWeights.get(resolvedName) ?? 0, value),
+    );
+  });
+
+  return Object.fromEntries(remappedWeights);
+}
+
 function buildInterpolatedKeys(
   fromWeights: BlendshapeWeights,
   targetWeights: BlendshapeWeights,
-  availableBlendshapes: ReadonlySet<BlendshapeName> | null,
 ) {
   const keys = new Set([
     ...Object.keys(fromWeights),
     ...Object.keys(targetWeights),
   ]);
 
-  if (!availableBlendshapes) {
-    return [...keys].sort((a, b) => a.localeCompare(b));
-  }
-
-  return [...keys]
-    .filter((key) => availableBlendshapes.has(key))
-    .sort((a, b) => a.localeCompare(b));
+  return [...keys].sort((a, b) => a.localeCompare(b));
 }
 
 export function interpolateBlendshapeWeights({
   fromWeights,
   targetWeights,
   progress,
+  resolveBlendshapeName,
   availableBlendshapes,
 }: {
   fromWeights: BlendshapeWeights;
   targetWeights: BlendshapeWeights;
   progress: number;
+  resolveBlendshapeName?:
+    ((name: BlendshapeName) => BlendshapeName | null) | null;
   availableBlendshapes?: ReadonlySet<BlendshapeName> | null;
 }): BlendshapeWeights {
-  const normalizedFrom = normalizeWeights(fromWeights);
-  const normalizedTarget = normalizeWeights(targetWeights);
-  const blendFactor = smoothProgress(progress);
-  const keys = buildInterpolatedKeys(
-    normalizedFrom,
-    normalizedTarget,
-    availableBlendshapes ?? null,
+  const blendshapeResolver =
+    resolveBlendshapeName ??
+    (availableBlendshapes
+      ? createMorphTargetNameResolver(availableBlendshapes)
+      : null);
+  const normalizedFrom = remapBlendshapeWeights(
+    fromWeights,
+    blendshapeResolver,
   );
+  const normalizedTarget = remapBlendshapeWeights(
+    targetWeights,
+    blendshapeResolver,
+  );
+  const blendFactor = smoothProgress(progress);
+  const keys = buildInterpolatedKeys(normalizedFrom, normalizedTarget);
 
   return Object.fromEntries(
     keys
@@ -90,7 +123,8 @@ export function interpolateBlendshapeWeights({
 
 export function createKinematicBlendshapeProvider(): DeformationProvider {
   let availableBlendshapes: readonly BlendshapeName[] = [];
-  let availableBlendshapeSet: ReadonlySet<BlendshapeName> | null = null;
+  let resolveBlendshapeName:
+    ((name: BlendshapeName) => BlendshapeName | null) | null = null;
   let initialized = false;
 
   const initialize = (
@@ -99,8 +133,10 @@ export function createKinematicBlendshapeProvider(): DeformationProvider {
     availableBlendshapes = [...context.availableBlendshapes].sort((a, b) =>
       a.localeCompare(b),
     );
-    availableBlendshapeSet =
-      availableBlendshapes.length > 0 ? new Set(availableBlendshapes) : null;
+    resolveBlendshapeName =
+      availableBlendshapes.length > 0
+        ? createMorphTargetNameResolver(availableBlendshapes)
+        : null;
     initialized = true;
 
     return {
@@ -115,7 +151,7 @@ export function createKinematicBlendshapeProvider(): DeformationProvider {
       fromWeights: input.previousBlendshapeWeights,
       targetWeights: targetPose.blendshapeWeights,
       progress: input.progress,
-      availableBlendshapes: initialized ? availableBlendshapeSet : null,
+      resolveBlendshapeName: initialized ? resolveBlendshapeName : null,
     });
 
     return {
@@ -134,7 +170,7 @@ export function createKinematicBlendshapeProvider(): DeformationProvider {
 
   const dispose = () => {
     availableBlendshapes = [];
-    availableBlendshapeSet = null;
+    resolveBlendshapeName = null;
     initialized = false;
   };
 
