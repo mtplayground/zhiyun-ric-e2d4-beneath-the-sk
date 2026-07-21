@@ -11,6 +11,7 @@ import MuscleSliderPanel from '@/components/controls/muscle-slider-panel';
 import PrecomputeController from '@/components/controls/precompute-controller';
 import PresetSelectors from '@/components/controls/preset-selectors';
 import ResetToNeutralControl from '@/components/controls/reset-to-neutral-control';
+import LiveNumericReadout from '@/components/readout/live-numeric-readout';
 import FaceViewport from '@/components/viewport/face-viewport';
 import type { AppConfig } from '@/config/env';
 import { cn } from '@/lib/utils';
@@ -18,7 +19,7 @@ import {
   useActivationValues,
   useActiveControlMode,
   useActivePoseLabel,
-  useControlReadout,
+  useCurrentFrameIndex,
 } from '@/state';
 
 type RegionProps = {
@@ -154,35 +155,16 @@ function ControlPanelRegion({ config }: RegionProps) {
 }
 
 function LiveReadoutRegion() {
-  const readout = useControlReadout();
-  const activationRows = Object.entries(readout.activationValues).slice(0, 3);
+  const currentFrameIndex = useCurrentFrameIndex();
 
   return (
     <DataPanel tone="amber" className="min-h-40">
       <DataPanelHeader className="border-b border-border/70">
         <DataPanelTitle>Live Readout</DataPanelTitle>
-        <StatusPill tone="amber">Frame {readout.currentFrameIndex}</StatusPill>
+        <StatusPill tone="amber">Frame {currentFrameIndex}</StatusPill>
       </DataPanelHeader>
-      <DataPanelBody className="grid gap-3 p-4">
-        <p className="font-mono text-sm text-foreground">
-          Current Pose: {readout.activePoseLabel} | Frame:{' '}
-          {readout.currentFrameIndex}
-        </p>
-        <div className="grid grid-cols-3 gap-2 font-mono text-xs text-muted-foreground">
-          {activationRows.length > 0 ? (
-            activationRows.map(([label, value]) => (
-              <span key={label}>
-                {label}: {value.toFixed(2)}
-              </span>
-            ))
-          ) : (
-            <>
-              <span>AU 0: 0.00</span>
-              <span>Jaw: 0.00</span>
-              <span>Lip: 0.00</span>
-            </>
-          )}
-        </div>
+      <DataPanelBody className="p-4">
+        <LiveNumericReadout />
       </DataPanelBody>
     </DataPanel>
   );
