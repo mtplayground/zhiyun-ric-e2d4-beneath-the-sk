@@ -9,29 +9,58 @@ import {
 } from '@/domain/poses';
 
 const referenceMeshMorphTargets = [
-  'browDownLeft',
-  'browDownRight',
+  'browDown_L',
+  'browDown_R',
   'browInnerUp',
-  'browOuterUpLeft',
-  'browOuterUpRight',
-  'cheekSquintLeft',
-  'cheekSquintRight',
-  'eyeSquintLeft',
-  'eyeSquintRight',
+  'browOuterUp_L',
+  'browOuterUp_R',
+  'cheekPuff',
+  'cheekSquint_L',
+  'cheekSquint_R',
+  'eyeBlink_L',
+  'eyeBlink_R',
+  'eyeLookDown_L',
+  'eyeLookDown_R',
+  'eyeLookIn_L',
+  'eyeLookIn_R',
+  'eyeLookOut_L',
+  'eyeLookOut_R',
+  'eyeLookUp_L',
+  'eyeLookUp_R',
+  'eyeSquint_L',
+  'eyeSquint_R',
+  'eyeWide_L',
+  'eyeWide_R',
+  'jawForward',
+  'jawLeft',
   'jawOpen',
+  'jawRight',
   'mouthClose',
-  'mouthFrownLeft',
-  'mouthFrownRight',
+  'mouthDimple_L',
+  'mouthDimple_R',
+  'mouthFrown_L',
+  'mouthFrown_R',
   'mouthFunnel',
-  'mouthLowerDownLeft',
-  'mouthLowerDownRight',
+  'mouthLeft',
+  'mouthLowerDown_L',
+  'mouthLowerDown_R',
+  'mouthPress_L',
+  'mouthPress_R',
   'mouthPucker',
-  'mouthSmileLeft',
-  'mouthSmileRight',
-  'mouthStretchLeft',
-  'mouthStretchRight',
-  'mouthUpperUpLeft',
-  'mouthUpperUpRight',
+  'mouthRight',
+  'mouthRollLower',
+  'mouthRollUpper',
+  'mouthShrugLower',
+  'mouthShrugUpper',
+  'mouthSmile_L',
+  'mouthSmile_R',
+  'mouthStretch_L',
+  'mouthStretch_R',
+  'mouthUpperUp_L',
+  'mouthUpperUp_R',
+  'noseSneer_L',
+  'noseSneer_R',
+  'tongueOut',
 ] as const;
 
 describe('reference mesh preset coverage', () => {
@@ -71,5 +100,51 @@ describe('reference mesh preset coverage', () => {
     expect(nonNeutralWithoutActiveWeights).toEqual([]);
     expect(summary.partialPoseCount).toBe(0);
     expect(summary.unsupportedPoseCount).toBe(0);
+
+    const weakVisiblePoses = summary.poseAudits.filter(
+      (audit) =>
+        audit.status !== 'neutral' &&
+        (audit.activeWeightTotal < 0.5 || audit.maxActiveWeight < 0.18),
+    );
+
+    expect(weakVisiblePoses).toEqual([]);
+  });
+
+  it('keeps N and Smile visually decisive on the default mesh', () => {
+    const summary = auditPoseLibrary({
+      providerId: 'kinematic-blendshape',
+      availableBlendshapes: referenceMeshMorphTargets,
+    });
+    const phonemeN = summary.poseAudits.find(
+      (audit) => audit.poseId === 'phoneme-n',
+    );
+    const smile = summary.poseAudits.find(
+      (audit) => audit.poseId === 'expression-smile',
+    );
+
+    expect(phonemeN).toMatchObject({
+      status: 'supported',
+      activeBlendshapeNames: expect.arrayContaining([
+        'jawOpen',
+        'mouthFunnel',
+        'mouthPress_L',
+        'mouthPress_R',
+        'mouthPucker',
+      ]),
+    });
+    expect(phonemeN?.activeWeightTotal).toBeGreaterThanOrEqual(2);
+
+    expect(smile).toMatchObject({
+      status: 'supported',
+      activeBlendshapeNames: expect.arrayContaining([
+        'cheekSquint_L',
+        'cheekSquint_R',
+        'mouthDimple_L',
+        'mouthDimple_R',
+        'mouthSmile_L',
+        'mouthSmile_R',
+      ]),
+    });
+    expect(smile?.activeWeightTotal).toBeGreaterThanOrEqual(5);
   });
 });
