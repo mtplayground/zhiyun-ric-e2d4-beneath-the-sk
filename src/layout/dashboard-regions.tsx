@@ -16,11 +16,7 @@ import ProjectHero from '@/components/hero/project-hero';
 import DeformationCurvePanel from '@/components/readout/deformation-curve-panel';
 import LiveNumericReadout from '@/components/readout/live-numeric-readout';
 import FaceViewport from '@/components/viewport/face-viewport';
-import type {
-  AppConfig,
-  FaceTextureConfig,
-  ProjectionAlignmentConfig,
-} from '@/config/env';
+import type { AppConfig, ProjectionAlignmentConfig } from '@/config/env';
 import { cn } from '@/lib/utils';
 import {
   useActivationValues,
@@ -31,10 +27,6 @@ import {
 
 type RegionProps = {
   config: AppConfig;
-};
-
-type ViewportRegionProps = RegionProps & {
-  textureConfig: FaceTextureConfig;
 };
 
 type ControlPanelRegionProps = RegionProps & {
@@ -69,7 +61,7 @@ function DashboardHeader({ config }: RegionProps) {
   return <ProjectHero config={config} />;
 }
 
-function ViewportRegion({ config, textureConfig }: ViewportRegionProps) {
+function ViewportRegion({ config }: RegionProps) {
   const activePoseLabel = useActivePoseLabel();
 
   return (
@@ -82,8 +74,6 @@ function ViewportRegion({ config, textureConfig }: ViewportRegionProps) {
         <FaceViewport
           activePoseLabel={activePoseLabel}
           assetUrl={config.assets.faceMeshUrl}
-          hairMeshUrl={config.assets.hairMeshUrl}
-          textureConfig={textureConfig}
         />
       </DataPanelBody>
     </DataPanel>
