@@ -1,4 +1,4 @@
-const authors = 'Zhiyun Peng, Eugene Fiume, Michael Tao';
+const authors = 'Zhiyun Peng, Michael Tao, Eugene Fiume';
 
 export default function ProjectFooter() {
   return (

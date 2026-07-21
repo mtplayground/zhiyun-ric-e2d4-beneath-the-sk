@@ -36,7 +36,7 @@ export default function ProjectHero({ config }: ProjectHeroProps) {
             Beneath the Skin
           </h1>
           <p className="text-sm font-medium text-foreground">
-            Zhiyun Peng, Eugene Fiume, Michael Tao
+            Zhiyun Peng, Michael Tao, Eugene Fiume
           </p>
           <p className="max-w-4xl text-sm leading-6 text-muted-foreground">
             Interactive facial deformation workspace for inspecting pose-driven
