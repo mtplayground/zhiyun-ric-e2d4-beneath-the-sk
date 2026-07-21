@@ -144,6 +144,9 @@ export const useControlState = create<ControlState>((set) => ({
     set((state) => {
       const acceptsActivationValues =
         options?.mode === undefined || options.mode === state.activeControlMode;
+      const activePoseIsNeutral = state.activePoseLabel
+        .toLowerCase()
+        .includes('neutral');
 
       return {
         activeControlMode: state.activeControlMode,
@@ -151,9 +154,11 @@ export const useControlState = create<ControlState>((set) => ({
           options?.frameIndex === undefined
             ? state.currentFrameIndex
             : normalizeFrameIndex(options.frameIndex),
-        activationValues: acceptsActivationValues
-          ? normalizeActivationValues(values)
-          : state.activationValues,
+        activationValues: activePoseIsNeutral
+          ? {}
+          : acceptsActivationValues
+            ? normalizeActivationValues(values)
+            : state.activationValues,
       };
     });
   },

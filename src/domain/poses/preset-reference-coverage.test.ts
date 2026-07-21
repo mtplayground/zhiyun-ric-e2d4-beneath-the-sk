@@ -80,7 +80,7 @@ describe('reference mesh preset coverage', () => {
     );
   });
 
-  it('resolves every non-neutral preset to supported reference mesh weights', () => {
+  it('resolves every non-neutral preset to non-empty supported reference mesh weights', () => {
     const summary = auditPoseLibrary({
       providerId: 'kinematic-blendshape',
       availableBlendshapes: referenceMeshMorphTargets,
@@ -88,23 +88,32 @@ describe('reference mesh preset coverage', () => {
     const unsupportedPoses = summary.poseAudits.filter(
       (audit) => audit.status === 'unsupported',
     );
+    const partialPoses = summary.poseAudits.filter(
+      (audit) => audit.status === 'partial',
+    );
     const missingTargets = summary.poseAudits.filter(
       (audit) => audit.missingCount > 0,
     );
-    const nonNeutralWithoutActiveWeights = summary.poseAudits.filter(
-      (audit) => audit.status !== 'neutral' && audit.activeCount === 0,
+    const nonNeutralAudits = summary.poseAudits.filter(
+      (audit) => audit.status !== 'neutral',
+    );
+    const nonNeutralWithoutSupportedWeights = nonNeutralAudits.filter(
+      (audit) =>
+        audit.status !== 'supported' ||
+        audit.activeCount === 0 ||
+        audit.activeBlendshapeNames.length === 0 ||
+        audit.activeWeightTotal <= 0,
     );
 
     expect(unsupportedPoses).toEqual([]);
+    expect(partialPoses).toEqual([]);
     expect(missingTargets).toEqual([]);
-    expect(nonNeutralWithoutActiveWeights).toEqual([]);
+    expect(nonNeutralWithoutSupportedWeights).toEqual([]);
     expect(summary.partialPoseCount).toBe(0);
     expect(summary.unsupportedPoseCount).toBe(0);
 
-    const weakVisiblePoses = summary.poseAudits.filter(
-      (audit) =>
-        audit.status !== 'neutral' &&
-        (audit.activeWeightTotal < 0.5 || audit.maxActiveWeight < 0.18),
+    const weakVisiblePoses = nonNeutralAudits.filter(
+      (audit) => audit.activeWeightTotal < 0.5 || audit.maxActiveWeight < 0.18,
     );
 
     expect(weakVisiblePoses).toEqual([]);
