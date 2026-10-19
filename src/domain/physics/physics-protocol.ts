@@ -1,9 +1,11 @@
-import type { SolverFrame, SolverOptions, StepResult } from './xpbd-solver';
+import type { SolverFrame, SolverOptions, SolverSettings, StepResult } from './xpbd-solver';
 
 export type WorkerSolverOptions = Omit<SolverOptions, 'constraints'>;
 export type PhysicsRequest =
   | { type: 'init'; options: WorkerSolverOptions }
   | { type: 'frame'; frame: SolverFrame }
+  | { type: 'configure'; settings: SolverSettings }
+  | { type: 'reset' }
   | { type: 'ack' }
   | { type: 'stop' };
 export type PhysicsResponse =

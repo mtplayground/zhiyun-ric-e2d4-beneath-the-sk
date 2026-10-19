@@ -19,7 +19,7 @@ const context: DeformationProviderContext = {
 };
 const input = { targetPose:{id:'aa',label:'AA',blendshapeWeights:{jawOpen:0.9}},previousBlendshapeWeights:{},progress:0.3,frameIndex:3 };
 function setup() {
-  const host = { ready:Promise.resolve(), sendFrame:vi.fn(),dispose:vi.fn() };
+  const host = { ready:Promise.resolve(), sendFrame:vi.fn(),configure:vi.fn(),reset:vi.fn(),dispose:vi.fn() };
   vi.mocked(createPhysicsHost).mockReturnValue(host);
   const provider=createXpbdSoftTissueProvider(); provider.initialize(context);
   const callbacks = vi.mocked(createPhysicsHost).mock.calls.at(-1)![0] as PhysicsHostOptions;
@@ -64,6 +64,15 @@ describe('XPBD provider', () => {
     callbacks.onPositions(simulated,{reset:false},target);
     expect(provider.updateVertexDeltas!({})).toBeUndefined();
     expect(host.dispose).toHaveBeenCalledOnce();
+  });
+  it('forwards live tuning and explicit reset without replacing the backend', () => {
+    const {provider,host}=setup();
+    provider.configurePhysics!({distanceCompliance:0.01,poseCompliance:0.02,damping:4,gravity:[0,0,-5]});
+    expect(host.configure).toHaveBeenCalledWith({distanceCompliance:0.01,poseCompliance:0.02,damping:4,gravity:[0,0,-5]});
+    provider.resetSimulation!();
+    expect(host.reset).toHaveBeenCalledOnce();
+    expect(createPhysicsHost).toHaveBeenCalledOnce();
+    provider.dispose!();
   });
   it('supports controls/precompute without mesh initialization', () => {
     const provider=createXpbdSoftTissueProvider();

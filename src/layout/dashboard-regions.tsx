@@ -6,6 +6,7 @@ import {
   DataPanelHeader,
   DataPanelTitle,
 } from '@/components/ui/data-panel';
+import PhysicsControlPanel from '@/components/controls/physics-control-panel';
 import KeyboardModePanel from '@/components/controls/keyboard-mode-panel';
 import MuscleSliderPanel from '@/components/controls/muscle-slider-panel';
 import PrecomputeController from '@/components/controls/precompute-controller';
@@ -80,6 +81,7 @@ function ControlPanelRegion({ config }: RegionProps) {
     ['Readout', config.features.readoutPanel],
     ['Curve', config.features.deformationCurvePanel],
     ['Precompute', config.features.precomputePanel],
+    ['Physics', config.features.physicsPanel],
   ] as const;
   const activationCount = Object.keys(activationValues).length;
 
@@ -102,6 +104,7 @@ function ControlPanelRegion({ config }: RegionProps) {
             <MuscleSliderPanel />
           </div>
         </div>
+        {config.features.physicsPanel ? <PhysicsControlPanel /> : null}
         {config.features.precomputePanel ? <PrecomputeController /> : null}
         <div className="grid gap-2">
           {featureRows.map(([label, enabled]) => (

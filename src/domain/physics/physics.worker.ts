@@ -35,6 +35,8 @@ scope.onmessage = ({ data }) => {
         loop.setFrame(data.frame);
         scope.postMessage({ type: 'frame-accepted' });
         break;
+      case 'configure': loop?.configure(data.settings); break;
+      case 'reset': loop?.reset(); break;
       case 'ack': awaitingAck = false; break;
       case 'stop': loop?.stop(); loop = undefined; scope.close(); break;
     }

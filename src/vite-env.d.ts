@@ -8,6 +8,7 @@ interface ImportMetaEnv {
   readonly VITE_STATIC_BASE_PATH?: string;
   readonly VITE_ENABLE_READOUT_PANEL?: string;
   readonly VITE_ENABLE_DEFORMATION_CURVE_PANEL?: string;
+  readonly VITE_ENABLE_PHYSICS_PANEL?: string;
   readonly VITE_ENABLE_PRECOMPUTE_PANEL?: string;
 }
 

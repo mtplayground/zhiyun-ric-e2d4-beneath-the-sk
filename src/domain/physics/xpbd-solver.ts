@@ -36,7 +36,7 @@ export class DistanceConstraint implements XpbdConstraint {
     readonly a: number,
     readonly b: number,
     readonly restLength: number,
-    readonly compliance = 0,
+    public compliance = 0,
   ) {
     if (!Number.isInteger(a) || !Number.isInteger(b) || a < 0 || b < 0 || a === b) throw new Error('Invalid edge indices');
     nonnegative(restLength, 'rest length');
@@ -64,7 +64,7 @@ export class DistanceConstraint implements XpbdConstraint {
 
 export class PoseTargetConstraint implements XpbdConstraint {
   private readonly lambda = new Float64Array(3);
-  constructor(readonly node: number, readonly compliance = 0) {
+  constructor(readonly node: number, public compliance = 0) {
     if (!Number.isInteger(node) || node < 0) throw new Error('Invalid pose node');
     nonnegative(compliance, 'pose compliance');
   }
@@ -80,6 +80,13 @@ export class PoseTargetConstraint implements XpbdConstraint {
       p[i] += w[this.node] * dl;
     }
   }
+}
+
+export interface SolverSettings {
+  distanceCompliance?: number;
+  poseCompliance?: number;
+  damping?: number;
+  gravity?: Vec3;
 }
 
 export interface SolverOptions {
@@ -119,8 +126,9 @@ export class XpbdSolver implements ParticleState {
   private readonly masses: Float64Array;
   private readonly targets: Float64Array;
   private readonly previous: Float64Array;
-  private readonly gravity: Vec3;
-  private readonly damping: number;
+  private gravity: Vec3;
+  private damping: number;
+  private resetRequested = false;
   private readonly constraints: XpbdConstraint[];
 
   constructor(options: SolverOptions) {
@@ -169,6 +177,28 @@ export class XpbdSolver implements ParticleState {
     this.constraints.push(...(options.constraints ?? []));
   }
 
+  /** Apply tunables without recreating particles or discarding velocities. */
+  configure(settings: SolverSettings) {
+    if (settings.distanceCompliance !== undefined) nonnegative(settings.distanceCompliance, 'distance compliance');
+    if (settings.poseCompliance !== undefined) nonnegative(settings.poseCompliance, 'pose compliance');
+    if (settings.damping !== undefined) nonnegative(settings.damping, 'damping');
+    if (settings.gravity && (settings.gravity.length !== 3 || !settings.gravity.every(Number.isFinite))) throw new Error('Invalid gravity');
+    if (settings.gravity) this.gravity = [settings.gravity[0], settings.gravity[1], settings.gravity[2]];
+    if (settings.damping !== undefined) this.damping = settings.damping;
+    for (const constraint of this.constraints) {
+      if (constraint instanceof DistanceConstraint && settings.distanceCompliance !== undefined) constraint.compliance = settings.distanceCompliance;
+      if (constraint instanceof PoseTargetConstraint && settings.poseCompliance !== undefined) constraint.compliance = settings.poseCompliance;
+      constraint.reset();
+    }
+  }
+
+  /** Restore the current pose and attachments, clearing velocity/multipliers. */
+  reset(frame: SolverFrame): StepResult {
+    this.resetRequested = true;
+    try { return this.step(frame); }
+    finally { this.resetRequested = false; }
+  }
+
   private attach(skull: AttachmentTransform, jaw: AttachmentTransform) {
     this.labels.forEach((label, node) => {
       if (label === 0) return;
@@ -210,6 +240,7 @@ export class XpbdSolver implements ParticleState {
     };
     if (invalidTarget) return recover('Non-finite pose target; retained last finite target coordinates');
     if (!matricesValid) return recover('Invalid attachment transform');
+    if (this.resetRequested) return recover('Simulation reset requested');
     if (!this.finite()) return recover('Non-finite or invalid particle state');
     const h = this.timestep / this.substeps;
     const decay = Math.exp(-this.damping * h);

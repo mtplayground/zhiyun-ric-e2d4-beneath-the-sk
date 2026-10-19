@@ -101,6 +101,29 @@ describe('physics host', () => {
     expect(second.onDiagnostic).toHaveBeenCalledWith(expect.objectContaining({ code: 'fallback', message: expect.stringContaining('timed out') }));
   });
 
+  it('forwards live worker settings and reset without constructing a new worker', async () => {
+    const worker=new FakeWorker();
+    const factory=vi.fn(()=>worker);
+    const {host}=setup(factory);await host.ready;worker.emit({type:'ready'});
+    host.configure({damping:4,gravity:[0,0,-5],poseCompliance:0.02,distanceCompliance:0.01});
+    expect(worker.postMessage).toHaveBeenLastCalledWith({type:'configure',settings:{damping:4,gravity:[0,0,-5],poseCompliance:0.02,distanceCompliance:0.01}});
+    host.sendFrame({poseTargets:[3,2,1]});host.reset();
+    expect(worker.postMessage).toHaveBeenLastCalledWith({type:'reset'});
+    expect(factory).toHaveBeenCalledOnce();
+  });
+
+  it('applies fallback settings live and resets immediately to the latest pose', async () => {
+    const {host,onPositions}=setup();await host.ready;
+    host.sendFrame({poseTargets:[1,2,3]});
+    host.configure({damping:5,gravity:[0,0,-10],poseCompliance:0.1,distanceCompliance:0.01});
+    vi.advanceTimersByTime(20);
+    expect(onPositions).toHaveBeenCalled();
+    host.reset();
+    const [positions,result]=onPositions.mock.calls.at(-1)!;
+    expect(Array.from(positions)).toEqual([1,2,3]);
+    expect(result.reset).toBe(true);
+  });
+
   it('reports mismatched assets and never starts a solver', async () => {
     vi.mocked(loadSoftTissueAsset).mockRejectedValueOnce(Error('Simulation asset does not match the render face mesh'));
     const factory = vi.fn(() => new FakeWorker());

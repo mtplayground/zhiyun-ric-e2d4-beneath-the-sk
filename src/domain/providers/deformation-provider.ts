@@ -1,3 +1,4 @@
+import type { SolverSettings } from '../physics/xpbd-solver';
 import type { PoseSurface } from '../physics/pose-target-mapper';
 import type { PhysicsDiagnostic } from '../physics/physics-protocol';
 
@@ -38,6 +39,7 @@ export type DeformationProviderContext = {
     sourceMesh: ArrayBuffer;
     surface: PoseSurface;
     simProxyUrl: string;
+    settings?: SolverSettings;
     onDiagnostic?: (diagnostic: PhysicsDiagnostic) => void;
   };
 };
@@ -63,6 +65,8 @@ export interface DeformationProvider {
     poses: readonly DeformationTargetPose[],
   ) => Promise<DeformationWarmupResult> | DeformationWarmupResult;
   /** Runs on idle/cached frames as well as pose transitions. */
+  configurePhysics?: (settings: SolverSettings) => void;
+  resetSimulation?: () => void;
   updateVertexDeltas?: (weights: BlendshapeWeights) => VertexDeltaFrame | undefined;
   dispose?: () => void;
 }

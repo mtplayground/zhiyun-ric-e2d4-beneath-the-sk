@@ -31,6 +31,11 @@
       "number": 101,
       "title": "Add the physics deformation provider and render embedding",
       "body": "## Scope\n\nRegister a new provider with id `xpbd-soft-tissue` in the provider registry, implementing the existing provider contract and producing vertex displacements.\nRendering uses the blendshape pose as today, plus a simulated offset: each node's simulated position minus its pose target, carried to render vertices through the embedding. This keeps the pose exact at rest and avoids applying the deformation twice.\n`kinematic-blendshape` stays the default provider. Physics can be selected through the existing `VITE_DEFORMATION_PROVIDER` variable and switched on and off at runtime without reloading the mesh. Turning it off returns to pure kinematic output immediately. Controls, readout and the curve panel keep working the same either way. Add `VITE_SIM_PROXY_URL` for the simulation asset location, defaulting to the committed asset, and document it in the example env file.\n\n## Files\n\n`src/domain/providers/provider-registry.ts`, new provider under `src/domain/providers/`, `src/components/viewport/kinematic-provider-runtime.tsx`, `src/components/viewport/gltf-head-loader.ts`, `src/config/env.ts`, `.env.example`\n\n## Dependencies\n\nDepends on: Pose-to-physics mapping\n\n---\nUUID: 7d5ca44f-1010-41ad-9a77-24a0fa7e7915"
+    },
+    {
+      "number": 102,
+      "title": "Add the physics control panel",
+      "body": "## Scope\n\nA control panel section with:\n- a physics on/off toggle;\n- a tissue compliance control;\n- a pose-following compliance control;\n- a damping control;\n- a gravity strength control, scaled so the effect can be made visible on an upright face;\n- a reset-simulation action.\nShow it only when the new `VITE_ENABLE_PHYSICS_PANEL` flag is set, following the existing optional-panel pattern, and document the flag in the example env file. Settings apply live to the running solver.\n\n## Files\n\nNew panel under `src/components/controls/`, `src/layout/dashboard-regions.tsx`, `src/config/env.ts`, `.env.example`\n\n## Dependencies\n\nDepends on: Physics deformation provider\n\n---\nUUID: fdc89073-acd7-41cd-ae82-692ddcbc2cc4"
     }
   ]
 }
