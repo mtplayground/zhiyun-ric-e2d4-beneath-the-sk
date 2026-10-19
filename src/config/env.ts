@@ -41,7 +41,7 @@ const defaultConfig = {
   readoutPanel: true,
   deformationCurvePanel: true,
   precomputePanel: true,
-  physicsPanel: false,
+  physicsPanel: true,
 } satisfies Record<string, string | boolean>;
 
 function normalizePath(value: string | undefined, fallback: string) {

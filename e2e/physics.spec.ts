@@ -157,3 +157,30 @@ test('real FaceCap: every expression, Smile and AA retain zero-gravity kinematic
   expect(expressions.length).toBeGreaterThan(0);expect(faceRequests).toBe(1);
   expect(errors).toEqual([]);expect(webglMessages).toEqual([]);
 });
+
+test('physics presets apply live, disclose exaggeration and survive reset',async({page})=>{
+  await servePhysicsFixture(page);
+  await load(page);
+  const preset=page.getByRole('combobox',{name:'Physics preset',exact:true});
+  await expect(preset).toHaveValue('physical');
+  await expect(page.getByRole('slider',{name:'Gravity',exact:true})).toHaveValue('9.81');
+  await preset.selectOption('visible-demonstration');
+  await expect(page.getByText('Exaggerated demonstration — not physically accurate.',{exact:true})).toBeVisible();
+  for(const [label,value] of [['Gravity','98.1'],['Skin pose stiffness','20'],['Edge stiffness','200'],['Damping','8']]) {
+    await expect(page.getByRole('slider',{name:label,exact:true})).toHaveValue(value);
+  }
+  await page.getByRole('switch',{name:'Enable soft-tissue physics'}).click();
+  await expect(page.getByTestId('physics-status')).toHaveText('Active · worker');
+  await page.getByRole('button',{name:'Reset simulation',exact:true}).click();
+  await expect(preset).toHaveValue('visible-demonstration');
+  await setSlider(page,'Gravity',0);
+  await expect(preset).toHaveValue('custom');
+  await page.getByRole('button',{name:'Reset simulation',exact:true}).click();
+  await expect(preset).toHaveValue('custom');
+  await expect.poll(async()=>parseFloat(await metric(page,'Maximum simulated displacement'))).toBe(0);
+  await preset.selectOption('physical');
+  await expect(page.getByRole('slider',{name:'Gravity',exact:true})).toHaveValue('9.81');
+  await expect(page.getByRole('slider',{name:'Skin pose stiffness',exact:true})).toHaveValue('50');
+  await expect(page.getByRole('slider',{name:'Edge stiffness',exact:true})).toHaveValue('10000');
+  await expect(page.getByRole('slider',{name:'Damping',exact:true})).toHaveValue('12');
+});

@@ -16,6 +16,18 @@ export const DEFAULT_PHYSICS_SETTINGS: Readonly<PhysicsSettings> = Object.freeze
   damping: SOLVER_DEFAULTS.damping,
   gravityAcceleration: 9.81,
 });
+export type PhysicsPreset = 'physical' | 'visible-demonstration';
+export const PHYSICS_PRESETS: Readonly<Record<PhysicsPreset, Readonly<PhysicsSettings>>> = Object.freeze({
+  physical: DEFAULT_PHYSICS_SETTINGS,
+  'visible-demonstration': Object.freeze({
+    ...DEFAULT_PHYSICS_SETTINGS,
+    gravityAcceleration: 98.1,
+    skinPoseStiffness: 20,
+    edgeStiffness: 200,
+    damping: 8,
+  }),
+});
+
 export const PHYSICS_SETTING_RANGES = {
   edgeStiffness: { min: 100, max: 1000000, step: 100 },
   skinPoseStiffness: { min: 5, max: 1000, step: 1 },

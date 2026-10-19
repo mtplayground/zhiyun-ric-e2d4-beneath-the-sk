@@ -1,4 +1,4 @@
-import { PHYSICS_SETTING_RANGES, type PhysicsSettings } from '@/domain/physics/physics-settings';
+import { PHYSICS_SETTING_RANGES, type PhysicsPreset, type PhysicsSettings } from '@/domain/physics/physics-settings';
 import { usePhysicsState } from '@/state/physics-state';
 
 const controls: { key: keyof PhysicsSettings; label: string; description: string; unit: string }[] = [
@@ -10,6 +10,8 @@ const controls: { key: keyof PhysicsSettings; label: string; description: string
 ];
 export default function PhysicsControlPanel() {
   const enabled = usePhysicsState(state => state.enabled);
+  const preset = usePhysicsState(state => state.preset);
+  const setPreset = usePhysicsState(state => state.setPreset);
   const settings = usePhysicsState(state => state.settings);
   const setEnabled = usePhysicsState(state => state.setEnabled);
   const setSetting = usePhysicsState(state => state.setSetting);
@@ -21,6 +23,23 @@ export default function PhysicsControlPanel() {
         <button type="button" role="switch" aria-checked={enabled} aria-label="Enable soft-tissue physics"
           className="rounded-md border border-border bg-background px-3 py-2 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-telemetry-cyan/50"
           onClick={() => setEnabled(!enabled)}>{enabled ? 'On' : 'Off'}</button>
+      </div>
+      <div className="grid gap-1.5">
+        <label htmlFor="physics-preset" className="text-xs">Physics preset</label>
+        <select id="physics-preset" value={preset} aria-describedby="physics-preset-help"
+          className="min-h-9 rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-telemetry-cyan/50"
+          onChange={event => setPreset(event.currentTarget.value as PhysicsPreset)}>
+          <option value="physical">Physical (default)</option>
+          <option value="visible-demonstration">Visible demonstration</option>
+          <option value="custom" disabled>Custom</option>
+        </select>
+        <p id="physics-preset-help" className="text-xs text-muted-foreground">
+          {preset === 'visible-demonstration'
+            ? 'Exaggerated demonstration — not physically accurate.'
+            : preset === 'physical'
+              ? 'Physical SI defaults.'
+              : 'Custom settings. Select a preset to restore its values.'}
+        </p>
       </div>
       {controls.map(({ key, label, description, unit }) => {
         const id = `physics-${key}`;

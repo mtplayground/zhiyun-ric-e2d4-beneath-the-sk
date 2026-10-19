@@ -96,6 +96,11 @@
       "number": 130,
       "title": "Show the real physics status on the toggle",
       "body": "## Scope\n\nThe physics toggle and viewport must not look \"on\" when physics isn't running. Next to the toggle, show one of these states:\n- **active** in the worker\n- **active** on the main-thread fallback\n- **inactive**, with a short reason: invalid or mismatched proxy asset, missing face mesh, or worker startup failure\nWhen inactive, show the reason in the viewport as well as in Provider Health, and keep showing the kinematic pose as today. The status comes from the existing diagnostics and telemetry, not a separate check.\n\n## Files\n\n`src/components/viewport/face-viewport.tsx`, `src/components/viewport/kinematic-provider-runtime.tsx`, `src/state/physics-telemetry-state.ts`\n\n---\nUUID: 1732095e-93c0-47a0-a7cc-2fe2db8828c3"
+    },
+    {
+      "number": 131,
+      "title": "Add physics presets and show the physics panel by default",
+      "body": "## Scope\n\nChange the `VITE_ENABLE_PHYSICS_PANEL` default to on, and update the example env file. Add a preset selector at the top of the physics panel:\n- **Physical (default):** the current SI defaults, unchanged.\n- **Visible demonstration:** gravity 98.1 m/s², skin stiffness 20, edge stiffness 200, damping 8. Label it in the UI as an exaggerated demonstration that is not physically accurate.\nChanging an individual setting switches the selector to Custom. Reset Simulation keeps the selected preset. The exact-resting-state behavior with gravity off must hold in every preset.\n\n## Files\n\nPhysics control panel under `src/components/controls/`, physics settings defaults, `src/state/physics-state.ts`, `src/config/env.ts`, `.env.example`\n\n## Dependencies\n\nDepends on: Physics status on the toggle\n\n---\nUUID: 1a139af5-5609-4b4a-82c0-379dd7e41718"
     }
   ]
 }
