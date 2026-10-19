@@ -1,3 +1,4 @@
+import { PHYSICS_PRESETS, toSolverSettings } from './physics-settings';
 import { describe, expect, it } from 'vitest';
 import {
   DistanceConstraint, PoseTargetConstraint, XpbdSolver,
@@ -73,6 +74,22 @@ describe('XpbdSolver', () => {
     const solver=new XpbdSolver({...base,positions,masses:[0.001,0.002,0.003,0.004],pairs:[0,2,1,3],edges,substeps:4,iterations:5});
     solver.reset({poseTargets:targets});
     for(let i=0;i<20;i++) expect(solver.step()).toEqual({reset:false});
+    expect(Array.from(solver.positions)).toEqual(targets);
+    expect(solver.velocities.every(v=>v===0)).toBe(true);
+  });
+
+  it.each(['physical','visible-demonstration','custom'] as const)('preserves the exact resting pose with gravity off for %s',preset=>{
+    const settings=preset==='custom'
+      ? {...PHYSICS_PRESETS.physical,skinPoseStiffness:37,edgeStiffness:700,damping:3}
+      : PHYSICS_PRESETS[preset];
+    const {gravityStrength,...solverSettings}=toSolverSettings({...settings,gravityAcceleration:0});
+    expect(gravityStrength).toBe(0);
+    const positions=[0,0,0,1,0,0,0,0,-0.05,1,0,-0.05];
+    const targets=[0,0,0,2,0.4,0.3,0,0,-0.05,2,0.4,0.25];
+    const solver=new XpbdSolver({...base,...solverSettings,gravity:[0,0,0],positions,
+      masses:[0.001,0.002,0.003,0.004],pairs:[0,2,1,3],edges:[0,1,2,3,0,2,1,3,0,3,1,2],substeps:4,iterations:5});
+    solver.reset({poseTargets:targets});
+    for(let frame=0;frame<120;frame++) expect(solver.step()).toEqual({reset:false});
     expect(Array.from(solver.positions)).toEqual(targets);
     expect(solver.velocities.every(v=>v===0)).toBe(true);
   });
