@@ -23,6 +23,7 @@ import {
 } from '@/domain/providers';
 import {
   controlActions,
+  useControlState,
   useActivationValues,
   useActiveControlMode,
   useActivePoseLabel,
@@ -388,6 +389,13 @@ export default function KinematicProviderRuntime({
   }, [resetRequest, provider, asset]);
 
   useFrame(() => {
+    // Zustand commands are synchronous, while the React effect that captures
+    // their target runs later. Do not overwrite a newly selected pose with a
+    // frame from the preceding transition during that interval.
+    const pendingControl = useControlState.getState();
+    if (pendingControl.activePoseLabel !== latestPoseLabelRef.current ||
+        pendingControl.activeControlMode !== latestControlModeRef.current ||
+        pendingControl.activationValues !== latestActivationValuesRef.current) return;
     frameIndexRef.current += 1;
     const frameIndex = frameIndexRef.current;
     const transition = transitionRef.current;

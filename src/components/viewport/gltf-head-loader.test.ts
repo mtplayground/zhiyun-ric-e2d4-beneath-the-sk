@@ -18,9 +18,14 @@ it('retains parsed source bytes and restores the same face mesh when offsets are
   expect(asset.physics?.surface.positions.length).toBe(6);
   asset.applyBlendshapeWeights({jaw_open:0.9});
   asset.applyVertexDeltas({positions:new Float32Array([0,0,0.1, 0,0,0.1])});
-  expect(face.geometry).not.toBe(geometry);
+  expect(face.geometry).toBe(geometry);
+  expect(geometry.getAttribute('simulationOffset')).toBeDefined();
+  expect(geometry.morphAttributes.position[0].getZ(0)).toBe(-1);
+  expect(face.material).not.toBe(material);
   asset.applyVertexDeltas();
   expect(face.geometry).toBe(geometry);
+  expect(geometry.hasAttribute('simulationOffset')).toBe(false);
+  expect(face.material).toBe(material);
   expect(scene.children[0]).toBe(face);
   expect(asset.readBlendshapeWeights()).toEqual({jaw_open:0.9});
   expect(Array.from(geometry.getAttribute('position').array)).toEqual([0,0,0,1,1,1]);

@@ -17,7 +17,8 @@
     "format:check": "prettier --check .",
     "generate:soft-tissue": "node scripts/generate-soft-tissue.mjs",
     "test:e2e:physics": "playwright test --config playwright.physics.config.ts",
-    "benchmark:physics": "node scripts/benchmark-physics.mjs"
+    "benchmark:physics": "node scripts/benchmark-physics.mjs",
+    "verify:physics": "node scripts/verify-physics-asset.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "^9.6.1",
