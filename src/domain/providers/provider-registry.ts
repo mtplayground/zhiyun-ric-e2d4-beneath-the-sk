@@ -1,7 +1,18 @@
 import type { ProviderRegistryEntry } from './deformation-provider';
 import { createKinematicBlendshapeProvider } from './kinematic-blendshape-provider';
 
+import { createXpbdSoftTissueProvider } from './xpbd-soft-tissue-provider';
+
 export const providerRegistry = {
+  'xpbd-soft-tissue': {
+    id: 'xpbd-soft-tissue',
+    label: 'XPBD soft-tissue provider',
+    description: 'Blendshape poses plus embedded simulated soft-tissue offsets.',
+    capabilities: { blendshapeWeights: true, vertexDeltas: true, precompute: true },
+    createProvider: createXpbdSoftTissueProvider,
+    selection: { envName: 'VITE_DEFORMATION_PROVIDER', defaultProvider: false,
+      notes: ['Physics can be switched off at runtime without reloading the face mesh.'] },
+  },
   'kinematic-blendshape': {
     id: 'kinematic-blendshape',
     label: 'Kinematic blendshape provider',

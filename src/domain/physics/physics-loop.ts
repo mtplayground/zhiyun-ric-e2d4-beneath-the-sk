@@ -4,7 +4,7 @@ import { XpbdSolver, type SolverFrame, type SolverOptions, type StepResult } fro
  * background pauses are dropped rather than causing unbounded catch-up work. */
 export function startPhysicsLoop(
   options: SolverOptions,
-  output: (positions: Float64Array, result: StepResult) => void,
+  output: (positions: Float64Array, result: StepResult, poseTargets: Float64Array) => void,
   error: (error: unknown) => void,
 ) {
   const solver = new XpbdSolver(options);
@@ -26,7 +26,7 @@ export function startPhysicsLoop(
         accumulator = Math.max(0, accumulator - solver.timestep);
         stepped = true;
       }
-      if (stepped) output(solver.positions.slice(), result);
+      if (stepped) output(solver.positions.slice(), result, Float64Array.from(frame.poseTargets));
     } catch (cause) {
       stopped = true;
       clearInterval(timer);

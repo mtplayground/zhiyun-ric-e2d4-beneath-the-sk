@@ -1,3 +1,6 @@
+import type { PoseSurface } from '../physics/pose-target-mapper';
+import type { PhysicsDiagnostic } from '../physics/physics-protocol';
+
 export type BlendshapeName = string;
 
 export type BlendshapeWeights = Record<BlendshapeName, number>;
@@ -31,6 +34,12 @@ export type DeformationProviderContext = {
   assetUrl: string;
   availableBlendshapes: readonly BlendshapeName[];
   initialBlendshapeWeights: BlendshapeWeights;
+  physics?: {
+    sourceMesh: ArrayBuffer;
+    surface: PoseSurface;
+    simProxyUrl: string;
+    onDiagnostic?: (diagnostic: PhysicsDiagnostic) => void;
+  };
 };
 
 export type DeformationProviderReadyState = {
@@ -53,6 +62,8 @@ export interface DeformationProvider {
   precompute?: (
     poses: readonly DeformationTargetPose[],
   ) => Promise<DeformationWarmupResult> | DeformationWarmupResult;
+  /** Runs on idle/cached frames as well as pose transitions. */
+  updateVertexDeltas?: (weights: BlendshapeWeights) => VertexDeltaFrame | undefined;
   dispose?: () => void;
 }
 

@@ -24,3 +24,5 @@ export {
   providerRegistry,
   type DeformationProviderId,
 } from './provider-registry';
+
+export { createXpbdSoftTissueProvider } from './xpbd-soft-tissue-provider';

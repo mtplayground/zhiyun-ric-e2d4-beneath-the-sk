@@ -77,3 +77,33 @@ diagnostics. The project header should show the configured face mesh and pose
 data paths, the author order should read `Zhiyun Peng, Michael Tao, Eugene
 Fiume`, and the preset/keyboard/slider controls should update the readout and
 provider-health overlay.
+
+## Soft-tissue physics
+
+`VITE_DEFORMATION_PROVIDER=kinematic-blendshape` remains the default.
+Set `VITE_DEFORMATION_PROVIDER=xpbd-soft-tissue` to start with physics enabled.
+The viewport's **Physics On/Off** button switches between both providers without
+reloading the face mesh. Turning it off immediately restores the pure blendshape
+pose. Presets, keyboard input, sliders, numeric readout and curves use the same
+blendshape weights in both modes.
+
+`VITE_SIM_PROXY_URL` selects the STP1 simulation binary. Its default is
+`data/facecap-soft-tissue.bin` under Vite's configured base path; the example env
+uses `./data/facecap-soft-tissue.bin`. A custom face mesh needs a matching proxy
+from `npm run generate:soft-tissue -- --source ...`. The app validates the binary
+against the exact mesh bytes parsed by the loader and the render vertex count.
+A mismatch appears in Provider Health and leaves the kinematic pose visible.
+No second mesh fetch is used for this validation.
+
+Physics runs in a module Web Worker with transferable buffers. Worker failures
+use the reduced-substep main-thread fallback, reported in Provider Health.
+Disabling physics or unmounting the viewport stops the backend. Deploy the Vite
+worker chunk alongside the application; SharedArrayBuffer and cross-origin
+isolation headers are not required.
+
+Rendering adds only `embedding(simulatedNodes - matchingPoseTargets)` after
+blendshape evaluation. The embedding converts proxy units back to mesh accessor
+units. A sample carries the targets used by its solve, so worker latency cannot
+accidentally subtract a different pose. Coincident simulated/target nodes yield
+zero offsets; the neutral render surface is never reconstructed from the coarse
+proxy. Physics shading currently retains the blendshape normal field.

@@ -54,7 +54,7 @@ describe('physics host', () => {
     expect(message.type).toBe('frame');
     if (message.type !== 'frame') throw Error('Expected frame');
     expect(transfer).toEqual([(message.frame.poseTargets as Float64Array).buffer]);
-    worker.emit({ type: 'positions', positions: new Float64Array([1, 2, 3]), result: { reset: false } });
+    worker.emit({ type: 'positions', positions: new Float64Array([1, 2, 3]), poseTargets: new Float64Array([1, 2, 3]), result: { reset: false } });
     expect(onPositions).toHaveBeenCalledOnce();
     expect(worker.postMessage).toHaveBeenLastCalledWith({ type: 'ack' });
   });

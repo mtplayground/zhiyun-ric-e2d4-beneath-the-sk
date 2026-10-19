@@ -1,0 +1,28 @@
+import { expect, it } from 'vitest';
+import { BufferGeometry, Float32BufferAttribute, Group, Mesh, MeshStandardMaterial } from 'three';
+import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { prepareNeutralHeadAsset } from './gltf-head-loader';
+
+it('retains parsed source bytes and restores the same face mesh when offsets are disabled', () => {
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position',new Float32BufferAttribute([0,0,0, 1,1,1],3));
+  geometry.morphAttributes.position=[new Float32BufferAttribute([0,0,-1, 0,0,-1],3)];
+  geometry.morphTargetsRelative=true;
+  const material=new MeshStandardMaterial();
+  const face=new Mesh(geometry,material);
+  face.morphTargetDictionary={jaw_open:0};face.morphTargetInfluences=[0];
+  const scene=new Group();scene.add(face);
+  const source=new ArrayBuffer(16);
+  const asset=prepareNeutralHeadAsset({scene} as unknown as GLTF,source);
+  expect(asset.physics?.sourceMesh).toBe(source);
+  expect(asset.physics?.surface.positions.length).toBe(6);
+  asset.applyBlendshapeWeights({jaw_open:0.9});
+  asset.applyVertexDeltas({positions:new Float32Array([0,0,0.1, 0,0,0.1])});
+  expect(face.geometry).not.toBe(geometry);
+  asset.applyVertexDeltas();
+  expect(face.geometry).toBe(geometry);
+  expect(scene.children[0]).toBe(face);
+  expect(asset.readBlendshapeWeights()).toEqual({jaw_open:0.9});
+  expect(Array.from(geometry.getAttribute('position').array)).toEqual([0,0,0,1,1,1]);
+  asset.dispose();geometry.dispose();material.dispose();
+});

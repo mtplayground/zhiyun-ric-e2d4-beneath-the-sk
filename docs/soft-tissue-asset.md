@@ -42,8 +42,8 @@ representable in embedding float32 records.
 
 `loadSoftTissueAsset` checks the original GLB bytes and face vertex count before
 returning the arrays. Call it with the fetched source mesh bytes before using an
-asset with a render mesh. It is provided for the later simulation integration;
-the current blendshape viewport does not load the simulation proxy.
+asset with a render mesh. The XPBD provider loads the simulation proxy on demand when physics is enabled;
+the kinematic provider does not start a solver.
 
 `npx vitest run scripts/generate-soft-tissue.test.mjs` exercises geometry, attachment
 labels, embedding completion, source/count mismatch rejection, and byte-for-byte
