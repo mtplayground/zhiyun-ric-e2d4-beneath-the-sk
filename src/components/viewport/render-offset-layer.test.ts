@@ -1,10 +1,19 @@
+import { usePhysicsState } from '@/state/physics-state';
+import { usePhysicsTelemetry } from '@/state/physics-telemetry-state';
+import type { PhysicsSnapshot } from '@/domain/physics/physics-telemetry';
 import { createHash } from 'node:crypto';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   Box3, Sphere, BufferGeometry, DynamicDrawUsage, Float32BufferAttribute, InterleavedBuffer,
   InterleavedBufferAttribute, Vector3, Mesh, MeshStandardMaterial, ShaderLib,
 } from 'three';
 import { createRenderOffsetLayer } from './render-offset-layer';
+
+const initialPhysicsState = usePhysicsState.getState();
+afterEach(() => {
+  usePhysicsState.setState(initialPhysicsState);
+  usePhysicsTelemetry.getState().clear();
+});
 
 function fixture(culling=true) {
   const geometry=new BufferGeometry();
@@ -149,4 +158,39 @@ it('leaves normals, morph normals, indices and loaded bounds intact through zero
   layer.apply();
   expect(normal.array).toEqual(bytes[0]);expect(morphNormal.array).toEqual(bytes[1]);expect(index!.array).toEqual(bytes[2]);
   expect(geometry.getAttribute('simulationOffset')).toBeUndefined();layer.dispose();
+});
+
+
+it('magnifies only shader display and measures the heatmap from raw offsets in SI millimetres',()=>{
+  const {geometry,mesh,layer}=fixture();
+  const state=usePhysicsState.getState();
+  state.setEnabled(true);state.setOffsetMagnification(10);state.setOffsetHeatmap(true);
+  usePhysicsTelemetry.setState({snapshot:{proxy:{metadata:{units:{metresPerSourceUnit:0.002}}}} as unknown as PhysicsSnapshot});
+  const offsets=new Float32Array([1,0,0,0,2,0]),original=offsets.slice();
+  layer.apply(offsets);
+  const copied=mesh.material as MeshStandardMaterial;
+  const shader={vertexShader:ShaderLib.standard.vertexShader,fragmentShader:ShaderLib.standard.fragmentShader,uniforms:{} as Record<string,{value:number}>};
+  copied.onBeforeCompile(shader as Parameters<typeof copied.onBeforeCompile>[0],{} as Parameters<typeof copied.onBeforeCompile>[1]);
+  expect(shader.uniforms.offsetMagnification.value).toBe(10);
+  expect(shader.uniforms.offsetMillimetres.value).toBe(2);
+  expect(shader.vertexShader).toContain('offsetDistanceMm = length(simulationOffset) * offsetMillimetres;');
+  expect(shader.vertexShader).toContain('transformed += simulationOffset * offsetMagnification;');
+  expect(shader.fragmentShader).toContain('offsetDistanceMm / 6.0');
+  expect(geometry.getAttribute('simulationOffset').array).toEqual(original);
+  expect(offsets).toEqual(original);
+  state.setOffsetMagnification(100);layer.apply(offsets);
+  expect(mesh.material).toBe(copied);
+  expect(shader.uniforms.offsetMagnification.value).toBe(100);
+  expect(shader.uniforms.offsetMillimetres.value).toBe(2);
+  state.setEnabled(false);layer.apply(offsets);
+  const normal=mesh.material as MeshStandardMaterial;
+  const normalShader={vertexShader:ShaderLib.standard.vertexShader,fragmentShader:ShaderLib.standard.fragmentShader,uniforms:{}};
+  normal.onBeforeCompile(normalShader as Parameters<typeof normal.onBeforeCompile>[0],{} as Parameters<typeof normal.onBeforeCompile>[1]);
+  expect(normalShader.vertexShader).not.toContain('offsetMagnification');
+  expect(normalShader.vertexShader).not.toContain('offsetDistanceMm');
+  expect(normalShader.fragmentShader).not.toContain('offsetHeat');
+  expect(normalShader.uniforms).toEqual({});
+  layer.apply();expect(mesh.material).not.toBe(normal);
+  expect(geometry.hasAttribute('simulationOffset')).toBe(false);
+  layer.dispose();
 });

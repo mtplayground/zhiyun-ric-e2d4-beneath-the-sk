@@ -1,5 +1,6 @@
 import { usePhysicsTelemetry, physicsStatusLabel, type PhysicsStatus } from '@/state/physics-telemetry-state';
 import PhysicsDebugOverlay from './physics-debug-overlay';
+import { OFFSET_HEATMAP_MAX_MM } from './render-offset-layer';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -9,7 +10,7 @@ import {
 } from 'three';
 import { OrbitControls as OrbitControlsImpl } from 'three/examples/jsm/controls/OrbitControls.js';
 
-import { usePhysicsState } from '@/state/physics-state';
+import { usePhysicsState, OFFSET_MAGNIFICATIONS, type OffsetMagnification } from '@/state/physics-state';
 import { cn } from '@/lib/utils';
 import { useGltfHeadAsset, type HeadAssetState } from './gltf-head-loader';
 import KinematicProviderRuntime, {
@@ -214,6 +215,10 @@ export default function FaceViewport({
   const physicsStatusText = physicsStatusLabel(physicsStatus);
   const physicsActive = physicsEnabled && physicsStatus.active;
   const debugOverlay = usePhysicsState(state => state.debugOverlay);
+  const offsetMagnification = usePhysicsState(state => state.offsetMagnification);
+  const offsetHeatmap = usePhysicsState(state => state.offsetHeatmap);
+  const setOffsetMagnification = usePhysicsState(state => state.setOffsetMagnification);
+  const setOffsetHeatmap = usePhysicsState(state => state.setOffsetHeatmap);
   const setDebugOverlay = usePhysicsState(state => state.setDebugOverlay);
   const setPhysicsEnabled = usePhysicsState(state => state.setEnabled);
   const [headAsset, setHeadAsset] = useState<HeadAssetState>({
@@ -270,16 +275,34 @@ export default function FaceViewport({
           onDiagnosticChange={handleProviderDiagnosticChange}
         />
       </Canvas>
-      {physicsActive ? <>
+      {physicsActive ? <div className="absolute right-3 top-24 z-10 grid max-h-[calc(100%-7rem)] max-w-64 gap-2 overflow-y-auto rounded-md border border-border bg-background/90 p-3 font-mono text-xs">
+        <label htmlFor="offset-magnification">Magnified offsets</label>
+        <select id="offset-magnification" value={offsetMagnification}
+          className="rounded border border-border bg-background p-1"
+          onChange={event => setOffsetMagnification(Number(event.currentTarget.value) as OffsetMagnification)}>
+          {OFFSET_MAGNIFICATIONS.map(factor => <option key={factor} value={factor}>{factor}×</option>)}
+        </select>
+        {offsetMagnification !== 1 ? <p data-testid="offset-magnification-notice" className="text-telemetry-amber">
+          Offsets magnified {offsetMagnification}× · display only
+        </p> : null}
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={offsetHeatmap} onChange={event => setOffsetHeatmap(event.currentTarget.checked)} />
+          Offset heatmap
+        </label>
+        {offsetHeatmap ? <div data-testid="offset-heatmap-legend" className="grid gap-1">
+          <span>Actual offset from pose target (mm)</span>
+          <div className="h-2 rounded" style={{background:'linear-gradient(to right, rgb(0,51,255), rgb(255,26,0))'}} />
+          <div className="flex justify-between"><span>0 mm</span><span>≥ {OFFSET_HEATMAP_MAX_MM} mm</span></div>
+        </div> : null}
         <button type="button" aria-pressed={debugOverlay} data-testid="physics-debug-toggle"
-          className="absolute right-3 top-24 rounded-md border border-border bg-background/90 px-3 py-2 font-mono text-xs text-foreground"
+          className="rounded-md border border-border px-3 py-2"
           onClick={()=>setDebugOverlay(!debugOverlay)}>Proxy {debugOverlay ? 'Visible' : 'Hidden'}</button>
-        {debugOverlay ? <div data-testid="physics-debug-legend" className="pointer-events-none absolute right-3 top-36 grid gap-1 rounded-md border border-border bg-background/90 px-3 py-2 font-mono text-xs">
+        {debugOverlay ? <div data-testid="physics-debug-legend" className="pointer-events-none grid gap-1">
           <span className="text-cyan-300">● Skin · label 0</span><span className="text-amber-300">● Inner · label 1</span><span className="text-pink-400">● Inner · label 2</span>
           <span>Labels are coloring only</span><span className="text-green-300">— Node → pose target</span>
           <span>Inspect each distance in the numeric readout (m)</span>
         </div> : null}
-      </> : null}
+      </div> : null}
       <button
         type="button"
         aria-pressed={physicsActive}

@@ -184,3 +184,26 @@ test('physics presets apply live, disclose exaggeration and survive reset',async
   await expect(page.getByRole('slider',{name:'Edge stiffness',exact:true})).toHaveValue('10000');
   await expect(page.getByRole('slider',{name:'Damping',exact:true})).toHaveValue('12');
 });
+
+test('offset debug views show display scale and SI legend and turn off with physics',async({page})=>{
+  await servePhysicsFixture(page);
+  await load(page);
+  const toggle=page.getByRole('switch',{name:'Enable soft-tissue physics'});
+  await toggle.click();
+  await expect(page.getByTestId('physics-status')).toHaveText('Active · worker');
+  const magnification=page.getByRole('combobox',{name:'Magnified offsets',exact:true});
+  await expect(magnification).toHaveValue('1');
+  for(const factor of ['10','50','100']) {
+    await magnification.selectOption(factor);
+    await expect(page.getByTestId('offset-magnification-notice')).toContainText(`${factor}× · display only`);
+  }
+  await page.getByRole('checkbox',{name:'Offset heatmap',exact:true}).check();
+  await expect(page.getByTestId('offset-heatmap-legend')).toContainText('Actual offset from pose target (mm)');
+  await expect(page.getByTestId('offset-heatmap-legend')).toContainText('≥ 6 mm');
+  await toggle.click();
+  await expect(page.getByTestId('offset-magnification-notice')).toHaveCount(0);
+  await expect(page.getByTestId('offset-heatmap-legend')).toHaveCount(0);
+  await toggle.click();
+  await expect(magnification).toHaveValue('1');
+  await expect(page.getByRole('checkbox',{name:'Offset heatmap',exact:true})).not.toBeChecked();
+});

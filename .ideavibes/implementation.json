@@ -101,6 +101,11 @@
       "number": 131,
       "title": "Add physics presets and show the physics panel by default",
       "body": "## Scope\n\nChange the `VITE_ENABLE_PHYSICS_PANEL` default to on, and update the example env file. Add a preset selector at the top of the physics panel:\n- **Physical (default):** the current SI defaults, unchanged.\n- **Visible demonstration:** gravity 98.1 m/s², skin stiffness 20, edge stiffness 200, damping 8. Label it in the UI as an exaggerated demonstration that is not physically accurate.\nChanging an individual setting switches the selector to Custom. Reset Simulation keeps the selected preset. The exact-resting-state behavior with gravity off must hold in every preset.\n\n## Files\n\nPhysics control panel under `src/components/controls/`, physics settings defaults, `src/state/physics-state.ts`, `src/config/env.ts`, `.env.example`\n\n## Dependencies\n\nDepends on: Physics status on the toggle\n\n---\nUUID: 1a139af5-5609-4b4a-82c0-379dd7e41718"
+    },
+    {
+      "number": 132,
+      "title": "Add a magnified view and heatmap of the physics offsets",
+      "body": "## Scope\n\nAdd two optional debug views to the existing debug overlay:\n- **Magnified offsets:** draw the face with the simulated offsets multiplied by a selectable factor (1×, 10×, 50×, 100×). This affects the display only, never the solver. Whenever the factor isn't 1×, show it clearly in the viewport.\n- **Offset heatmap:** color the face by how far each vertex is displaced from its pose target, with a scale legend in millimetres.\nBoth views turn off when physics is off and add no cost when hidden.\n\n## Files\n\n`src/components/viewport/render-offset-layer.ts`, debug overlay in `src/components/viewport/face-viewport.tsx`, `src/state/physics-state.ts`\n\n## Dependencies\n\nDepends on: Physics presets and default panel\n\n---\nUUID: 405d057b-df3e-44a2-8e1e-ac6bda136ced"
     }
   ]
 }
