@@ -1,91 +1,108 @@
-# Physics milestone acceptance and benchmark
+# Corrected physics model acceptance and benchmark
 
-This milestone supplies executable tests and a benchmark. No test, build,
-benchmark result or hardware performance claim is recorded by the implementation.
+These are executable acceptance specifications. No test, build, browser session,
+benchmark run or performance result was executed during implementation.
+
+## Current prerequisite failure
+
+The committed proxy is still version 1. The 12 mm generation request fails at
+proxy triangle 0, nearest source triangle 7, and FaceCap inner-mouth annotations
+are missing. The diagnostic and exact source/binary SHA-256 values are recorded
+in `soft-tissue-generation-failure.json`. Version 3 is required for SI masses,
+pairing and bounded render embeddings. Neither browser acceptance nor benchmark
+silently substitutes a fixture for this asset. The real FaceCap browser test
+fails its Physics Active assertion until these generation prerequisites are
+resolved; it is not skipped or presented as passed. The benchmark refuses the
+old format before producing timing results.
 
 ## Unit and integrity coverage
 
-Run `npm test` for the unit suite. Physics coverage includes XPBD distance/pose
-compliance, attachment transforms, fixed substeps, gravity, damping, deterministic
-outputs, live tuning, explicit reset, and recovery from non-finite state. Mapper
-coverage uses Neutral, Smile and AA from the existing pose library and compares
-relative/absolute morph evaluation to Three. Host/worker tests cover transferable
-ownership, coalescing, failure/timeout fallback, lifecycle cleanup, settings,
-reset and telemetry. Rendering tests cover residual-only embedding and immediate
-restoration of kinematic geometry/materials.
+`npm test` includes the following corrected-model regressions:
 
-`physics-milestone.test.ts` reads the committed binary directly. It checks all
-section counts, every tetrahedron's positive volume, every embedding including
-the last render vertex, zero residual at rest, finite/deterministic repeated
-transitions at worker/fallback substep counts, fixed skull attachment and settling
-of a disturbed skin node. This test is offline. The separate generator integrity
-test regenerates the asset byte-for-byte from its recorded source, validates the
-source SHA-256, and requires network access. No attachment/source data is copied
-or recreated in these tests.
+- Named Neutral, Smile, AA and slider-mix cases construct the solver at full
+  pose targets with gravity off. Repeated steps must preserve every position
+  exactly and leave every velocity zero. Broader cases cover every preset,
+  keyboard entry and 21 deterministic slider mixes.
+- Every explicit pair gets exactly `innerRest + outerTarget - outerRest`.
+  All inverse masses are positive reciprocals of stored SI masses. Both layers
+  have soft targets with independent stiffness; no hard attachment is expected.
+- Jaw targets change only through morph displacement. Frames contain targets and
+  diagnostic surface positions, with no extra transform, pivot or angular cap.
+- A planar 0.5 m² triangle extruded 0.012 m has analytic total mass 6 kg at
+  1000 kg/m³, and incidence masses [1.5, 1, 0.5, 0.5, 1, 1.5] kg. These values
+  independently check the tetrahedral lumping calculation through the last node.
+- Gravity matches -9.81 m/s² along the full recorded vertical axis at both a
+  known test scale and the exact committed FaceCap normalization/scale.
+- Valid geometry extrudes at the converted 12 mm thickness. The actual FaceCap
+  failure must reproduce location, source/proxy indices, centroid, normal and
+  requested physical/proxy thickness. The integrity case hashes the exact
+  upstream bytes, checks counts and the last source vertex, and compares the
+  complete recorded topology and diagnostic.
+- Smooth forehead duplicate fans weld to shared nodes. A generated smooth patch
+  explicitly checks the forehead candidate area, shared embeddings, continuous
+  offsets and local-thickness limits. The real source report independently
+  checks that all 16 old forehead crease groups disappear.
+- Rendering retains original geometry/base/morph accessors and exact shared
+  backing-buffer hashes across zero-offset enable/disable cycles. Materials,
+  culling and only the owned offset attribute are restored on cleanup.
+- Outside flags, nearest-point convex weights, distance fading, anatomical
+  exclusions, duplicate positions, float32-safe offset caps, malformed policy
+  rejection, last records, and byte-exact encoding are covered separately.
 
-## Browser acceptance
+The original-files manifest is empty. These tests do not recreate user source
+content or publish original attachments.
 
-Run `npm run test:e2e:physics` after installing Playwright Chromium. Its dedicated
-configuration starts the app on port 8081 with the physics panel enabled and the
-kinematic provider initially selected. It does not alter the default E2E server
-or optional-panel defaults. The ordinary `npm run test:e2e` suite remains the
-kinematic regression suite.
+## Real browser and real FaceCap
 
-The physics suite intercepts only the configured model/proxy URLs with a small
-generated GLB and a correctly source-hashed STP1 asset. This isolates browser
-acceptance from third-party downloads and Basis texture transcoding. The tests
-exercise the actual application, actual worker module and WebGL rendering:
+After installing Playwright Chromium, run `npm run test:e2e:physics`. The dedicated
+server uses port 8081 with the physics panel visible, real FaceCap URL configured,
+and the kinematic provider selected initially. The real-FaceCap test does not
+intercept GLB or proxy responses and never calls `servePhysicsFixture`.
 
-- Neutral, Smile and AA selection; keyboard and slider input while physics runs.
-- Live settings, nonzero displacement and finite telemetry.
-- Canvas pixels changing under simulation, with before/after PNG attachments.
-- Debug overlay visibility/legend and displacement curve selection.
-- Reset without incrementing numerical-reset counts.
-- Repeated off/on cycles with workers terminated on disable, one model fetch and
-  one cached proxy fetch, plus document unload.
-- Main-thread fallback when Worker is unavailable.
-- Source-hash mismatch diagnostics while kinematic controls remain usable.
+It requires the actual 2,694-vertex morph face, enables physics with gravity set
+to zero, and visits every expression option plus Neutral, Smile and AA. For each
+pose it waits for the actual morph influences to match the library's evaluated
+weights, resets to equilibrium, and checks finite node/target/distance/offset
+values, zero numerical resets, a bounded offset and a clean WebGL error state.
 
-These generated browser fixtures test integration, not FaceCap anatomy or a visual
-reference image. The original FaceCap proxy is exercised by the unit/integrity
-suite and benchmark. Review actual FaceCap Neutral/Smile/AA screenshots on the
-intended deployment as part of the executor's live verification. Browser traces
-are retained on failure. There are no hardware-dependent time assertions in E2E.
+For each pose it captures the real canvas with physics on, disables physics and
+captures the kinematic canvas. Pixel comparison uses 256×256 RGBA samples from
+the scene canvas, excluding changing DOM telemetry. At most 0.1% of pixels may
+differ by more than 2/255 in any RGB channel; mean per-pixel maximum channel
+error must be at most 0.1/255. Full canvas PNGs are attached for both modes.
 
-## Reproducible benchmark
+A dev-server-only test helper reads the same R3F/Three/store modules as the app.
+It records geometry, attribute and material references plus SHA-256 hashes of
+all unique backing buffers. Each off/on cycle must retain geometry/base/morph
+identity and bytes, remove the offset attribute on disable, restore original
+material/culling and successfully restart physics. Page errors, console errors,
+WebGL warnings/errors and GL error codes fail acceptance. The mesh must be fetched
+once despite repeated toggles. There are no production test hooks.
 
-Run:
+The existing small generated GLB tests remain as separate worker/fallback,
+settings, reset, telemetry and source-mismatch integration cases. They do not
+satisfy the real-FaceCap acceptance case. Browser traces are retained on failure.
+
+## All-node benchmark
+
+Once a valid version 3 asset exists, run:
 
 ```sh
 npm run benchmark:physics -- --warmup 30 --steps 120 --substeps 4 --iterations 5 --output /tmp/physics-benchmark.json
-npm run benchmark:physics -- --warmup 30 --steps 120 --substeps 2 --iterations 5 --output /tmp/physics-fallback-benchmark.json
 ```
 
-The script loads the actual TypeScript solver through Vite's SSR module loader,
-without copying its implementation or compiling an application build. It reads
-the committed binary directly. Module loading, asset decoding and warmup are
-excluded from measured samples. Target generation and telemetry are also outside
-solver/embedding timing windows. A deterministic synthetic skin pulse drives the
-real topology under the provider's default compliance and gravity values. This
-is a solver/embedding throughput workload, not an anatomical pose evaluation,
-worker messaging benchmark, browser FPS test or realtime guarantee.
+`--asset PATH` can select another deliberately generated version 3 artifact; the
+report records its binary/source hashes. No fallback mesh is fabricated. The
+benchmark uses the real TypeScript solver through Vite, SI gravity along the
+recorded axis, retuned defaults, and spatially varying paired-layer pose pulses.
+All edge-target updates are included in the timed `step(frame)` operation.
 
-JSON includes Node/CPU/platform information, binary SHA-256, recorded source-mesh
-hash and mesh counts; timestep/substeps/iterations and sample counts; solver and
-embedding mean/median/p95/maximum milliseconds; numerical resets, maximum residual
-and final state fingerprint. The recorded source hash is metadata, not independent
-source verification; use the integrity test for that. Warmup resets still fail the
-benchmark. All node/offset values must remain finite. No timing result is fabricated
-or stored in source. Compare distributions on the same host/configuration, with
-other workloads minimized, and run several times before drawing conclusions.
-
-An optional explicit gate is available:
-
-```sh
-npm run benchmark:physics -- --steps 120 --max-p95-ms 16.67
-```
-
-This exits nonzero for a numerical reset, non-finite output or a solver p95 above
-the requested budget. The value is caller-selected; no default device performance
-budget is asserted. A 16.67 ms solver budget alone does not include rendering,
-pose mapping, worker transfer, browser scheduling or other application work.
+Every node must retain a finite positive inverse mass exactly equal to the
+reciprocal of its stored SI mass, before and after all steps. The report includes
+all dynamic/outer/inner counts, zero pinned nodes, total mass in kg, actual gravity
+vector, configuration, environment, binary/source hashes and final-state hash.
+It reports solver and embedding mean/median/p95/max durations, numerical resets,
+maximum node residual in metres, maximum render offset in metres and largest
+fraction of the configured cap. Exceeding a render cap or corrupting a mass fails
+immediately. `--max-p95-ms N` remains an optional explicit hardware budget;
+non-finite results or numerical resets make the benchmark fail.

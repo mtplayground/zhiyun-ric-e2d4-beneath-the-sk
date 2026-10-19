@@ -6,7 +6,7 @@ import { loadSoftTissueAsset } from '../src/domain/simulation/soft-tissue-asset'
 const fixture = {regions:['skin','skin','skin'],normalization:{center:[0,0,0],scale:1},units:{metresPerSourceUnit:1,verticalAxis:[0,0,1]},positions:[[0,0,0],[1,0,0],[0,1,0]],indices:[0,1,2]};
 const buffer = b => Uint8Array.from(b).buffer;
 describe('soft tissue proxy', () => {
-  it('creates positive tetrahedra, distinct attachments, edges and complete nearest embeddings', async () => {
+  it('creates positive tetrahedra, visual labels, explicit pairs and complete embeddings', async () => {
     const face={...fixture,regions:[...fixture.regions,'skin'],positions:[...fixture.positions,[0.2,0.2,0.2]]};
     const asset=generate(face,{target:12,upAxis:1,mouthLine:0.5});
     expect(asset.tetrahedra).toHaveLength(3);
@@ -55,6 +55,16 @@ describe('soft tissue proxy', () => {
       expect.fail('The recorded source must fail at 12 mm until its geometry is repaired');
     } catch(error) {
       expect(error.diagnostic).toEqual(failure.diagnostic);
+      const d=error.diagnostic;
+      expect(d.requestedThicknessMetres).toBe(0.012);
+      expect(d.requestedThicknessProxy*face.normalization.scale*face.units.metresPerSourceUnit).toBeCloseTo(0.012,12);
+      expect(Number.isInteger(d.proxyTriangleIndex)&&d.proxyTriangleIndex>=0).toBe(true);
+      expect(Number.isInteger(d.sourceTriangleIndex)&&d.sourceTriangleIndex>=0).toBe(true);
+      expect(d.centroidSource.every(Number.isFinite)).toBe(true);
+      expect(d.centroidProxy.every(Number.isFinite)).toBe(true);
+      expect(Math.hypot(...d.normal)).toBeCloseTo(1);
+      expect(d.sourceVertexIndices).toHaveLength(3);
+      expect(typeof d.nearestFacialRegion).toBe('string');
     }
     await expect(loadSoftTissueAsset(buffer(committed),buffer(source),face.positions.length)).rejects.toThrow('regenerate as version 3');
   },120000);
@@ -106,6 +116,9 @@ describe('version 3 SI layer data', () => {
     }
     expect(asset.masses).toEqual(reference);
     expect(asset.masses.reduce((a,b)=>a+b,0)).toBeCloseTo(6,5);
+    // Independent analytic prism: area 0.5 m² * 0.012 m * 1000 kg/m³.
+    // Three equal 2 kg tetrahedra yield these corner incidence masses.
+    [1.5,1,0.5,0.5,1,1.5].forEach((mass,i)=>expect(asset.masses[i]).toBeCloseTo(mass,6));
     expect(asset.masses.at(-1)).toBeGreaterThan(0);
     const source=new Uint8Array([1,2,3]);
     const metadata={sourceHash:hash(source),units:fixture.units,normalization:fixture.normalization};

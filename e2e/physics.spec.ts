@@ -83,3 +83,69 @@ test('reports a mismatched proxy and keeps the kinematic controls usable',async(
   await expect(page.getByText(/Current Pose: Smile \| Frame:/)).toBeVisible();
   await expect.poll(()=>page.evaluate(()=>((window as unknown as {__physicsWorkers:{created:number}}).__physicsWorkers.created))).toBe(0);
 });
+
+// This test intentionally does not call servePhysicsFixture or intercept GLB/proxy
+// responses. A stale/failed real asset is an acceptance failure, never a skip.
+test('real FaceCap: every expression, Smile and AA retain zero-gravity kinematic pixels and mesh identity',async({page},testInfo)=>{
+  test.setTimeout(600_000);
+  const errors:string[]=[],webglMessages:string[]=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  page.on('console',message=>{
+    if(message.type()==='error') errors.push(message.text());
+    if(/webgl|gl_invalid|context lost|shader error/i.test(message.text())&&['warning','error'].includes(message.type())) webglMessages.push(message.text());
+  });
+  let faceRequests=0;
+  page.on('request',request=>{if(request.url().endsWith('/facecap.glb')) faceRequests++;});
+  await page.goto('/');
+  await expect(page.getByText(/\d+ blendshapes/)).toBeVisible({timeout:90_000});
+  // Vite serves this test-only helper, resolving the same Three/R3F/store modules
+  // as the application. No production test hooks or alternative renderer exist.
+  const probePath='/e2e/physics-browser-probe.ts';
+  const identity=await page.evaluate(async path=>{
+    const probe=await import(/* @vite-ignore */ path);return probe.rememberFace();
+  },probePath);
+  expect(identity.vertices).toBe(2694);expect(identity.morphs).toBeGreaterThan(3);
+  await setSlider(page,'Gravity',0);
+  const toggle=page.getByRole('switch',{name:'Enable soft-tissue physics'});
+  await toggle.click();
+  await expect(page.getByText('Physics Active',{exact:true}),
+    'Real FaceCap acceptance requires a generated version 3 proxy; the recorded 12 mm inversion and missing anatomical regions must be resolved, not bypassed with fixtures.').toBeVisible({timeout:30_000});
+  const expressions=await page.getByRole('combobox',{name:'Expressions / Emotions',exact:true}).locator('option').evaluateAll(options=>options.map(option=>({id:(option as HTMLOptionElement).value,label:option.textContent??''})).filter(option=>option.id));
+  const poses=[...expressions.map(p=>({...p,control:'Expressions / Emotions'})),{id:'phoneme-neutral',label:'Neutral',control:'Phoneme'},{id:'expression-smile',label:'Smile',control:'Expressions / Emotions'},{id:'phoneme-aa',label:'AA',control:'Phoneme'}];
+  for(const pose of poses) {
+    await test.step(pose.label,async()=>{
+      await page.getByRole('combobox',{name:pose.control,exact:true}).selectOption(pose.id);
+      await expect.poll(()=>page.evaluate(async({path,id})=>(await import(/* @vite-ignore */ path)).poseReady(id),{path:probePath,id:pose.id})).toBe(true);
+      await page.getByRole('button',{name:'Reset simulation',exact:true}).click();
+      await expect.poll(()=>page.evaluate(async path=>{
+        const sample=(await import(/* @vite-ignore */ path)).sample();return sample.ready&&sample.finite&&sample.maxDistance<=1e-9;
+      },probePath)).toBe(true);
+      const sample=await page.evaluate(async path=>(await import(/* @vite-ignore */ path)).sample(),probePath);
+      expect(sample.webglError).toBe(0);expect(sample.resets).toBe(0);expect(sample.boundRatio).toBeLessThanOrEqual(1);
+      const simulated=await page.evaluate(async path=>(await import(/* @vite-ignore */ path)).pixels(),probePath);
+      await testInfo.attach(`${pose.id}-physics`,{body:await page.locator('canvas').first().screenshot(),contentType:'image/png'});
+      const active=await page.evaluate(async path=>(await import(/* @vite-ignore */ path)).integrity(true),probePath);
+      expect(active).toMatchObject({sameMesh:true,sameGeometry:true,sameBase:true,sameMorphs:true,sameBytes:true,offsetAttribute:true});
+      await toggle.click();
+      await expect(toggle).toHaveAttribute('aria-checked','false');
+      const intact=await page.evaluate(async path=>(await import(/* @vite-ignore */ path)).integrity(false),probePath);
+      expect(intact).toMatchObject({sameMesh:true,sameGeometry:true,sameBase:true,sameMorphs:true,sameBytes:true,originalMaterial:true,cullingRestored:true,offsetAttribute:false});
+      const kinematic=await page.evaluate(async path=>(await import(/* @vite-ignore */ path)).pixels(),probePath);
+      await testInfo.attach(`${pose.id}-kinematic`,{body:await page.locator('canvas').first().screenshot(),contentType:'image/png'});
+      let changed=0,total=0;const colors=new Set<number>();
+      for(let i=0;i<kinematic.length;i+=4) {
+        colors.add((kinematic[i]<<16)|(kinematic[i+1]<<8)|kinematic[i+2]);
+        const diff=Math.max(...[0,1,2].map(c=>Math.abs(kinematic[i+c]-simulated[i+c])));
+        if(diff>2) changed++;total+=diff;
+      }
+      // At most 0.1% pixels may differ by >2/255; mean max-channel error <=0.1/255.
+      expect(colors.size).toBeGreaterThan(32); // an empty/background-only canvas cannot pass
+      expect(changed/(kinematic.length/4)).toBeLessThanOrEqual(0.001);
+      expect(total/(kinematic.length/4)).toBeLessThanOrEqual(0.1);
+      expect(errors).toEqual([]);expect(webglMessages).toEqual([]);
+      await toggle.click();await expect(page.getByText('Physics Active',{exact:true})).toBeVisible();
+    });
+  }
+  expect(expressions.length).toBeGreaterThan(0);expect(faceRequests).toBe(1);
+  expect(errors).toEqual([]);expect(webglMessages).toEqual([]);
+});
