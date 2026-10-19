@@ -112,3 +112,11 @@ and complete embeddings. `npm run test:e2e:physics` exercises the actual FaceCap
 worker, all expressions plus Smile/AA, zero-gravity pixel parity, finite values,
 geometry/morph buffer identity and repeated off/on. Fixture browser cases are
 separate and cannot substitute for the real source case.
+
+`npm run build:static` also loads the committed binary through the same validator
+used by the runtime loader. This offline gate pins the default FaceCap source
+SHA-256 and 2,694 render vertices independently of the asset header, rejects any
+runtime-invalid format or payload, and requires the built binary to match the
+committed bytes exactly. The generator runs the runtime loader before replacing
+the output file. Static-gate regression tests cover legacy versions, source/count
+mismatches, truncated payloads, invalid final SI masses and altered build copies.

@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { verifyCommittedSoftTissue } from './verify-committed-soft-tissue.mjs';
 
 const projectRoot = process.cwd();
 const distDir = path.resolve(
@@ -124,6 +125,12 @@ function localDistPath(url) {
     distDir,
     decodeURIComponent(url.pathname.replace(/^\/+/, '')),
   );
+}
+
+try {
+  await verifyCommittedSoftTissue(projectRoot, distDir);
+} catch (error) {
+  fail(`FaceCap soft-tissue asset: ${error.message}`);
 }
 
 const env = loadViteEnv();

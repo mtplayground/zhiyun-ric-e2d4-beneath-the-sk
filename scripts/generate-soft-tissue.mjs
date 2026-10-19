@@ -1,3 +1,4 @@
+import { createServer } from 'vite';
 import { EMBEDDING_OUTSIDE, EMBEDDING_EXCLUDED, validateBoundedEmbedding } from '../src/domain/physics/bounded-embedding.mjs';
 import { positionGroups, POSITION_TOLERANCE } from '../src/domain/physics/position-groups.mjs';
 import { metresToProxyUnits } from '../src/domain/physics/physical-units.mjs';
@@ -430,6 +431,12 @@ export async function main(args=process.argv.slice(2)) {
   }
   const output=encode(asset,{sourceHash:hash(bytes),source:options.source,proxySurface:face.proxySurface,selectionPolicy:face.selectionPolicy,normalization:face.normalization,units:face.units,options:{target:options.target,thicknessMetres:options.thicknessMetres,mouthLine:options.mouthLine,upAxis:options.upAxis,metresPerSourceUnit:options.metresPerSourceUnit,maxOffsetFraction:options.maxOffsetFraction,outsideToleranceMetres:options.outsideToleranceMetres,fadeDistanceThicknesses:options.fadeDistanceThicknesses,regionsHash:options.regionsHash,regionsPath:options.regionsPath},labels:{skin:0,skull:1,jaw:2}});
   await mkdir(new URL('../public/data/',import.meta.url),{recursive:true});
+  // Refuse to replace the committed binary with anything runtime would reject.
+  const server=await createServer({configFile:false,optimizeDeps:{noDiscovery:true,entries:[]},server:{middlewareMode:true},appType:'custom',logLevel:'error'});
+  try {
+    const {loadSoftTissueAsset}=await server.ssrLoadModule('/src/domain/simulation/soft-tissue-asset.ts');
+    await loadSoftTissueAsset(Uint8Array.from(output).buffer,Uint8Array.from(bytes).buffer,face.positions.length);
+  } finally {await server.close();}
   await writeFile(options.output,output);
   await writeFile('docs/facecap-asset-integrity.json',JSON.stringify({source:options.source,sourceHash:hash(bytes),
     assetSha256:hash(output),counts:JSON.parse(output.subarray(8,8+output.readUInt32LE(4)).toString()).counts,

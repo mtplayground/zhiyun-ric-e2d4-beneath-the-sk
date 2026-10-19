@@ -1,5 +1,5 @@
 {
-  "batch_id": "d02fbd6c-9931-4437-8b56-119a7ee82ad3",
+  "batch_id": "2aa19ebf-be99-420e-a58c-e807ef81e684",
   "verification": "pending",
   "issues": [
     {
@@ -86,6 +86,11 @@
       "number": 120,
       "title": "Replace the physics tests to match the corrected model",
       "body": "## Scope\n\nRemove or rewrite the existing tests that expect fixed skull and jaw attachments and a rigid jaw rotation. Add:\n- **Exact equilibrium:** with gravity off and positions starting at the full targets, Neutral, Smile, AA and a slider mix produce no correction and no velocity.\n- **Inner layer follows:** every inner node receives exactly its outer counterpart's pose displacement.\n- **No rigid jaw:** changing `jawOpen` changes the targets only through the morph displacement, and no extra transform exists.\n- **SI:** known tetrahedron volumes give the expected masses, and gravity converts correctly for the recorded scale.\n- **Proxy diagnostics:** the 12 mm request either succeeds at the converted thickness or fails with a location-specific report.\n- **Seam regression:** smooth forehead vertices are not split into disconnected parts, and offsets are continuous across the checked area.\n- **Render-path and offset limits:** the zero-offset render matches the kinematic render, and the largest render offset stays under the configured limit.\n- **Real browser, real FaceCap:** physics on, then cycle every expression plus Smile and AA. Check that there are no page or WebGL errors and no non-finite values, and compare canvas captures with gravity off against the kinematic capture within a tolerance. Turning physics off and on again must leave the mesh intact.\nUpdate the benchmark script so it reports timing with all nodes dynamic.\n\n## Files\n\n`src/domain/physics/` unit tests, `src/components/viewport/render-offset-layer.test.ts`, `e2e/physics.spec.ts`, benchmark script under `scripts/`\n\n## Dependencies\n\nDepends on: All other issues in this task\n\n---\nUUID: 62d2d3cc-b435-4048-a345-dce08de40912"
+    },
+    {
+      "number": 129,
+      "title": "Regenerate a valid FaceCap proxy and fail the build when it is invalid",
+      "body": "## Scope\n\nRegenerate the committed soft-tissue asset from the real default FaceCap mesh in the current asset format version, with the 12 mm thickness, the inner–outer pairing, the SI masses and the seam fix already in place. Replace `public/data/facecap-soft-tissue.bin` with it.\nMake the static build verification load the committed asset and run it through the same validator the app uses at runtime, checking it against the expected source-mesh hash and render vertex count. The build fails if validation fails, so an asset the app would reject can never be committed again. Update the soft-tissue asset doc so it no longer calls the committed asset legacy or invalid.\n\n## Files\n\nSoft-tissue asset generation script under `scripts/`, `public/data/facecap-soft-tissue.bin`, `scripts/verify-static-build.mjs`, soft-tissue asset format doc under `docs/`\n\n---\nUUID: 4c38be13-3f76-41f9-b089-658b8039d8e1"
     }
   ]
 }
