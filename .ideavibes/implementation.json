@@ -71,6 +71,11 @@
       "number": 117,
       "title": "Update the physics panel and telemetry for SI settings and the removed jaw",
       "body": "## Scope\n\nUpdate the physics control panel:\n- gravity is shown in m/s², defaulting to 9.81;\n- skin and inner-layer pose stiffness are separate controls;\n- edge stiffness and damping use the retuned SI defaults;\n- all jaw-related controls are removed.\nUpdate the telemetry and debug overlay to drop the jaw attachment state, keep node labels as visual coloring only, and add each node's distance from its pose target. Apply the same changes to the physics settings store.\n\n## Files\n\nPhysics control panel under `src/components/controls/`, `src/state/physics-state.ts`, `src/components/readout/live-numeric-readout.tsx`, debug overlay in `src/components/viewport/face-viewport.tsx`\n\n## Dependencies\n\nDepends on: Solver rework\n\n---\nUUID: a0cb1c31-478b-4c8d-8b23-15feacfe1466"
+    },
+    {
+      "number": 118,
+      "title": "Apply simulation offsets to the original face geometry without copying it",
+      "body": "## Scope\n\nChange the physics render path so it no longer replaces the face geometry with a copy. While physics is on, add the simulation offset attribute directly to the original geometry, and copy only the material/shader that applies the offset. The offset must still be applied after the morph-target displacement.\nWhen physics is turned off, reset or disposed, remove the attribute and restore the original material and culling state. The base and morph attributes are never recreated or replaced, so FaceCap's compressed, shared morph data stays exactly as loaded. With all offsets forced to zero, the render must be identical to the kinematic render.\n\n## Files\n\n`src/components/viewport/render-offset-layer.ts`, `src/components/viewport/render-offset-layer.test.ts`, `src/components/viewport/kinematic-provider-runtime.tsx`\n\n---\nUUID: 10bc063f-fcc4-4e07-bd5f-1de3e3facbc2"
     }
   ]
 }

@@ -1,62 +1,55 @@
-import { BufferAttribute, InterleavedBufferAttribute, Float32BufferAttribute, type Mesh, type Material } from 'three';
+import { DynamicDrawUsage, Float32BufferAttribute, type Mesh, type Material } from 'three';
 
-// Clone each accessor independently. Three's shared-buffer clone cache loses
-// byte offsets when GLB accessors view different ranges of the same ArrayBuffer.
-function cloneAccessor(attribute: BufferAttribute | InterleavedBufferAttribute): BufferAttribute {
-  if (!(attribute instanceof InterleavedBufferAttribute)) return attribute.clone();
-  const values = attribute.array.slice(0, attribute.count * attribute.itemSize);
-  for (let vertex = 0; vertex < attribute.count; vertex++) {
-    for (let component = 0; component < attribute.itemSize; component++) {
-      values[vertex * attribute.itemSize + component] = attribute.array[vertex * attribute.data.stride + attribute.offset + component];
-    }
-  }
-  return new BufferAttribute(values, attribute.itemSize, attribute.normalized);
-}
-
-/** Shader offset is added after morph evaluation, so absolute and relative morph
- * targets both preserve the original kinematic pose without base-weight scaling. */
+/** Offset the loaded geometry after morph evaluation. Base/morph accessors and
+ * their shared compressed buffers remain owned by the original glTF asset. */
 export function createRenderOffsetLayer(mesh: Mesh) {
-  const originalGeometry = mesh.geometry, originalMaterial = mesh.material;
+  const geometry = mesh.geometry, originalMaterial = mesh.material;
   const originalCulling = mesh.frustumCulled;
   let attribute: Float32BufferAttribute | undefined;
   let materials: Material[] = [];
+  let disposed = false;
   function clear() {
     if (!attribute) return;
-    mesh.geometry.dispose();
-    materials.forEach(material => material.dispose());
-    mesh.geometry = originalGeometry;
+    if (geometry.getAttribute('simulationOffset') === attribute) geometry.deleteAttribute('simulationOffset');
     mesh.material = originalMaterial;
     mesh.frustumCulled = originalCulling;
-    attribute = undefined; materials = [];
+    materials.forEach(material => material.dispose());
+    attribute = undefined;
+    materials = [];
   }
   return {
     apply(offsets?: Float32Array) {
+      if (disposed) return;
       if (!offsets) { clear(); return; }
-      if (offsets.length !== originalGeometry.getAttribute('position').count * 3 || !offsets.every(Number.isFinite)) throw new Error('Invalid face vertex offsets');
+      if (mesh.geometry !== geometry) throw new Error('Face geometry changed while applying simulation offsets');
+      if (offsets.length !== geometry.getAttribute('position').count * 3 || !offsets.every(Number.isFinite)) throw new Error('Invalid face vertex offsets');
       if (!attribute) {
-        mesh.geometry = originalGeometry.clone();
-        mesh.geometry.attributes = Object.fromEntries(Object.entries(originalGeometry.attributes).map(([name, value]) => [name, cloneAccessor(value)]));
-        mesh.geometry.morphAttributes = Object.fromEntries(Object.entries(originalGeometry.morphAttributes).map(([name, values]) => [name, values.map(cloneAccessor)]));
-        attribute = new Float32BufferAttribute(new Float32Array(offsets.length), 3);
-        mesh.geometry.setAttribute('simulationOffset', attribute);
-        materials = (Array.isArray(originalMaterial) ? originalMaterial : [originalMaterial]).map(original => {
-          const material = original.clone();
-          material.onBeforeCompile = (shader, renderer) => {
-            original.onBeforeCompile.call(material, shader, renderer);
-            shader.vertexShader = 'attribute vec3 simulationOffset;\n' + shader.vertexShader.replace(
-              '#include <morphtarget_vertex>',
-              '#include <morphtarget_vertex>\ntransformed += simulationOffset;',
-            );
-          };
-          material.customProgramCacheKey = () => `${original.customProgramCacheKey()}:xpbd-offset-v1`;
-          return material;
-        });
-        mesh.material = Array.isArray(originalMaterial) ? materials : materials[0];
-        mesh.frustumCulled = false; // Original bounds do not include dynamic offsets.
+        if (geometry.hasAttribute('simulationOffset')) throw new Error('Face geometry already has a simulationOffset attribute');
+        attribute = new Float32BufferAttribute(new Float32Array(offsets.length), 3).setUsage(DynamicDrawUsage);
+        try {
+          for (const original of Array.isArray(originalMaterial) ? originalMaterial : [originalMaterial]) {
+            const material = original.clone();
+            materials.push(material);
+            material.onBeforeRender = original.onBeforeRender;
+            material.onBeforeCompile = (shader, renderer) => {
+              original.onBeforeCompile.call(material, shader, renderer);
+              const morphChunk = '#include <morphtarget_vertex>';
+              if (!shader.vertexShader.includes(morphChunk)) throw new Error('Face shader has no morph-target insertion point');
+              shader.vertexShader = 'attribute vec3 simulationOffset;\n' + shader.vertexShader.replace(
+                morphChunk,
+                morphChunk + '\ntransformed += simulationOffset;',
+              );
+            };
+            material.customProgramCacheKey = () => `${original.customProgramCacheKey()}:xpbd-offset-v2`;
+          }
+          geometry.setAttribute('simulationOffset', attribute);
+          mesh.material = Array.isArray(originalMaterial) ? materials : materials[0];
+          mesh.frustumCulled = false; // Loaded bounds do not include simulation motion.
+        } catch (error) { clear(); throw error; }
       }
       attribute.array.set(offsets);
       attribute.needsUpdate = true;
     },
-    dispose: clear,
+    dispose() { clear(); disposed = true; },
   };
 }
