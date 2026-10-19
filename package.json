@@ -14,7 +14,8 @@
     "test:e2e": "playwright test",
     "verify:static": "node scripts/verify-static-build.mjs",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "generate:soft-tissue": "node scripts/generate-soft-tissue.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "^9.6.1",

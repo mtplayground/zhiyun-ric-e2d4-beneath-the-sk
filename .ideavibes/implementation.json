@@ -1,11 +1,16 @@
 {
-  "batch_id": "d9cf7a58-985c-4d01-8471-1592364c1206",
+  "batch_id": "6b50e285-c99e-4054-80eb-4a4044094b97",
   "verification": "pending",
   "issues": [
     {
       "number": 95,
       "title": "Create a dated backup branch of the current main",
       "body": "## Scope\n\nCreate a branch named `backup/main-2026-10-19` from the current tip of `main` (commit `07e909f`, the merge of pull request #94) and push it to origin.\nThe branch is a read-only snapshot: no commits go on it, and the existing `v1.0` tag and `backup/v1.0` branch stay as they are. Check that the pushed branch points to the same commit as `main` did when it was created.\nIf a branch already exists on origin that points to the current `main` tip, skip creating it and record that existing branch as the restore point instead.\nAdd a short entry to the existing rollback/versioning doc listing this branch as a restore point, described as the state after the texture/hair/tongue removal and the pose fixes. Restoring from it follows the existing method in that doc: make a branch from the backup and open a pull request into `main`.\n\n## Files\n\nRepository branches, rollback/versioning doc under `docs/`\n\n---\nUUID: f3e4d636-24e2-4974-b16b-2ac10dbf0572"
+    },
+    {
+      "number": 97,
+      "title": "Generate the soft-tissue simulation proxy from the face mesh",
+      "body": "## Scope\n\nAdd a build-time script that reads the neutral face mesh (default FaceCap) and produces a compact binary simulation asset committed to the static assets directory.\nThe script:\n- simplifies the face surface to a coarse proxy, targeting a low thousands-range tetrahedron count with the target count configurable;\n- creates an inner surface by offsetting the proxy inward along its normals by a configurable tissue thickness;\n- splits each layer cell between the outer and inner surfaces into tetrahedra.\nIt labels inner-surface nodes as skull-attached or jaw-attached. Jaw-attached means below a configurable mouth-line boundary on the lower face. Outer nodes are labelled as skin.\nIt computes the render embedding: for every render-mesh vertex, the tetrahedron containing it, or the nearest one, and its barycentric weights.\nThe asset stores node positions, tetrahedra, edges, node labels, the embedding, and the render vertex count and a hash of the source mesh, so a mismatched face mesh is detected at load time. The script fails if it produces inverted or near-zero-volume tetrahedra or render vertices without an embedding.\n\n## Files\n\nNew script under `scripts/`, new simulation asset in the static assets directory\n\n---\nUUID: d32e8259-0254-4ad3-bbbd-a975c2631923"
     }
   ]
 }
