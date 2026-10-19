@@ -13,8 +13,9 @@ positive; neither is a hard pin. Defaults for SI masses are edge compliance
 0.0001, skin pose compliance 0.02, inner pose compliance 0.00002 (1000 times
 stiffer than skin), and exponential velocity damping 12 per second. These are
 initial retuned values, not a measured material calibration or a validated visual
-tuning result. Live controls expose separate skin/inner settings and keep the
-inner range stiffer than the skin range.
+tuning result. The panel stores stiffness in N/m (skin 50, inner 50,000, edges 10,000),
+with independent positive controls, and damping in s⁻¹. The settings boundary
+converts stiffness to compliance by its reciprocal.
 
 `submitFrame({ poseTargets })` copies the complete target array and updates every
 edge's rest length from those targets, once before integration. This includes
@@ -42,8 +43,9 @@ The bare solver defaults to zero acceleration; the asset-aware host initializes
 SI gravity. It calls `gravityFromMetadata` once per asset: -9.81 m/s² times the
 recorded vertical vector, converted with the shared length/acceleration helper.
 The vector is in face-local proxy units/s², including the recorded sign and tilt.
-Live `gravityStrength` is dimensionless and scales that cached vector, so it
-never converts units again. Worker/fallback messages carry only the resulting
+The settings store exposes `gravityAcceleration` in m/s², default 9.81. The
+settings boundary supplies the host an internal dimensionless `gravityStrength`
+ratio to scale that cached vector, so it never converts length units again. Worker/fallback messages carry only the resulting
 proxy acceleration. Tests may supply an explicit proxy acceleration directly.
 
 Additional constraints implement `XpbdConstraint.reset()` and `project(context)`.
@@ -169,8 +171,13 @@ It emits mean step cost per timer batch, completed-step/wall-time rate and a
 cumulative count of numerical recovery resets. Explicit reset commands do not
 increment the counter. Timing fields travel with the position/target pair through
 the worker protocol; reset totals survive output coalescing and backend fallback.
-`measureDisplacement` computes the maximum residual over all nodes and mean
-pose-following error over skin nodes. Sanitized solver targets are returned on
+`measureDisplacement` computes each node’s Euclidean pose distance in metres,
+including inner nodes, and the maximum and mean over all nodes. Labels do not
+select contributors. `nodePoseDistancesMetres` preserves node-index order; the
+numeric readout allows selection of any index. The chart’s displacement axis
+also uses metres. Snapshots include the matching `poseTargets`, so the debug
+overlay draws every node-to-target residual and stores each node’s SI distance
+attribute. Labels control only visual coloring, with no attachment state. Sanitized solver targets are returned on
 recovery so invalid caller targets cannot contaminate telemetry.
 
 The provider publishes immutable sample references to a separate telemetry store,

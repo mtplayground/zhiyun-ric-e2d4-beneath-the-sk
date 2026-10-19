@@ -11,3 +11,21 @@ export function updateDebugPositions(
     for(let axis=0;axis<3;axis++) edgePositions[endpoint*3+axis]=nodePositions[node*3+axis];
   }
 }
+
+/** Residual segments end at the matching pose target; colors remain label-only. */
+export function updateDebugPoseErrors(
+  proxy: PoseProxy, simulated: ArrayLike<number>, targets: ArrayLike<number>, distancesMetres: ArrayLike<number>,
+  segments: Float32Array, nodeDistances: Float32Array,
+) {
+  if(simulated.length!==proxy.nodes.length || targets.length!==simulated.length ||
+    segments.length!==simulated.length*2 || distancesMetres.length*3!==simulated.length || nodeDistances.length!==distancesMetres.length) throw new Error('Debug pose sample dimensions differ');
+  const {center,scale}=proxy.metadata.normalization;
+  for(let node=0;node<distancesMetres.length;node++) {
+    if(!Number.isFinite(distancesMetres[node])||distancesMetres[node]<0) throw new Error('Invalid debug pose distance');
+    nodeDistances[node]=distancesMetres[node];
+    for(let axis=0;axis<3;axis++) {
+      segments[node*6+axis]=simulated[node*3+axis]*scale+center[axis];
+      segments[node*6+3+axis]=targets[node*3+axis]*scale+center[axis];
+    }
+  }
+}

@@ -29,10 +29,11 @@ test('worker physics supports reference poses, live tuning, overlay, reset and r
   await toggle.click();
   await expect(page.getByText('Physics Active',{exact:true})).toBeVisible();
   await expect(page.getByTestId('physics-telemetry')).toBeVisible();
-  await setSlider(page,'Gravity strength',10);
-  await setSlider(page,'Pose-following compliance',0.05);
-  await setSlider(page,'Tissue compliance',0.005);
+  await setSlider(page,'Gravity',98.1);
+  await setSlider(page,'Skin pose stiffness',20);
+  await setSlider(page,'Edge stiffness',200);
   await setSlider(page,'Damping',8);
+  await setSlider(page,'Inner-layer pose stiffness',50000);
   await expect.poll(async()=>parseFloat(await metric(page,'Maximum simulated displacement'))).toBeGreaterThan(0);
   const simulated=await page.locator('canvas').first().screenshot();
   expect(simulated.equals(baseline)).toBe(false);
@@ -44,8 +45,11 @@ test('worker physics supports reference poses, live tuning, overlay, reset and r
     await expect(page.getByTestId('physics-telemetry')).toBeVisible();
   }
   await page.getByTestId('physics-debug-toggle').click();
-  await expect(page.getByTestId('physics-debug-legend')).toContainText('Skull-attached');
-  await expect(page.getByLabel('Max displacement (right axis, face extents)')).toBeChecked();
+  await expect(page.getByTestId('physics-debug-legend')).toContainText('Inner · label 1');
+  await expect(page.getByTestId('physics-debug-legend')).not.toContainText(/attached/i);
+  await page.getByRole('spinbutton',{name:'Pose distance node index'}).fill('7');
+  await expect(page.getByTestId('node-pose-distance')).toContainText(' m');
+  await expect(page.getByLabel('Max displacement (right axis, m)')).toBeChecked();
   await page.getByRole('button',{name:'Reset simulation',exact:true}).click();
   await expect.poll(()=>metric(page,'Non-finite resets')).toBe('0');
   await page.getByLabel('Enable keyboard mode').check();await page.locator('canvas').first().click();await page.keyboard.press('a');

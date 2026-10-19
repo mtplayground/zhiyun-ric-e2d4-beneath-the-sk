@@ -20,7 +20,7 @@ export const usePhysicsState = create<PhysicsState>((set) => ({
   setDebugOverlay: debugOverlay => set({debugOverlay}),
   setEnabled: enabled => set({ enabled }),
   setSetting: (key, value) => {
-    if (!Number.isFinite(value)) return;
+    if (!Number.isFinite(value) || !Object.hasOwn(PHYSICS_SETTING_RANGES, key)) return;
     const { min, max } = PHYSICS_SETTING_RANGES[key];
     set(state => ({ settings: { ...state.settings, [key]: Math.max(min, Math.min(max, value)) } }));
   },

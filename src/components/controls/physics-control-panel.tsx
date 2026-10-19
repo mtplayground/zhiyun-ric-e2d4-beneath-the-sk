@@ -1,12 +1,12 @@
 import { PHYSICS_SETTING_RANGES, type PhysicsSettings } from '@/domain/physics/physics-settings';
 import { usePhysicsState } from '@/state/physics-state';
 
-const controls: { key: keyof PhysicsSettings; label: string; description: string }[] = [
-  { key: 'tissueCompliance', label: 'Tissue compliance', description: 'Higher values make the tissue softer.' },
-  { key: 'poseCompliance', label: 'Skin pose compliance', description: 'Higher values let the tissue move farther from the pose.' },
-  { key: 'innerPoseCompliance', label: 'Inner pose compliance', description: 'Controls how closely the inner tissue follows the expression. Lower values make it stiffer.' },
-  { key: 'damping', label: 'Damping', description: 'Higher values reduce motion more quickly.' },
-  { key: 'gravityStrength', label: 'Gravity strength', description: 'Pulls downward on the upright face. Increase for a more visible effect.' },
+const controls: { key: keyof PhysicsSettings; label: string; description: string; unit: string }[] = [
+  { key: 'gravityAcceleration', label: 'Gravity', unit: 'm/s²', description: 'Acceleration downward along the face scene’s recorded vertical axis. Set to zero to turn gravity off.' },
+  { key: 'skinPoseStiffness', label: 'Skin pose stiffness', unit: 'N/m', description: 'Higher values keep the skin closer to the expression.' },
+  { key: 'innerPoseStiffness', label: 'Inner-layer pose stiffness', unit: 'N/m', description: 'Keeps the inner layer close to the expression with a stiffer, soft target.' },
+  { key: 'edgeStiffness', label: 'Edge stiffness', unit: 'N/m', description: 'Higher values resist changes to the expression’s edge lengths.' },
+  { key: 'damping', label: 'Damping', unit: 's⁻¹', description: 'Higher values reduce motion more quickly.' },
 ];
 export default function PhysicsControlPanel() {
   const enabled = usePhysicsState(state => state.enabled);
@@ -22,17 +22,17 @@ export default function PhysicsControlPanel() {
           className="rounded-md border border-border bg-background px-3 py-2 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-telemetry-cyan/50"
           onClick={() => setEnabled(!enabled)}>{enabled ? 'On' : 'Off'}</button>
       </div>
-      {controls.map(({ key, label, description }) => {
+      {controls.map(({ key, label, description, unit }) => {
         const id = `physics-${key}`;
         const value = settings[key];
         return (
           <div key={key} className="grid gap-1.5">
             <div className="flex justify-between gap-2 text-xs">
               <label htmlFor={id}>{label}</label>
-              <output htmlFor={id} className="font-mono text-telemetry-cyan">{key === 'gravityStrength' ? `${value.toFixed(1)}×` : key.endsWith('Compliance') ? value.toExponential(2) : value.toFixed(1)}</output>
+              <output htmlFor={id} className="font-mono text-telemetry-cyan">{key === 'gravityAcceleration' ? value.toFixed(2) : key === 'damping' ? value.toFixed(1) : value.toLocaleString('en-US', { maximumFractionDigits: 0 })} {unit}</output>
             </div>
             <input id={id} type="range" {...PHYSICS_SETTING_RANGES[key]} value={value}
-              aria-describedby={`${id}-help`} className="w-full accent-cyan-400"
+              aria-describedby={`${id}-help`} aria-valuetext={`${value} ${unit}`} className="w-full accent-cyan-400"
               onChange={event => setSetting(key, Number(event.currentTarget.value))} />
             <p id={`${id}-help`} className="text-xs text-muted-foreground">{description}</p>
           </div>
