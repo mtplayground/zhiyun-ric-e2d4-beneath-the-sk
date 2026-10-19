@@ -39,7 +39,7 @@ try {
     const embeddingMs=performance.now()-embeddingStart;
     if(result.reset) resets++;
     if(!solver.positions.every(Number.isFinite)||!offsets.every(Number.isFinite)) throw new Error('Non-finite benchmark result');
-    maximumDisplacement=Math.max(maximumDisplacement,measureDisplacement(solver.positions,targets,asset.labels).maxDisplacement);
+    maximumDisplacement=Math.max(maximumDisplacement,measureDisplacement(solver.positions,targets,asset.metadata).maxDisplacement);
     if(frame>=options.warmup) {timings.push(stepMs);embeddingTimings.push(embeddingMs);checksum+=offsets[offsets.length-1];}
   }
   const summary=values=>{
@@ -47,7 +47,7 @@ try {
     const percentile=p=>sorted[Math.max(0,Math.ceil(sorted.length*p)-1)];
     return {meanMs:sum/values.length,medianMs:percentile(0.5),p95Ms:percentile(0.95),maxMs:sorted.at(-1)};
   };
-  const report={schemaVersion:1,workload:'synthetic-skin-pulse-on-committed-facecap-proxy',environment:{node:process.version,platform:platform(),arch:arch(),cpu:cpus()[0]?.model},asset:{sha256:assetHash,sourceMeshHash:asset.metadata.sourceHash,counts:asset.metadata.counts},configuration:{...options,timestep:1/60},solver:summary(timings),embedding:summary(embeddingTimings),resets,maximumDisplacement,checksum,finalStateHash:createHash('sha256').update(Buffer.from(solver.positions.buffer)).digest('hex')};
+  const report={schemaVersion:1,workload:'synthetic-skin-pulse-on-committed-facecap-proxy',environment:{node:process.version,platform:platform(),arch:arch(),cpu:cpus()[0]?.model},asset:{sha256:assetHash,sourceMeshHash:asset.metadata.sourceHash,counts:asset.metadata.counts},configuration:{...options,timestep:1/60},solver:summary(timings),embedding:summary(embeddingTimings),resets,displacementUnits:'metres',maximumDisplacement,checksum,finalStateHash:createHash('sha256').update(Buffer.from(solver.positions.buffer)).digest('hex')};
   const json=JSON.stringify(report,null,2)+'\n';
   if(options.output) await writeFile(options.output,json);
   process.stdout.write(json);

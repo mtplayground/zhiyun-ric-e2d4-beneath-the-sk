@@ -1,3 +1,4 @@
+import { metresToProxyUnits, type UnitMetadata } from './physical-units';
 import type { PoseProxy } from './pose-target-mapper';
 export interface SolverTiming {
   solverTimeMs: number;
@@ -5,24 +6,29 @@ export interface SolverTiming {
   nonFiniteResets: number;
 }
 export interface PhysicsTelemetry extends SolverTiming {
-  /** Distances in normalized proxy (face-extent) units, relative to pose targets. */
+  /** SI metres, relative to the matching submitted pose targets, over all nodes. */
   maxDisplacement: number;
   meanPoseError: number;
+  nodePoseDistancesMetres: Float64Array;
 }
 export interface PhysicsSnapshot {
-  proxy: PoseProxy & { edges: ArrayLike<number> };
+  proxy: PoseProxy & { edges: ArrayLike<number>; metadata: PoseProxy['metadata'] & UnitMetadata };
   positions: Float64Array;
+  poseTargets: Float64Array;
   telemetry: PhysicsTelemetry;
 }
-export function measureDisplacement(positions: ArrayLike<number>, targets: ArrayLike<number>, labels: ArrayLike<number>) {
-  if (positions.length !== targets.length || positions.length !== labels.length*3) throw new Error('Telemetry sample dimensions differ');
-  let maxDisplacement=0, totalError=0, skinCount=0;
-  for(let node=0;node<labels.length;node++) {
+export function measureDisplacement(positions: ArrayLike<number>, targets: ArrayLike<number>, metadata: UnitMetadata) {
+  if (positions.length !== targets.length || positions.length % 3 !== 0) throw new Error('Telemetry sample dimensions differ');
+  const metresPerProxyUnit=1/metresToProxyUnits(1,metadata);
+  const nodePoseDistancesMetres=new Float64Array(positions.length/3);
+  let maxDisplacement=0,totalError=0;
+  for(let node=0;node<nodePoseDistancesMetres.length;node++) {
     const i=node*3;
-    const distance=Math.hypot(positions[i]-targets[i],positions[i+1]-targets[i+1],positions[i+2]-targets[i+2]);
+    const distance=Math.hypot(positions[i]-targets[i],positions[i+1]-targets[i+1],positions[i+2]-targets[i+2])*metresPerProxyUnit;
     if(!Number.isFinite(distance)) throw new Error('Non-finite telemetry sample');
+    nodePoseDistancesMetres[node]=distance;
     maxDisplacement=Math.max(maxDisplacement,distance);
-    if(labels[node]===0) {totalError+=distance;skinCount++;}
+    totalError+=distance;
   }
-  return {maxDisplacement,meanPoseError:skinCount?totalError/skinCount:0};
+  return {maxDisplacement,meanPoseError:nodePoseDistancesMetres.length?totalError/nodePoseDistancesMetres.length:0,nodePoseDistancesMetres};
 }

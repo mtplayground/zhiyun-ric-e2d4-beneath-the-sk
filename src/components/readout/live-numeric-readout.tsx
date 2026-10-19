@@ -1,7 +1,7 @@
 import { usePhysicsState } from '@/state/physics-state';
 import { usePhysicsTelemetry } from '@/state/physics-telemetry-state';
 import type { PhysicsTelemetry } from '@/domain/physics/physics-telemetry';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import { cn } from '@/lib/utils';
 import { useControlReadout } from '@/state';
@@ -32,15 +32,25 @@ function getActivationRows(
 }
 
 export function PhysicsTelemetryReadout({ telemetry }: { telemetry: PhysicsTelemetry }) {
+  const [selectedNode, setSelectedNode] = useState(0);
+  const count=telemetry.nodePoseDistancesMetres.length;
+  const node=Math.min(selectedNode,Math.max(0,count-1));
   const rows = [
     ['Solver time / step', `${telemetry.solverTimeMs.toFixed(2)} ms`],
     ['Effective simulation rate', `${telemetry.simulationRateHz.toFixed(1)} Hz`],
-    ['Maximum simulated displacement', `${telemetry.maxDisplacement.toFixed(5)} face extents`],
-    ['Mean pose-following error', `${telemetry.meanPoseError.toFixed(5)} face extents`],
+    ['Maximum simulated displacement', `${telemetry.maxDisplacement.toFixed(5)} m`],
+    ['Mean pose-following error (all nodes)', `${telemetry.meanPoseError.toFixed(5)} m`],
     ['Non-finite resets', String(telemetry.nonFiniteResets)],
   ];
   return <dl data-testid="physics-telemetry" className="grid gap-2 border-t border-border pt-3 font-mono text-xs">
     {rows.map(([label,value])=><div key={label} className="flex justify-between gap-3"><dt className="text-muted-foreground">{label}</dt><dd className="text-right text-foreground">{value}</dd></div>)}
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <dt><label htmlFor="physics-pose-distance-node">Node pose distance</label> <input id="physics-pose-distance-node" type="number" min={0} max={Math.max(0,count-1)} step={1}
+        value={node} disabled={!count} aria-label="Pose distance node index" className="w-20 rounded border border-border bg-background px-1 py-0.5"
+        onChange={event=>{const value=event.currentTarget.valueAsNumber;if(Number.isFinite(value)) setSelectedNode(Math.max(0,Math.min(count-1,Math.trunc(value))));}} />
+        <span className="text-muted-foreground"> / {count} nodes</span></dt>
+      <dd data-testid="node-pose-distance">{count?`${telemetry.nodePoseDistancesMetres[node].toFixed(6)} m`:'No node sample'}</dd>
+    </div>
   </dl>;
 }
 

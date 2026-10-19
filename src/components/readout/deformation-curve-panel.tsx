@@ -189,7 +189,7 @@ export default function DeformationCurvePanel() {
         <span className="text-telemetry-cyan">Activation energy (left axis)</span>
         {physicsEnabled ? <label className="flex items-center gap-2 text-pink-400">
           <input type="checkbox" checked={showDisplacement} onChange={event=>setShowDisplacement(event.currentTarget.checked)} />
-          Max displacement (right axis, face extents)
+          Max displacement (right axis, m)
         </label> : null}
       </div>
       <div className="min-h-36 overflow-hidden rounded-md border border-border bg-background/70 p-2">

@@ -1,15 +1,15 @@
-import { measureDisplacement } from '../physics/physics-telemetry';
+import { measureDisplacement, type PhysicsSnapshot } from '../physics/physics-telemetry';
 import { createKinematicBlendshapeProvider } from './kinematic-blendshape-provider';
 import type { BlendshapeWeights, DeformationProvider, VertexDeltaFrame } from './deformation-provider';
 import { createPhysicsHost, type PhysicsHost } from '../physics/physics-host';
-import { createPoseTargetMapper, type PoseProxy } from '../physics/pose-target-mapper';
+import { createPoseTargetMapper } from '../physics/pose-target-mapper';
 import { embedSimulationOffsets } from '../physics/render-embedding';
 
 export function createXpbdSoftTissueProvider(): DeformationProvider {
   const kinematic = createKinematicBlendshapeProvider();
   let host: PhysicsHost | undefined;
   let mapper: ReturnType<typeof createPoseTargetMapper> | undefined;
-  let proxy: (PoseProxy & { edges: ArrayLike<number> }) | undefined;
+  let proxy: PhysicsSnapshot['proxy'] | undefined;
   let offsets: Float32Array | undefined;
   let generation = 0;
   let currentWeights: BlendshapeWeights = {};
@@ -48,8 +48,8 @@ export function createXpbdSoftTissueProvider(): DeformationProvider {
             if (token !== generation || !proxy) return;
             // Recovery should display the exact kinematic pose immediately.
             offsets = result.reset ? undefined : embedSimulationOffsets(proxy, positions, poseTargets);
-            if (timing) physics.onSnapshot?.({ proxy, positions,
-              telemetry: { ...timing, ...measureDisplacement(positions, poseTargets, proxy.labels) } });
+            if (timing) physics.onSnapshot?.({ proxy, positions, poseTargets,
+              telemetry: { ...timing, ...measureDisplacement(positions, poseTargets, proxy.metadata) } });
           },
           onDiagnostic: diagnostic => {
             if (token === generation) physics.onDiagnostic?.(diagnostic);

@@ -1,3 +1,4 @@
+import type { PhysicsSnapshot } from '../physics/physics-telemetry';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createXpbdSoftTissueProvider } from './xpbd-soft-tissue-provider';
 import { createKinematicBlendshapeProvider } from './kinematic-blendshape-provider';
@@ -19,10 +20,10 @@ const context: DeformationProviderContext = {
   physics: { sourceMesh:new ArrayBuffer(4),simProxyUrl:'/proxy.bin',surface:{positions:[0,0,0],morphTargets:{jaw_open:[0,-1,-1]},morphTargetsRelative:true} },
 };
 const input = { targetPose:{id:'aa',label:'AA',blendshapeWeights:{jawOpen:0.9}},previousBlendshapeWeights:{},progress:0.3,frameIndex:3 };
-function setup() {
+function setup(onSnapshot?: (snapshot: PhysicsSnapshot) => void) {
   const host = { ready:Promise.resolve(), sendFrame:vi.fn(),configure:vi.fn(),reset:vi.fn(),dispose:vi.fn() };
   vi.mocked(createPhysicsHost).mockReturnValue(host);
-  const provider=createXpbdSoftTissueProvider(); provider.initialize(context);
+  const provider=createXpbdSoftTissueProvider(); provider.initialize({...context,physics:{...context.physics!,onSnapshot}});
   const callbacks = vi.mocked(createPhysicsHost).mock.calls.at(-1)![0] as PhysicsHostOptions;
   callbacks.onAssetReady!(asset);
   return {provider,host,callbacks};
@@ -52,6 +53,18 @@ describe('XPBD provider', () => {
     const deltas=provider.updateVertexDeltas!({jawOpen:0.7})!.positions!;
     expect(deltas[0]).toBeCloseTo(0.1); // weight 0.25 * residual 0.2 * scale 2
     expect(deltas[1]).toBe(0);
+    provider.dispose!();
+  });
+  it('publishes matching targets and SI pose distances for all nodes, including inner nodes',()=>{
+    const onSnapshot=vi.fn();const {provider,callbacks}=setup(onSnapshot);
+    const targets=Float64Array.from(asset.nodes),positions=targets.slice();positions[0]+=0.2;positions[11]+=0.1;
+    callbacks.onPositions(positions,{reset:false},targets,{solverTimeMs:1,simulationRateHz:60,nonFiniteResets:0});
+    const snapshot=onSnapshot.mock.calls[0][0] as PhysicsSnapshot;
+    expect(snapshot.poseTargets).toBe(targets);
+    expect(snapshot.telemetry.nodePoseDistancesMetres).toHaveLength(4);
+    expect(snapshot.telemetry.nodePoseDistancesMetres[0]).toBeCloseTo(0.4);
+    expect(snapshot.telemetry.nodePoseDistancesMetres[3]).toBeCloseTo(0.2);
+    expect(snapshot.telemetry.meanPoseError).toBeCloseTo(0.15);
     provider.dispose!();
   });
   it('clears output on numerical reset and ignores late worker messages after disable', () => {

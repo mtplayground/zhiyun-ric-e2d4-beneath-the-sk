@@ -128,3 +128,18 @@ vertex count including the last vertex, and compares the complete diagnostic.
 It also checks that the retained binary is unchanged and rejected. Network
 access is required. Tests were added but not run in this implementation step.
 No original-files directory or source mesh is copied into public assets.
+
+The physics panel stores SI settings: gravity acceleration in m/s² (default 9.81),
+edge stiffness 10,000 N/m, skin pose stiffness 50 N/m, inner-layer pose stiffness
+50,000 N/m, and damping 12 s⁻¹. Stiffness is converted to XPBD compliance by its
+reciprocal at the settings boundary. Gravity is turned into a ratio of the host's
+cached 9.81 m/s² vector, preserving the recorded axis and avoiding repeat length
+conversion. Zero gravity is supported; pose stiffness remains positive and finite.
+
+Telemetry records `nodePoseDistancesMetres` in node-index order, including the
+last and all inner nodes. Maximum and mean residuals now use metres over every
+node, independent of labels. The numeric readout has a node-index selector for
+individual distances; the debug overlay draws each node-to-target residual and
+keeps the three label colors for visual categorization only. No label implies a
+jaw or skull attachment. Pose-target positions travel with each snapshot so the
+residual corresponds to the submitted pose for that simulation output.

@@ -270,7 +270,9 @@ export default function FaceViewport({
           className="absolute right-3 top-14 rounded-md border border-border bg-background/90 px-3 py-2 font-mono text-xs text-foreground"
           onClick={()=>setDebugOverlay(!debugOverlay)}>Proxy {debugOverlay ? 'Visible' : 'Hidden'}</button>
         {debugOverlay ? <div data-testid="physics-debug-legend" className="pointer-events-none absolute right-3 top-24 grid gap-1 rounded-md border border-border bg-background/90 px-3 py-2 font-mono text-xs">
-          <span className="text-cyan-300">● Skin</span><span className="text-amber-300">● Skull-attached</span><span className="text-pink-400">● Jaw-attached</span>
+          <span className="text-cyan-300">● Skin · label 0</span><span className="text-amber-300">● Inner · label 1</span><span className="text-pink-400">● Inner · label 2</span>
+          <span>Labels are coloring only</span><span className="text-green-300">— Node → pose target</span>
+          <span>Inspect each distance in the numeric readout (m)</span>
         </div> : null}
       </> : null}
       <button
