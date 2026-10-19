@@ -1,3 +1,4 @@
+import { positionGroups, POSITION_TOLERANCE } from '../src/domain/physics/position-groups.mjs';
 import { metresToProxyUnits } from '../src/domain/physics/physical-units.mjs';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
@@ -89,7 +90,7 @@ export async function readFace(bytes, {metresPerSourceUnit}={}) {
   const max=[0,1,2].map(i=>Math.max(...positions.map(p=>p[i])));
   const scale=Math.max(...max.map((v,i)=>v-min[i]));
   if(!(scale>0)) throw Error('Empty face bounds');
-  return {units,positions:positions.map(p=>p.map((v,i)=>(v-(min[i]+max[i])/2)/scale)), indices:p.indices===undefined?positions.map((_,i)=>i):accessor(p.indices).flat(), normalization:{center:min.map((v,i)=>(v+max[i])/2),scale}};
+  return {diagnosticAxes:{rightAxis:frame.rightAxis,verticalAxis:frame.verticalAxis},units,positions:positions.map(p=>p.map((v,i)=>(v-(min[i]+max[i])/2)/scale)), indices:p.indices===undefined?positions.map((_,i)=>i):accessor(p.indices).flat(), normalization:{center:min.map((v,i)=>(v+max[i])/2),scale}};
 }
 
 // Simplification does not preserve triangle IDs. Associate a failed proxy triangle
@@ -150,17 +151,78 @@ export function validateOffset(face,nodes,indices,n,thicknessMetres) {
   }
 }
 
+export function disconnectedCoincidences(face,geometry) {
+  const attr=geometry.getAttribute('position');
+  const positions=Array.from({length:attr.count},(_,i)=>[attr.getX(i),attr.getY(i),attr.getZ(i)]);
+  const indices=Array.from(geometry.index.array);
+  const parent=positions.map((_,i)=>i), neighbors=positions.map(()=>new Set());
+  const root=i=>parent[i]===i?i:(parent[i]=root(parent[i]));
+  for(let i=0;i<indices.length;i+=3) {
+    const ids=indices.slice(i,i+3);
+    for(const a of ids) for(const b of ids) if(a!==b) {parent[root(a)]=root(b);neighbors[a].add(b);}
+  }
+  const up=face.diagnosticAxes?.verticalAxis??face.units.verticalAxis;
+  const right=face.diagnosticAxes?.rightAxis??[1,0,0];
+  const heights=face.positions.map(p=>dot(p,up)), widths=face.positions.map(p=>dot(p,right));
+  const lo=Math.min(...heights),hi=Math.max(...heights),left=Math.min(...widths),rightBound=Math.max(...widths);
+  const forehead=p=>dot(p,up)>=hi-0.25*(hi-lo)&&Math.abs(dot(p,right)-(left+rightBound)/2)<=0.3*(rightBound-left);
+  const groups=positionGroups(positions).filter(g=>g.length>1).filter(g=>{
+    // Distinguish a short real edge from disconnected local incident fans.
+    const allowed=new Set(g),seen=new Set([g[0]]),queue=[g[0]];
+    for(const a of queue) for(const b of neighbors[a]) if(allowed.has(b)&&!seen.has(b)) {seen.add(b);queue.push(b);}
+    return seen.size!==g.length;
+  }).map(g=>{
+    const p=positions[g[0]];
+    let nearest=Infinity;
+    for(const q of face.positions) nearest=Math.min(nearest,Math.hypot(...sub(p,q)));
+    const sourceVertices=face.positions.flatMap((q,i)=>Math.hypot(...sub(p,q))<=nearest+POSITION_TOLERANCE?[i]:[]);
+    return {proxyVertices:g,positionsProxy:g.map(i=>positions[i]),
+      positionsSource:g.map(i=>positions[i].map((v,k)=>v*face.normalization.scale+face.normalization.center[k])),
+      sourceVertices,sourceAssociation:'nearest original accessor vertices',
+      globalComponents:g.map(root),foreheadCandidate:forehead(p)};
+  });
+  return {toleranceProxy:POSITION_TOLERANCE,foreheadDefinition:'heuristic: upper 25% of vertical extent and central 60% of horizontal extent; not an anatomical annotation',
+    disconnectedGroups:groups.length,foreheadGroups:groups.filter(g=>g.foreheadCandidate).length,groups};
+}
+
+export function weldPhysicalSurface(geometry) {
+  const pos=geometry.getAttribute('position');
+  const positions=Array.from({length:pos.count},(_,i)=>[pos.getX(i),pos.getY(i),pos.getZ(i)]);
+  const used=new Set(geometry.index.array);
+  const groups=positionGroups(positions).map(group=>group.filter(i=>used.has(i))).filter(group=>group.length), remap=new Map();
+  groups.forEach((group,index)=>group.forEach(old=>remap.set(old,index)));
+  const indices=Array.from(geometry.index.array,i=>remap.get(i));
+  for(let i=0;i<indices.length;i+=3) if(new Set(indices.slice(i,i+3)).size!==3) throw Error(`Near-coincident weld collapses proxy triangle ${i/3}`);
+  const welded=new BufferGeometry();
+  welded.setAttribute('position',new Float32BufferAttribute(groups.flatMap(group=>positions[group[0]]),3));
+  welded.setIndex(indices);
+  welded.computeVertexNormals();
+  return welded;
+}
+
+export function prepareSurface(face,{target=3000}={}) {
+  const geometry=new BufferGeometry();
+  geometry.setAttribute('position',new Float32BufferAttribute(face.positions.flat(),3));geometry.setIndex(face.indices);
+  const desiredVertices=Math.max(4,Math.round(target/6));
+  const unique=new Set(face.positions.map(p=>p.join(','))).size;
+  const simplified=new SimplifyModifier().modify(geometry,Math.max(0,unique-desiredVertices));
+  const beforeNormalSplit=disconnectedCoincidences(face,simplified);
+  const oldCreased=mergeVertices(toCreasedNormals(simplified.clone(),Math.PI/6));
+  const before=disconnectedCoincidences(face,oldCreased);
+  // Mechanical continuity is independent of shading normals. This face skin has
+  // no supplied physical cut boundaries, so retain no shading-induced splits.
+  // Remove normal attributes BEFORE welding: mergeVertices compares all attributes.
+  const proxy=weldPhysicalSurface(simplified);
+  const after=disconnectedCoincidences(face,proxy);
+  if(after.disconnectedGroups) throw Error(`Disconnected coincident proxy vertices after welding: ${JSON.stringify(after)}`);
+  return {proxy,topologyReport:{policy:'continuous physical skin; render shading creases do not split simulation nodes',beforeNormalSplit,beforeCreaseWeld:before,afterCreaseWeld:after}};
+}
+
 export function generate(face,{target=3000,thicknessMetres=0.012,mouthLine=-0.12,upAxis}={}) {
   if(!Number.isInteger(target)||target<12||!Number.isFinite(thicknessMetres)||thicknessMetres<=0||!Number.isFinite(mouthLine)||(upAxis!==undefined&&![0,1,2].includes(upAxis))) throw Error('Invalid proxy options');
   const thickness=metresToProxyUnits(thicknessMetres,face);
   const metresPerProxyUnit=1/metresToProxyUnits(1,face);
-  const geometry=new BufferGeometry();
-  geometry.setAttribute('position',new Float32BufferAttribute(face.positions.flat(),3)); geometry.setIndex(face.indices);
-  // Collapse edges rather than dropping triangles, retaining a connected surface.
-  const desiredVertices=Math.max(4,Math.round(target/6));
-  const unique=new Set(face.positions.map(p=>p.join(','))).size;
-  let proxy=new SimplifyModifier().modify(geometry,Math.max(0,unique-desiredVertices));
-  proxy = mergeVertices(toCreasedNormals(proxy, Math.PI / 6));
+  const {proxy,topologyReport}=prepareSurface(face,{target});
   const pos=proxy.getAttribute('position'),normal=proxy.getAttribute('normal');
   const nodes=Array.from({length:pos.count},(_,i)=>[pos.getX(i),pos.getY(i),pos.getZ(i)]);
   const n=nodes.length;
@@ -207,7 +269,7 @@ export function generate(face,{target=3000,thicknessMetres=0.012,mouthLine=-0.12
     if(!best||!best.every(Number.isFinite)) throw Error('Render vertex without embedding');
     return best;
   });
-  return {nodes,tetrahedra,edges,labels,embedding,pairs,masses};
+  return {nodes,tetrahedra,edges,labels,embedding,pairs,masses,topologyReport};
 }
 
 export function encode(asset,metadata) {
@@ -220,16 +282,32 @@ export function encode(asset,metadata) {
 }
 
 export async function main(args=process.argv.slice(2)) {
-  const options={source:DEFAULT_SOURCE,output:'public/data/facecap-soft-tissue.bin',target:3000,thicknessMetres:0.012,mouthLine:-0.12};
+  const options={source:DEFAULT_SOURCE,output:'public/data/facecap-soft-tissue.bin',topologyReport:'docs/facecap-topology.json',target:3000,thicknessMetres:0.012,mouthLine:-0.12};
   for(let i=0;i<args.length;i+=2) {
-    const key={'--metres-per-source-unit':'metresPerSourceUnit','--source':'source','--output':'output','--target':'target','--thickness-metres':'thicknessMetres','--mouth-line':'mouthLine'}[args[i]];
+    const key={'--metres-per-source-unit':'metresPerSourceUnit','--topology-report':'topologyReport','--source':'source','--output':'output','--target':'target','--thickness-metres':'thicknessMetres','--mouth-line':'mouthLine'}[args[i]];
     if(!key||args[i+1]===undefined) throw Error(`Unknown or incomplete option ${args[i]}`);
-    options[key]=['source','output'].includes(key)?args[i+1]:Number(args[i+1]);
+    options[key]=['source','output','topologyReport'].includes(key)?args[i+1]:Number(args[i+1]);
   }
   let bytes;
   if(/^https?:/.test(options.source)) {const response=await fetch(options.source);if(!response.ok) throw Error(`Source HTTP ${response.status}`);bytes=Buffer.from(await response.arrayBuffer());}
   else bytes=await readFile(options.source);
-  const face=await readFace(bytes,options), asset=generate(face,options);
+  const face=await readFace(bytes,options);
+  // Write investigation data before attempting the mandatory 12 mm layer, so a
+  // failed offset cannot hide evidence about the surface topology.
+  await mkdir(new URL('../public/data/',import.meta.url),{recursive:true});
+  const {topologyReport}=prepareSurface(face,options);
+  await writeFile(options.topologyReport,JSON.stringify({source:options.source,sourceHash:hash(bytes),target:options.target,...topologyReport},null,2)+'\n');
+  let asset;
+  try {asset=generate(face,options);}
+  catch(error) {
+    if(error.diagnostic) {
+      let retainedAssetSha256=null;
+      try {retainedAssetSha256=hash(await readFile(options.output));} catch { /* first generation may have no asset */ }
+      await writeFile('docs/soft-tissue-generation-failure.json',JSON.stringify({source:options.source,sourceHash:hash(bytes),retainedAssetSha256,renderVertices:face.positions.length,
+        options:{target:options.target,thicknessMetres:options.thicknessMetres,mouthLine:options.mouthLine,metresPerSourceUnit:options.metresPerSourceUnit},diagnostic:error.diagnostic},null,2)+'\n');
+    }
+    throw error;
+  }
   const output=encode(asset,{sourceHash:hash(bytes),source:options.source,normalization:face.normalization,units:face.units,options:{target:options.target,thicknessMetres:options.thicknessMetres,mouthLine:options.mouthLine,upAxis:options.upAxis,metresPerSourceUnit:options.metresPerSourceUnit},labels:{skin:0,skull:1,jaw:2}});
   await mkdir(new URL('../public/data/',import.meta.url),{recursive:true});
   await writeFile(options.output,output);

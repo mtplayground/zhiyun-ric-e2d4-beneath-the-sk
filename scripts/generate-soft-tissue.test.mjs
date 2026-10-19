@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFile } from 'node:fs/promises';
-import { generate, encode, readFace, hash, determinant, faceFrame, physicalUnits, offsetFailure, validateOffset } from './generate-soft-tissue.mjs';
+import { generate, encode, readFace, hash, determinant, faceFrame, physicalUnits, offsetFailure, validateOffset, prepareSurface } from './generate-soft-tissue.mjs';
 import { loadSoftTissueAsset } from '../src/domain/simulation/soft-tissue-asset';
 
 const fixture = {normalization:{center:[0,0,0],scale:1},units:{metresPerSourceUnit:1,verticalAxis:[0,0,1]},positions:[[0,0,0],[1,0,0],[0,1,0]],indices:[0,1,2]};
@@ -43,6 +43,13 @@ describe('soft tissue proxy', () => {
     const face=await readFace(source,failure.options);
     expect(face.positions).toHaveLength(failure.renderVertices);
     expect(face.positions.at(-1).every(Number.isFinite)).toBe(true);
+    const topology=JSON.parse(await readFile(new URL('../docs/facecap-topology.json',import.meta.url),'utf8'));
+    expect(topology.sourceHash).toBe(hash(source));
+    const {topologyReport}=prepareSurface(face,failure.options);
+    for(const key of ['beforeNormalSplit','beforeCreaseWeld','afterCreaseWeld']) expect(topologyReport[key]).toEqual(topology[key]);
+    expect(topologyReport.beforeNormalSplit.foreheadGroups).toBe(0);
+    expect(topologyReport.beforeCreaseWeld.foreheadGroups).toBeGreaterThan(0);
+    expect(topologyReport.afterCreaseWeld.disconnectedGroups).toBe(0);
     try {
       generate(face,failure.options);
       expect.fail('The recorded source must fail at 12 mm until its geometry is repaired');
