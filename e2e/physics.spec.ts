@@ -28,6 +28,8 @@ test('worker physics supports reference poses, live tuning, overlay, reset and r
   const toggle=page.getByRole('switch',{name:'Enable soft-tissue physics'});
   await toggle.click();
   await expect(page.getByText('Physics Active',{exact:true})).toBeVisible();
+  await expect(page.getByTestId('physics-status')).toHaveText('Active · worker');
+  await expect(page.getByTestId('physics-toggle')).toHaveAttribute('aria-pressed','true');
   await expect(page.getByTestId('physics-telemetry')).toBeVisible();
   await setSlider(page,'Gravity',98.1);
   await setSlider(page,'Skin pose stiffness',20);
@@ -70,6 +72,8 @@ test('falls back when workers are unavailable and continues reporting finite tel
   await servePhysicsFixture(page,false,true);
   await load(page);await page.getByRole('switch',{name:'Enable soft-tissue physics'}).click();
   await expect(page.getByText('Physics Fallback',{exact:true})).toBeVisible();
+  await expect(page.getByTestId('physics-status')).toHaveText('Active · main-thread fallback');
+  await expect(page.getByTestId('physics-toggle')).toHaveAttribute('aria-pressed','true');
   await expect(page.getByTestId('physics-telemetry')).toBeVisible();
   await expect.poll(async()=>parseFloat(await metric(page,'Effective simulation rate'))).toBeGreaterThan(0);
   await expect(page.getByTestId('physics-telemetry')).not.toContainText(/NaN|Infinity/);
@@ -78,6 +82,10 @@ test('reports a mismatched proxy and keeps the kinematic controls usable',async(
   await servePhysicsFixture(page,true);await load(page);
   await page.getByRole('switch',{name:'Enable soft-tissue physics'}).click();
   await expect(page.getByText('Simulation asset does not match the render face mesh',{exact:true})).toBeVisible();
+  await expect(page.getByTestId('physics-status')).toHaveText('Inactive · Invalid or mismatched proxy asset');
+  await expect(page.getByTestId('provider-physics-status')).toContainText('Inactive · Invalid or mismatched proxy asset');
+  await expect(page.getByTestId('physics-toggle')).toHaveAttribute('aria-pressed','false');
+  await expect(page.getByTestId('physics-toggle')).toHaveText('Physics Inactive');
   await expect(page.getByTestId('physics-telemetry')).toHaveCount(0);
   await page.getByLabel('Expressions / Emotions').selectOption('expression-smile');
   await expect(page.getByText(/Current Pose: Smile \| Frame:/)).toBeVisible();

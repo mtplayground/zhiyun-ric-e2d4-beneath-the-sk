@@ -91,6 +91,11 @@
       "number": 129,
       "title": "Regenerate a valid FaceCap proxy and fail the build when it is invalid",
       "body": "## Scope\n\nRegenerate the committed soft-tissue asset from the real default FaceCap mesh in the current asset format version, with the 12 mm thickness, the inner–outer pairing, the SI masses and the seam fix already in place. Replace `public/data/facecap-soft-tissue.bin` with it.\nMake the static build verification load the committed asset and run it through the same validator the app uses at runtime, checking it against the expected source-mesh hash and render vertex count. The build fails if validation fails, so an asset the app would reject can never be committed again. Update the soft-tissue asset doc so it no longer calls the committed asset legacy or invalid.\n\n## Files\n\nSoft-tissue asset generation script under `scripts/`, `public/data/facecap-soft-tissue.bin`, `scripts/verify-static-build.mjs`, soft-tissue asset format doc under `docs/`\n\n---\nUUID: 4c38be13-3f76-41f9-b089-658b8039d8e1"
+    },
+    {
+      "number": 130,
+      "title": "Show the real physics status on the toggle",
+      "body": "## Scope\n\nThe physics toggle and viewport must not look \"on\" when physics isn't running. Next to the toggle, show one of these states:\n- **active** in the worker\n- **active** on the main-thread fallback\n- **inactive**, with a short reason: invalid or mismatched proxy asset, missing face mesh, or worker startup failure\nWhen inactive, show the reason in the viewport as well as in Provider Health, and keep showing the kinematic pose as today. The status comes from the existing diagnostics and telemetry, not a separate check.\n\n## Files\n\n`src/components/viewport/face-viewport.tsx`, `src/components/viewport/kinematic-provider-runtime.tsx`, `src/state/physics-telemetry-state.ts`\n\n---\nUUID: 1732095e-93c0-47a0-a7cc-2fe2db8828c3"
     }
   ]
 }
