@@ -21,6 +21,11 @@
       "number": 99,
       "title": "Run the solver in a Web Worker with a main-thread fallback",
       "body": "## Scope\n\nHost the solver in a dedicated Web Worker running a fixed-timestep loop. Each frame the main thread sends pose targets and the jaw transform, and the worker returns node positions as transferable typed arrays. Do not rely on SharedArrayBuffer, because the static self-hosted deploy doesn't send the cross-origin isolation headers it needs.\nLoad the simulation asset once and validate its source-mesh hash and render vertex count against the loaded face mesh, reporting a mismatch as a diagnostic. If workers are unavailable, fall back to running the solver on the main thread at a reduced substep count. The worker must shut down cleanly when physics is turned off or the viewport unmounts.\n\n## Files\n\nNew worker module and host bridge under `src/domain/physics/`, `vite.config.ts` if worker bundling needs it\n\n## Dependencies\n\nDepends on: XPBD solver core, simulation proxy asset\n\n---\nUUID: 173c4744-3c3a-4ca3-877b-bd2421c2cb81"
+    },
+    {
+      "number": 100,
+      "title": "Map blendshape poses to physics targets",
+      "body": "## Scope\n\nTurn the existing pose state into solver inputs without changing the controls. Each frame, evaluate the blendshape-posed surface exactly as the kinematic provider does today. Map it through the embedding to target positions for the proxy's skin nodes. Derive a rigid jaw rotation from the jaw-open weight for the jaw-attached nodes. Keep skull-attached nodes fixed.\nThis applies to every preset, keyboard and slider pose. Neutral, Smile, and the AA phoneme (jaw open) are the reference poses for tuning and acceptance.\n\n## Files\n\nNew pose-target mapper under `src/domain/physics/`, `src/domain/poses/` read-only\n\n## Dependencies\n\nDepends on: Physics worker host\n\n---\nUUID: 1e589e45-84ba-4c27-a0e9-f7f5fea94bda"
     }
   ]
 }
