@@ -10,9 +10,9 @@
     "target": 3000,
     "thicknessMetres": 0.012,
     "mouthLine": -0.12,
-    "metresPerSourceUnit": 0.0000194938469,
+    "metresPerSourceUnit": 1.94938469e-05,
     "maxOffsetFraction": 0.5,
-    "outsideToleranceMetres": 0.00001,
+    "outsideToleranceMetres": 1e-05,
     "fadeDistanceThicknesses": 1
   },
   "diagnostic": {
@@ -48,5 +48,7 @@
     "requestedThicknessMetres": 0.012,
     "requestedThicknessProxy": 0.050920577164946065,
     "nearestFacialRegion": "unknown: source has no anatomical region annotations"
-  }
+  },
+  "status": "historical: resolved by source-derived radial convex envelope",
+  "legacyPolicy": "simplify and offset every disconnected component"
 }

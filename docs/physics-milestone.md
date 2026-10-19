@@ -3,17 +3,17 @@
 These are executable acceptance specifications. No test, build, browser session,
 benchmark run or performance result was executed during implementation.
 
-## Current prerequisite failure
+## Committed source-derived proxy
 
-The committed proxy is still version 1. The 12 mm generation request fails at
-proxy triangle 0, nearest source triangle 7, and FaceCap inner-mouth annotations
-are missing. The diagnostic and exact source/binary SHA-256 values are recorded
-in `soft-tissue-generation-failure.json`. Version 3 is required for SI masses,
-pairing and bounded render embeddings. Neither browser acceptance nor benchmark
-silently substitutes a fixture for this asset. The real FaceCap browser test
-fails its Physics Active assertion until these generation prerequisites are
-resolved; it is not skipped or presented as passed. The benchmark refuses the
-old format before producing timing results.
+The committed version 3 proxy now generates at the full 12 mm thickness with
+984 nodes, 2,940 tetrahedra and all 2,694 render embeddings. Its source-bound
+mechanical eligibility mask excludes detached components and inward-facing folds,
+without inventing anatomical annotation values. The coarse radial convex envelope
+is a mechanical approximation; the original detailed render/morph geometry stays
+unchanged. See `soft-tissue-asset.md` and `facecap-asset-integrity.json`.
+The old inversion report remains historical regression evidence. Real FaceCap
+browser acceptance and all-node benchmarks use the actual committed version 3
+asset; no fixture or failure-rejection test can qualify it for release.
 
 ## Unit and integrity coverage
 
@@ -85,7 +85,7 @@ satisfy the real-FaceCap acceptance case. Browser traces are retained on failure
 
 ## All-node benchmark
 
-Once a valid version 3 asset exists, run:
+Run against the committed version 3 asset:
 
 ```sh
 npm run benchmark:physics -- --warmup 30 --steps 120 --substeps 4 --iterations 5 --output /tmp/physics-benchmark.json

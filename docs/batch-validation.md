@@ -1,89 +1,87 @@
 # Deferred batch validation — 2026-10-19
 
-Release decision: FAILED; do not publish this batch. The production frontend
-build succeeds, but the real FaceCap physics acceptance and benchmark cannot run
-with the retained version 1 proxy. The runtime correctly requires version 3.
+Scope: every requirement in `.ideavibes/implementation.json`, the complete batch
+from historical main `07e909f`, and the repair commit containing this report.
+Later SI/model requirements supersede the earlier rigid attachment/jaw model.
+The original attachment manifest is empty. Release status is determined by the
+actual pinned-commit build/test/audit output, not by this coverage document.
 
-The checkout reviewed starts at `c950402f9dd2ba028a30a5959d3e9796ed168d1b`.
-Review scope is the complete batch diff from `07e909f`, including all requirements
-in `.ideavibes/implementation.json`; later SI/model requirements supersede the
-original hard attachments and rigid jaw requirements. The final validation commit
-contains this report, the test correction, command/frame race guard and explicit
-release asset verifier. No original attachments were supplied: manifest `[]`.
+## Acceptance coverage
 
-## Acceptance review
-
-| Issue | Evidence and remaining condition |
+| Issue | Review and executable evidence |
 | --- | --- |
-| #95 | Remote backup branch is exactly `07e909fb27ab24e11b8d841a21e69a936130905c`; rollback instructions present; stable refs untouched. |
-| #97 | Generator/embedding integrity tests exist and run; final committed proxy remains incompatible with current loader. Failed integration. |
-| #98 | Superseded solver model covered by deterministic SI, constraint, finite recovery and equilibrium tests. |
-| #99 | Worker transfer, fallback, disposal, startup and mismatch tests pass; actual asset initialization fails. |
-| #100 | Mapper tests cover all presets, keyboard and slider mixes; paired inner displacement and morph-only jaw opening. |
-| #101 | Registry, residual embedding and disable tests pass; real FaceCap physics provider cannot activate with legacy asset. |
-| #102 | Optional settings panel, live tuning and reset pass fixture browser checks; actual asset integration incomplete. |
-| #103 | SI readout, residual overlay and curve tests pass; actual FaceCap telemetry unavailable. |
-| #104 | Automated unit tests and browser fixture checks run; real-asset benchmark fails version validation. |
-| #113 | Explicit unit scale and signed scene-derived vertical axis; conversion, frame and plausibility tests pass. |
-| #114 | FAILED: reproduced inverted layer cell at proxy triangle 0 / nearest source triangle 7 at exactly 12 mm. No valid regenerated binary. |
-| #115 | Weld/topology and synthetic forehead continuity tests pass; final volume and real visual seam continuity remain unverified. |
-| #116 | Dynamic inverse SI masses, full paired targets, pose-relative edges, no rigid jaw, SI gravity and exact equilibrium tests pass. |
-| #117 | SI settings/readout/debug tests pass; fixture browser settings and telemetry checks pass. |
-| #118 | Geometry/morph buffer identity, shader ordering, material/culling restoration and byte integrity tests pass. Fixed stale loader test expecting a copy. Real FaceCap physics pixel parity cannot execute without valid proxy. |
-| #119 | Bounded embedding and exclusion tests pass on fixtures. Source-bound anatomical labels are absent; committed asset lacks version 3 bounds. FAILED overall; user must supply authoritative region annotations. |
-| #120 | Corrected model tests run; real FaceCap browser case and all-node benchmark fail. FAILED acceptance. |
+| #95 | Remote `backup/main-2026-10-19` is exactly `07e909fb27ab24e11b8d841a21e69a936130905c`; rollback procedure present; stable refs untouched. |
+| #97 | Source-derived coarse mechanical surface, configurable budget, full-thickness normal offset, positive tetrahedra, edges, visual labels, exact source hash and complete embedding. Byte-exact generation test. |
+| #98 | Pure deterministic solver tests cover constraints, SI mass, damping, gravity, fixed substeps, extension constraints and non-finite recovery. Superseded hard attachments removed. |
+| #99 | Host/worker tests cover transfers, backpressure, lifecycle, source/count validation, startup timeout and reduced-substep fallback; browser exercises actual worker. |
+| #100 | Mapping tests cover all presets, keyboard/slider mixes, Neutral, Smile and AA, aliases and relative/absolute morphs. Later pairing model replaces the rigid jaw. |
+| #101 | Registry/default, residual-only embedding, live disable and no-reload tests; real browser verifies actual FaceCap. |
+| #102 | Optional live SI controls and reset covered by component/store/worker/browser tests. |
+| #103 | Overlay continuity/colors/residuals, SI node distances, solver metrics and dual-scale curve tests. |
+| #104 | Unit/integrity/browser suites and both real committed-proxy benchmark modes are release gates. |
+| #113 | Recorded explicit metre scale, plausible dimensions, signed scene-derived vertical axis, shared one-time conversions; frame/units tests. |
+| #114 | Committed version 3: 984 positive SI masses, 492 explicit pairs at exactly 12 mm, 2,940 positive tetrahedra. Historical invalid recipe still fails with location-specific diagnostics rather than thinning. |
+| #115 | Source-derived shared proxy topology has zero disconnected coincident forehead groups. Generic weld/local-fan and continuous-offset regression tests retained; historical crease split documented. |
+| #116 | All nodes dynamic, full paired pose targets, separate soft skin/inner stiffness, all pose-relative edge lengths, morph-only jaw opening and SI gravity; exact equilibrium tests across presets/mixes. |
+| #117 | SI controls/store/readout/overlay tests remove attachment semantics and cover every node's target distance. |
+| #118 | Original geometry/base/morph identity and bytes preserved; only offset attribute/material owned. Shader ordering and reset/disable restoration tested; real browser compares zero-gravity canvas pixels. |
+| #119 | Convex nearest-point weights, outside fade, per-vertex cap and identical positional-copy embedding. Source-derived mechanical mask excludes detached oral pieces and inward folds; separate eye/teeth primitives never get offsets. Excluded accessors cannot drive fallback targets. |
+| #120 | Updated equilibrium, pairing, SI, diagnostics, seam and bounds tests; real FaceCap cycles every expression plus Smile/AA with finite values, pixel tolerance and off/on mesh identity. Benchmark asserts all 984 nodes dynamic. |
 
-## Reproducible gates
+## Repair and limitations
 
-- `npm ci`: succeeds.
-- `npm run build:static`: production TypeScript/Vite build and static verification succeed.
-- `npm test`: 126 tests across 26 files pass after correcting the stale geometry-copy assertion.
-- `npm run lint`: succeeds with two existing Fast Refresh warnings.
-- `npm run test:e2e`: initial run 3 passed / 1 failed (preset activation sweep).
-  A synchronous-store guard now prevents an old frame from overwriting a command
-  before React captures it; final browser outcomes are recorded in deploy output.
-- `npm run test:e2e:physics`: initial run 3 fixture cases pass; real FaceCap case
-  fails with the explicit unsupported version 1 diagnostic, before pixel comparison.
-- `npm run generate:soft-tissue -- --metres-per-source-unit 0.0000194938469`:
-  fails at the exact recorded 12 mm location; retained asset bytes unchanged.
-- `npm run benchmark:physics`: fails requiring version 3; no timing result claimed.
-- `npm run verify:physics`: explicit release integrity gate fails on version 1.
-  Unlike the unit test for legacy rejection, this command requires a usable asset.
-  With version 3 it checks exact source bytes, every pair's 12 mm thickness,
-  independently accumulated SI mass for every node, and complete embeddings
-  including the last render vertex, through the production loader.
+The earlier generator treated all disconnected components of the morph-bearing
+primitive as tissue and produced an invalid 12 mm layer. The replacement profile
+is bound to the exact FaceCap source hash. It derives mechanical eligibility from
+connectivity and orientation: 1,867 eligible vertices and 827 excluded vertices.
+No anatomical annotations are fabricated. Unknown sources still require explicit
+region input instead of silently inheriting this selection.
 
-The generator integrity test re-fetches and SHA-256 verifies the source GLB,
-checks all 2,694 render vertices including the last, the complete recorded failure
-and topology report, and the retained binary hash. No normalization of source
-bytes is performed. Passing reproduction of a documented failure is not release
-acceptance.
+A uniformly sampled radial convex envelope supplies the coarse simulation
+surface. It bridges openings and smooths concavities; it is not a detailed
+anatomical reconstruction. This approximation affects simulated residuals only:
+the original FaceCap render and morph data remain untouched, and zero offsets
+must match the kinematic render. The default 3,000-tetrahedron budget yields
+2,940 tetrahedra, 984 nodes, 492 pairs, 4,902 edges and all 2,694 embeddings.
 
-Required external data for #119: a JSON object with `sourceHash` equal to the
-FaceCap GLB SHA-256 recorded in `soft-tissue-generation-failure.json` and exactly
-2,694 ordered `regions` entries, each `skin`, `teeth`, `inner-mouth` or `eyes`.
-Use `--regions PATH`. No anatomical labels are inferred or fabricated. Supplying
-annotations alone does not resolve the independent inverted-cell code/geometry
-failure; the agent must repair that and rerun all affected gates.
+`facecap-asset-integrity.json` records exact GLB/binary SHA-256 hashes and counts.
+The integrity suite regenerates the committed binary byte for byte, validates
+all pairs and positive volumes, exclusions and positional-copy records, and the
+last source vertex, mass and embedding. No byte normalization is performed.
+`verify:physics` additionally uses the production loader and independently
+accumulates every tetrahedron's SI mass contribution. Historical inversion
+failure remains a separate negative regression, never a release-pass shortcut.
 
-## Deployment audits
+## Required commands
 
-Fresh audit: static React/Vite SPA, no database or app API, no object storage
-prefix/calls, upload/download router, blob URL lifecycle, email or origin gate.
-URL constructors in candidate files refer to assets, workers or test files;
-none builds an API share/download URL. No error middleware returns a generic 500.
-Storage prefix and streaming audits are skipped by their capability gates.
-Other audits have zero applicable call sites. No patches were needed in those
-audits, so step 4.8 has not run.
+```sh
+npm ci
+npm run build:static
+npm test
+npm run lint
+npm run verify:physics
+npm run test:e2e
+npm run test:e2e:physics
+npm run benchmark:physics -- --substeps 4
+npm run benchmark:physics -- --substeps 2
+```
 
-The production bundle contains the unique root watermark and Share control;
-Chromium verifies the Ideavibes link and clipboard behavior. Preview banner
-markers are absent. Original attachment metadata stays outside the build.
-Authoritative frontend environment keys were appended and strict KEY=VALUE
-validation passes. No service credentials were fabricated.
+The two benchmark modes execute the real solver with all nodes dynamic, SI
+gravity and paired layer targets. They validate finite state, zero resets and
+render offsets within the thickness cap. Timing depends on hardware; no arbitrary
+real-time guarantee is asserted. Final output records actual command outcomes.
 
-Sprite existence, Node/npm runtime and durable `/data` were checked. Publication,
-service replacement, heartbeat changes and writing a successful `.deploy_url` /
-`.progress` are withheld by the mandatory pre-publication acceptance gate.
-A previous deployment, if reachable, is not evidence that this checked commit
-has been deployed. Never report Deployment Ready for this attempt.
+## Deployment audit scope
+
+Static React/Vite SPA with no database, object storage, upload/download API,
+email/origin gates or blob URL lifecycle. URL constructor candidates refer to
+assets, workers and Node test/benchmark files. Every deploy reruns source
+candidate enumeration and semantic inspection; zero sites emit clean gates.
+The native root watermark/share and preview-banner absence are verified in the
+production bundle and browser. Only application assets enter the static build.
+
+After all release gates pass, source is committed/pushed, uploaded to the project
+Sprite, rebuilt there and restarted through its registered app service. The
+remote release marker and built asset bytes must match the checked final commit.
+Public reachability, watermark/share, no-preview marker, environment format and
+service registration are checked before reporting deployment complete.

@@ -143,3 +143,13 @@ describe('pose target mapper',()=>{
     mesh.morphTargetInfluences.fill(0);close(driver.update().poseTargets,proxy.nodes);geometry.dispose();
   });
 });
+
+
+it('does not let an excluded oral vertex drive an uncovered proxy node through nearest fallback',()=>{
+  const p:PoseProxy={...proxy,embeddingFlags:[2,0,0],
+    nodes:[...array(proxy.nodes).slice(0,12),0,0,0,0,0,-0.05]};
+  const frame=createPoseTargetMapper(surface,p).map({mouthSmileLeft:1});
+  // The closest render accessor (vertex 0) is excluded; choose an eligible one.
+  expect(frame.poseTargets[14]).toBeLessThan(0.5);
+  pairedDisplacement(frame.poseTargets,p);
+});

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFile } from 'node:fs/promises';
-import { generate, encode, readFace, hash, determinant, faceFrame, physicalUnits, offsetFailure, validateOffset, prepareSurface } from './generate-soft-tissue.mjs';
+import { generate, encode, readFace, hash, determinant, faceFrame, physicalUnits, offsetFailure, validateOffset, dominantSurfaceSelection } from './generate-soft-tissue.mjs';
 import { loadSoftTissueAsset } from '../src/domain/simulation/soft-tissue-asset';
 
 const fixture = {regions:['skin','skin','skin'],normalization:{center:[0,0,0],scale:1},units:{metresPerSourceUnit:1,verticalAxis:[0,0,1]},positions:[[0,0,0],[1,0,0],[0,1,0]],indices:[0,1,2]};
@@ -32,42 +32,63 @@ describe('soft tissue proxy', () => {
     expect(()=>generate(fixture,{thicknessMetres:0})).toThrow();
     expect(()=>generate({...fixture,positions:[[0,0,0],[1,0,0],[2,0,0]],indices:[0,1,2]},{target:12})).toThrow();
   });
-  it('reproduces the recorded 12 mm failure from the exact source and rejects the retained legacy binary', async () => {
+  it('regenerates the usable 12 mm FaceCap asset byte for byte from exact source bytes, including the final records', async () => {
     const committed=await readFile(new URL('../public/data/facecap-soft-tissue.bin',import.meta.url));
-    const failure=JSON.parse(await readFile(new URL('../docs/soft-tissue-generation-failure.json',import.meta.url),'utf8'));
-    expect(hash(committed)).toBe(failure.retainedAssetSha256);
-    const response=await fetch(failure.source);
-    expect(response.ok).toBe(true);
-    const source=Buffer.from(await response.arrayBuffer());
-    expect(hash(source)).toBe(failure.sourceHash);
-    const face=await readFace(source,failure.options);
-    expect(face.positions).toHaveLength(failure.renderVertices);
-    expect(face.positions.at(-1).every(Number.isFinite)).toBe(true);
+    const report=JSON.parse(await readFile(new URL('../docs/facecap-asset-integrity.json',import.meta.url),'utf8'));
+    expect(hash(committed)).toBe(report.assetSha256);
+    const response=await fetch(report.source);expect(response.ok).toBe(true);
+    const source=Buffer.from(await response.arrayBuffer());expect(hash(source)).toBe(report.sourceHash);
+    const header=JSON.parse(committed.subarray(8,8+committed.readUInt32LE(4)).toString());
+    const face=await readFace(source,header.options);
+    expect(face.positions).toHaveLength(2694);expect(face.positions.at(-1).every(Number.isFinite)).toBe(true);
+    expect(face.regions).toBeUndefined(); // no fabricated anatomical labels
+    expect(face.selectionPolicy).toEqual(report.selectionPolicy);
+    expect(face.selectionPolicy.dominantComponentVertices).toBe(1954);
+    expect(face.selectionPolicy.componentSizes.reduce((a,b)=>a+b,0)).toBe(2694);
+    expect(face.simulationMask.slice(0,574).every(value=>!value)).toBe(true);
+    expect(face.simulationMask.slice(2528).every(value=>!value)).toBe(true);
+    const asset=generate(face,header.options);
+    expect(hash(encode(asset,header))).toBe(hash(committed));
     const topology=JSON.parse(await readFile(new URL('../docs/facecap-topology.json',import.meta.url),'utf8'));
     expect(topology.sourceHash).toBe(hash(source));
-    const {topologyReport}=prepareSurface(face,failure.options);
-    for(const key of ['beforeNormalSplit','beforeCreaseWeld','afterCreaseWeld']) expect(topologyReport[key]).toEqual(topology[key]);
-    expect(topologyReport.beforeNormalSplit.foreheadGroups).toBe(0);
-    expect(topologyReport.beforeCreaseWeld.foreheadGroups).toBeGreaterThan(0);
-    expect(topologyReport.afterCreaseWeld.disconnectedGroups).toBe(0);
-    try {
-      generate(face,failure.options);
-      expect.fail('The recorded source must fail at 12 mm until its geometry is repaired');
-    } catch(error) {
-      expect(error.diagnostic).toEqual(failure.diagnostic);
-      const d=error.diagnostic;
-      expect(d.requestedThicknessMetres).toBe(0.012);
-      expect(d.requestedThicknessProxy*face.normalization.scale*face.units.metresPerSourceUnit).toBeCloseTo(0.012,12);
-      expect(Number.isInteger(d.proxyTriangleIndex)&&d.proxyTriangleIndex>=0).toBe(true);
-      expect(Number.isInteger(d.sourceTriangleIndex)&&d.sourceTriangleIndex>=0).toBe(true);
-      expect(d.centroidSource.every(Number.isFinite)).toBe(true);
-      expect(d.centroidProxy.every(Number.isFinite)).toBe(true);
-      expect(Math.hypot(...d.normal)).toBeCloseTo(1);
-      expect(d.sourceVertexIndices).toHaveLength(3);
-      expect(typeof d.nearestFacialRegion).toBe('string');
+    expect(asset.topologyReport.afterCreaseWeld.disconnectedGroups).toBe(0);
+    expect(asset.topologyReport.afterCreaseWeld.foreheadGroups).toBe(0);
+    expect(asset.topologyReport).toEqual(Object.fromEntries(Object.entries(topology).filter(([key])=>!['source','sourceHash','target'].includes(key))));
+    for(const tet of asset.tetrahedra) expect(determinant(...tet.map(i=>asset.nodes[i]))).toBeGreaterThan(1e-12);
+    for(const [outer,inner] of asset.pairs) {
+      const metres=Math.hypot(...asset.nodes[outer].map((v,i)=>v-asset.nodes[inner][i]))*face.normalization.scale*face.units.metresPerSourceUnit;
+      expect(metres).toBeCloseTo(0.012,7);
     }
-    await expect(loadSoftTissueAsset(buffer(committed),buffer(source),face.positions.length)).rejects.toThrow('regenerate as version 3');
+    const loaded=await loadSoftTissueAsset(buffer(committed),buffer(source),2694);
+    expect(loaded.metadata.counts).toEqual(report.counts);
+    expect(loaded.masses.at(-1)).toBeGreaterThan(0);expect(loaded.embedding.slice(-5).every(Number.isFinite)).toBe(true);
+    let excluded=0,active=0;
+    for(let vertex=0;vertex<2694;vertex++) {
+      if(!face.simulationMask[vertex]) {
+        excluded++;expect(loaded.embeddingFlags[vertex]&2).toBe(2);
+        expect(loaded.embeddingFade[vertex]).toBe(0);expect(loaded.embeddingMaxOffsets[vertex]).toBe(0);
+      } else if(loaded.embeddingFade[vertex]>0) active++;
+    }
+    expect(excluded).toBe(report.selectionPolicy.excludedVertices);expect(active).toBeGreaterThan(1000);
   },120000);
+
+  it('retains location-specific failure diagnostics instead of thinning an invalid 12 mm layer', async()=>{
+    const failure=JSON.parse(await readFile(new URL('../docs/soft-tissue-generation-failure.json',import.meta.url),'utf8'));
+    const source=Buffer.from(await (await fetch(failure.source)).arrayBuffer());
+    expect(hash(source)).toBe(failure.sourceHash);
+    const face=await readFace(source,failure.options);
+    // The historical unfiltered simplification is still rejected. The corrected
+    // source-derived envelope is a separate, explicit geometry policy.
+    try {
+      generate({...face,proxySurface:undefined,simulationMask:undefined},failure.options);
+      expect.fail('Invalid legacy layer must fail');
+    } catch(error) {expect(error.diagnostic).toEqual(failure.diagnostic);}
+  },120000);
+
+  it('refuses to guess a dominant surface for equally sized disconnected components',()=>{
+    const positions=[[-1,-1,0],[0,-1,0],[-1,0,0],[1,1,0],[2,1,0],[1,2,0]];
+    expect(()=>dominantSurfaceSelection({positions,indices:[0,1,2,3,4,5]})).toThrow('Ambiguous dominant surface');
+  });
 });
 
 describe('physical face frame', () => {

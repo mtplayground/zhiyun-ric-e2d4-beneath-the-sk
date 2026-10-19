@@ -6,6 +6,8 @@ import { hash, readFace, determinant } from './generate-soft-tissue.mjs';
 // Release acceptance is separate from tests of legacy-asset rejection. A passing
 // rejection test must never qualify an unusable committed asset for deployment.
 const bytes = await readFile(new URL('../public/data/facecap-soft-tissue.bin', import.meta.url));
+const integrity = JSON.parse(await readFile(new URL('../docs/facecap-asset-integrity.json', import.meta.url), 'utf8'));
+assert.equal(hash(bytes), integrity.assetSha256, 'Committed binary bytes differ from the integrity report');
 const metadata = JSON.parse(bytes.subarray(8, 8 + bytes.readUInt32LE(4)).toString());
 assert.equal(metadata.version, 3, 'Committed FaceCap proxy must be version 3; regenerate the full 12 mm layer');
 assert.equal(metadata.options.thicknessMetres, 0.012);
@@ -18,6 +20,18 @@ const server = await createServer({ server: { middlewareMode: true }, appType: '
 try {
   const { loadSoftTissueAsset } = await server.ssrLoadModule('/src/domain/simulation/soft-tissue-asset.ts');
   const asset = await loadSoftTissueAsset(Uint8Array.from(bytes).buffer, Uint8Array.from(source).buffer, face.positions.length);
+  assert.deepEqual(metadata.counts, integrity.counts);
+  if (face.simulationMask) {
+    let excluded = 0;
+    face.simulationMask.forEach((eligible, vertex) => {
+      if (eligible) return;
+      excluded++;
+      assert(asset.embeddingFlags[vertex] & 2, `Missing exclusion at render vertex ${vertex}`);
+      assert.equal(asset.embeddingFade[vertex], 0);
+      assert.equal(asset.embeddingMaxOffsets[vertex], 0);
+    });
+    assert.equal(excluded, integrity.selectionPolicy.excludedVertices);
+  }
   const metresPerProxy = metadata.units.metresPerSourceUnit * metadata.normalization.scale;
   const expectedMasses = new Float64Array(metadata.counts.nodes);
   for (let i = 0; i < asset.pairs.length; i += 2) {

@@ -109,7 +109,7 @@ test('real FaceCap: every expression, Smile and AA retain zero-gravity kinematic
   const toggle=page.getByRole('switch',{name:'Enable soft-tissue physics'});
   await toggle.click();
   await expect(page.getByText('Physics Active',{exact:true}),
-    'Real FaceCap acceptance requires a generated version 3 proxy; the recorded 12 mm inversion and missing anatomical regions must be resolved, not bypassed with fixtures.').toBeVisible({timeout:30_000});
+    'Real FaceCap acceptance requires the generated, source-validated version 3 proxy at the full 12 mm thickness; fixtures cannot satisfy this case.').toBeVisible({timeout:30_000});
   const expressions=await page.getByRole('combobox',{name:'Expressions / Emotions',exact:true}).locator('option').evaluateAll(options=>options.map(option=>({id:(option as HTMLOptionElement).value,label:option.textContent??''})).filter(option=>option.id));
   const poses=[...expressions.map(p=>({...p,control:'Expressions / Emotions'})),{id:'phoneme-neutral',label:'Neutral',control:'Phoneme'},{id:'expression-smile',label:'Smile',control:'Expressions / Emotions'},{id:'phoneme-aa',label:'AA',control:'Phoneme'}];
   for(const pose of poses) {

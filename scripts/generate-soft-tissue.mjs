@@ -4,11 +4,13 @@ import { metresToProxyUnits } from '../src/domain/physics/physical-units.mjs';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
-import { BufferGeometry, Float32BufferAttribute, Vector3, Triangle, Matrix4, Quaternion } from 'three';
+import { BufferGeometry, Float32BufferAttribute, Vector3, Triangle, Matrix4, Quaternion, IcosahedronGeometry } from 'three';
 import { toCreasedNormals, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { ConvexHull } from 'three/addons/math/ConvexHull.js';
 import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
+export const FACECAP_SOURCE_HASH = '6bfce6d0fcbb5839f5102b79733007859fef7c5df6d9eb49e2264542810b5f64';
 export const DEFAULT_SOURCE = 'https://threejs.org/examples/models/gltf/facecap.glb';
 const sub = (a,b) => a.map((v,i)=>v-b[i]);
 const dot = (a,b) => a.reduce((s,v,i)=>s+v*b[i],0);
@@ -91,7 +93,69 @@ export async function readFace(bytes, {metresPerSourceUnit}={}) {
   const max=[0,1,2].map(i=>Math.max(...positions.map(p=>p[i])));
   const scale=Math.max(...max.map((v,i)=>v-min[i]));
   if(!(scale>0)) throw Error('Empty face bounds');
-  return {regions:p.extras?.simulationRegions??json.meshes[meshIndex].extras?.simulationRegions,diagnosticAxes:{rightAxis:frame.rightAxis,verticalAxis:frame.verticalAxis},units,positions:positions.map(p=>p.map((v,i)=>(v-(min[i]+max[i])/2)/scale)), indices:p.indices===undefined?positions.map((_,i)=>i):accessor(p.indices).flat(), normalization:{center:min.map((v,i)=>(v+max[i])/2),scale}};
+  const face = {regions:p.extras?.simulationRegions??json.meshes[meshIndex].extras?.simulationRegions,diagnosticAxes:{rightAxis:frame.rightAxis,verticalAxis:frame.verticalAxis},units,positions:positions.map(p=>p.map((v,i)=>(v-(min[i]+max[i])/2)/scale)), indices:p.indices===undefined?positions.map((_,i)=>i):accessor(p.indices).flat(), normalization:{center:min.map((v,i)=>(v+max[i])/2),scale}};
+  // This profile is bound to exact upstream bytes. It computes mechanical
+  // eligibility from connectivity; it does not invent anatomical annotations.
+  if (hash(bytes) === FACECAP_SOURCE_HASH && !face.regions) {
+    Object.assign(face, dominantSurfaceSelection(face), {proxySurface:'radial-convex-envelope'});
+  }
+  return face;
+}
+
+export function dominantSurfaceSelection(face) {
+  const groups=positionGroups(face.positions), remap=new Map();
+  groups.forEach((group,index)=>group.forEach(vertex=>remap.set(vertex,index)));
+  const parent=groups.map((_,i)=>i), used=new Set();
+  const root=i=>parent[i]===i?i:(parent[i]=root(parent[i]));
+  for(let i=0;i<face.indices.length;i+=3) {
+    const ids=face.indices.slice(i,i+3).map(vertex=>remap.get(vertex));
+    for(const node of ids) {used.add(node);parent[root(node)]=root(ids[0]);}
+  }
+  const components=new Map();
+  for(const node of used) {
+    const key=root(node);
+    if(!components.has(key)) components.set(key,[]);
+    components.get(key).push(...groups[node]);
+  }
+  const ordered=[...components.values()].sort((a,b)=>b.length-a.length||a[0]-b[0]);
+  if(!ordered.length || ordered[0].length<=face.positions.length/2 ||
+      ordered.length>1&&ordered[0].length<=ordered[1].length*2) throw Error('Ambiguous dominant surface: supply source-bound region annotations');
+  // Conservatively omit inward-facing folds too. This is a geometric support
+  // mask, not a guessed per-vertex anatomical name. Coincident accessors share it.
+  const normals=groups.map(()=>[0,0,0]);
+  for(let i=0;i<face.indices.length;i+=3) {
+    const ids=face.indices.slice(i,i+3),[a,b,c]=ids.map(v=>face.positions[v]);
+    const normal=cross(sub(b,a),sub(c,a));
+    for(const vertex of ids) for(let axis=0;axis<3;axis++) normals[remap.get(vertex)][axis]+=normal[axis];
+  }
+  const dominant=new Set(ordered[0]);
+  const selected=new Set(ordered[0].filter(vertex=>dot(normals[remap.get(vertex)],face.positions[vertex])>1e-12));
+  return {simulationMask:face.positions.map((_,i)=>selected.has(i)), selectionPolicy:{
+    dominantComponentVertices:dominant.size,inwardFacingVertices:dominant.size-selected.size,
+    method:'dominant-exterior-connected-surface-v1',componentSizes:ordered.map(group=>group.length),
+    eligibleVertices:selected.size,excludedVertices:face.positions.length-selected.size,
+    annotationStatus:'not supplied; mechanical eligibility is computed from topology and surface orientation'}};
+}
+
+/** Uniform directions resample the source convex envelope. This coarse closed
+ * mechanical surface removes tiny disconnected oral pieces and sharp shading
+ * fans; render geometry and every morph accessor remain unchanged. */
+export function radialEnvelopeSurface(face,target) {
+  const points=face.positions.filter((_,i)=>face.simulationMask[i]).map(p=>new Vector3(...p));
+  const hull=new ConvexHull().setFromPoints(points);
+  if(hull.faces.length<4||hull.faces.some(f=>f.constant<=1e-8)) throw Error('Neutral origin must lie strictly inside the proxy envelope');
+  const detail=Math.max(0,Math.round(Math.sqrt(target/60))-1);
+  const sphere=new IcosahedronGeometry(1,detail);
+  sphere.setIndex(Array.from({length:sphere.attributes.position.count},(_,i)=>i));
+  const proxy=weldPhysicalSurface(sphere),p=proxy.getAttribute('position');
+  for(let i=0;i<p.count;i++) {
+    const direction=new Vector3(p.getX(i),p.getY(i),p.getZ(i)).normalize();
+    const radius=Math.min(...hull.faces.filter(f=>f.normal.dot(direction)>1e-10).map(f=>f.constant/f.normal.dot(direction)));
+    if(!Number.isFinite(radius)||radius<=0) throw Error('Invalid radial proxy envelope');
+    p.setXYZ(i,...direction.multiplyScalar(radius).toArray());
+  }
+  proxy.computeVertexNormals();sphere.dispose();
+  return proxy;
 }
 
 // Simplification does not preserve triangle IDs. Associate a failed proxy triangle
@@ -202,6 +266,13 @@ export function weldPhysicalSurface(geometry) {
 }
 
 export function prepareSurface(face,{target=3000}={}) {
+  if(face.proxySurface==='radial-convex-envelope') {
+    const proxy=radialEnvelopeSurface(face,target);
+    const continuity=disconnectedCoincidences(face,proxy);
+    if(continuity.disconnectedGroups) throw Error('Disconnected radial proxy nodes');
+    return {proxy,topologyReport:{policy:'uniform radial resampling of the source convex envelope',
+      selection:face.selectionPolicy,beforeNormalSplit:continuity,beforeCreaseWeld:continuity,afterCreaseWeld:continuity}};
+  }
   const geometry=new BufferGeometry();
   geometry.setAttribute('position',new Float32BufferAttribute(face.positions.flat(),3));geometry.setIndex(face.indices);
   const desiredVertices=Math.max(4,Math.round(target/6));
@@ -226,11 +297,15 @@ export function validateRegions(regions,count) {
 export function applyRegionAnnotations(face,annotation,sourceHash) {
   if(annotation.sourceHash!==sourceHash) throw Error('Region annotation source hash does not match GLB');
   validateRegions(annotation.regions,face.positions.length);
-  return {...face,regions:annotation.regions};
+  return {...face,regions:annotation.regions,simulationMask:annotation.regions.map(region=>region==='skin'),
+    selectionPolicy:{method:'source-bound-region-annotations',eligibleVertices:annotation.regions.filter(region=>region==='skin').length,
+      excludedVertices:annotation.regions.filter(region=>region!=='skin').length}};
 }
 
 export function buildEmbedding(face,nodes,tetrahedra,pairs,{maxOffsetFraction=0.5,outsideToleranceMetres=0.00001,fadeDistanceThicknesses=1}={}) {
-  validateRegions(face.regions,face.positions.length);
+  if(face.regions) validateRegions(face.regions,face.positions.length);
+  else if(!Array.isArray(face.simulationMask)||face.simulationMask.length!==face.positions.length||face.simulationMask.some(v=>typeof v!=='boolean'))
+    throw Error('Missing or ambiguous simulation regions or mechanical eligibility mask');
   if(!Number.isFinite(maxOffsetFraction)||maxOffsetFraction<=0||maxOffsetFraction>1||!Number.isFinite(outsideToleranceMetres)||outsideToleranceMetres<0||!Number.isFinite(fadeDistanceThicknesses)||fadeDistanceThicknesses<=0) throw Error('Invalid bounded embedding options');
   const tolerance=metresToProxyUnits(outsideToleranceMetres,face);
   const nodeThickness=Array(nodes.length).fill(0);
@@ -238,7 +313,7 @@ export function buildEmbedding(face,nodes,tetrahedra,pairs,{maxOffsetFraction=0.
   const embedding=Array(face.positions.length),embeddingFlags=[],embeddingFade=[],embeddingThickness=[],embeddingMaxOffsets=[];
   for(const group of positionGroups(face.positions)) {
     const point=face.positions[group[0]],p=new Vector3(...point);
-    const excluded=group.some(i=>face.regions[i]!=='skin');
+    const excluded=group.some(i=>face.regions?face.regions[i]!=='skin':!face.simulationMask[i]);
     let best=null,distance=Infinity;
     for(let ti=0;ti<tetrahedra.length;ti++) {
       const t=tetrahedra[ti].map(k=>nodes[k]),[a,b,c,d]=t,det=determinant(a,b,c,d);
@@ -353,9 +428,12 @@ export async function main(args=process.argv.slice(2)) {
     }
     throw error;
   }
-  const output=encode(asset,{sourceHash:hash(bytes),source:options.source,normalization:face.normalization,units:face.units,options:{target:options.target,thicknessMetres:options.thicknessMetres,mouthLine:options.mouthLine,upAxis:options.upAxis,metresPerSourceUnit:options.metresPerSourceUnit,maxOffsetFraction:options.maxOffsetFraction,outsideToleranceMetres:options.outsideToleranceMetres,fadeDistanceThicknesses:options.fadeDistanceThicknesses,regionsHash:options.regionsHash,regionsPath:options.regionsPath},labels:{skin:0,skull:1,jaw:2}});
+  const output=encode(asset,{sourceHash:hash(bytes),source:options.source,proxySurface:face.proxySurface,selectionPolicy:face.selectionPolicy,normalization:face.normalization,units:face.units,options:{target:options.target,thicknessMetres:options.thicknessMetres,mouthLine:options.mouthLine,upAxis:options.upAxis,metresPerSourceUnit:options.metresPerSourceUnit,maxOffsetFraction:options.maxOffsetFraction,outsideToleranceMetres:options.outsideToleranceMetres,fadeDistanceThicknesses:options.fadeDistanceThicknesses,regionsHash:options.regionsHash,regionsPath:options.regionsPath},labels:{skin:0,skull:1,jaw:2}});
   await mkdir(new URL('../public/data/',import.meta.url),{recursive:true});
   await writeFile(options.output,output);
+  await writeFile('docs/facecap-asset-integrity.json',JSON.stringify({source:options.source,sourceHash:hash(bytes),
+    assetSha256:hash(output),counts:JSON.parse(output.subarray(8,8+output.readUInt32LE(4)).toString()).counts,
+    proxySurface:face.proxySurface,selectionPolicy:face.selectionPolicy,thicknessMetres:options.thicknessMetres},null,2)+'\n');
   console.log(`Wrote ${options.output}: ${asset.nodes.length} nodes, ${asset.tetrahedra.length} tetrahedra, ${asset.embedding.length} embeddings`);
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) main().catch(error=>{console.error(error);process.exitCode=1;});

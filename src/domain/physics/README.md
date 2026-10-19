@@ -188,11 +188,21 @@ matrix. Debug visibility never changes simulation state, and owned geometries ar
 disposed when hidden or unmounted.
 
 
-## Current asset limitation
+## Committed FaceCap proxy
 
-The required 12 mm FaceCap layer still fails generation as recorded in
-`docs/soft-tissue-generation-failure.json`. The committed legacy version 1 binary
-is rejected by the version 3 loader. This issue does not change that binary or
-weaken its validation. The solver and mapper regression cases use explicit valid
-SI/pairing fixtures, including all preset and slider-mix equilibrium cases.
-Tests/builds and visual retuning were not run in this implementation step.
+The version 3 binary is generated at the full 12 mm thickness with 984 dynamic
+nodes, 492 explicit pairs, 2,940 tetrahedra and all 2,694 render embeddings.
+The exact-source FaceCap profile resamples the dominant exterior surface's convex
+envelope using uniform directions. This is a coarse mechanical approximation:
+it bridges cavities and smooths fine concavities, while the untouched render mesh
+still supplies every visible blendshape detail and the exact zero-offset pose.
+
+A conservative mechanical eligibility mask is computed from connected components
+and surface orientation; it is not fabricated anatomical annotation. Detached
+oral pieces and inward-facing folds get exactly zero simulation offset. Separate
+named eye/teeth primitives never receive the offset layer. Unknown source hashes
+must supply explicit region data instead of inheriting the FaceCap profile.
+Excluded render vertices are also omitted from uncovered-node pose fallback.
+See `docs/soft-tissue-asset.md` and the source/asset hashes and complete counts in
+`docs/facecap-asset-integrity.json`. The former failure report is historical;
+the rejection path is still tested independently and never thins the layer.

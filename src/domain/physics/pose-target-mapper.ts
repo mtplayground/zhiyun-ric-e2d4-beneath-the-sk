@@ -70,8 +70,9 @@ export function createPoseTargetMapper(surface: PoseSurface, proxy: PoseProxy) {
   for(const group of skinGroups) {
     if(group.some(node=>totals[node]>1e-12)) continue;
     const node=group[0];
-    const distances=Array.from({length:count},(_,vertex)=>Math.hypot(...[0,1,2].map(axis=>(rest[vertex*3+axis]-center[axis])/scale-nodes[node*3+axis])));
+    const distances=Array.from({length:count},(_,vertex)=>((proxy.embeddingFlags?.[vertex]??0)&EMBEDDING_EXCLUDED)?Infinity:Math.hypot(...[0,1,2].map(axis=>(rest[vertex*3+axis]-center[axis])/scale-nodes[node*3+axis])));
     const best=Math.min(...distances);
+    if(!Number.isFinite(best)) throw new Error('No eligible render surface for pose-target fallback');
     // Average coincident/equidistant render accessors rather than letting accessor
     // ordering choose different sides of a UV/normal seam.
     fallback.set(node,distances.flatMap((distance,vertex)=>Math.abs(distance-best)<=1e-10?[vertex]:[]));

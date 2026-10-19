@@ -8,18 +8,13 @@ const path=new URL('../../../public/data/facecap-soft-tissue.bin',import.meta.ur
 const bytes=readFileSync(path);
 const metadata=JSON.parse(bytes.toString('utf8',8,8+bytes.readUInt32LE(4)));
 describe('committed physics milestone asset',()=>{
-  it('refuses the retained pre-SI asset while 12 mm generation is blocked',()=>{
-    if(metadata.version===3) {
-      const {asset}=readMilestoneProxy();
-      expect(asset.pairs.length).toBe(asset.metadata.counts.nodes);
-      expect(asset.masses.length).toBe(asset.metadata.counts.nodes);
-      expect(Array.from(asset.masses).every(m=>m>0&&Number.isFinite(m))).toBe(true);
-      return;
-    }
-    expect(()=>readMilestoneProxy()).toThrow('Regenerate simulation asset as version 3');
-    const failure=JSON.parse(readFileSync(new URL('../../../docs/soft-tissue-generation-failure.json',import.meta.url),'utf8'));
-    expect(failure.options.thicknessMetres).toBe(0.012);
-    expect(failure.diagnostic.reason).toBe('Inverted or near-zero layer cell');
+  it('requires a usable committed version 3 asset with all paired SI masses',()=>{
+    expect(metadata.version).toBe(3);
+    const {asset}=readMilestoneProxy();
+    expect(asset.pairs.length).toBe(asset.metadata.counts.nodes);
+    expect(asset.masses.length).toBe(asset.metadata.counts.nodes);
+    expect(Array.from(asset.masses).every(m=>m>0&&Number.isFinite(m))).toBe(true);
+    expect(asset.masses.at(-1)).toBeGreaterThan(0);
   });
 
   it('keeps zero residual on valid SI data with all three edge classes at a mixed pose',()=>{

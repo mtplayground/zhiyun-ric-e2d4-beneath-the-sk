@@ -1,0 +1,40 @@
+{
+  "source": "https://threejs.org/examples/models/gltf/facecap.glb",
+  "sourceHash": "6bfce6d0fcbb5839f5102b79733007859fef7c5df6d9eb49e2264542810b5f64",
+  "assetSha256": "99409c5656e82ae126f5a407859f8752db3b56141e169f32ca247bd98969829f",
+  "counts": {
+    "nodes": 984,
+    "tetrahedra": 2940,
+    "edges": 4902,
+    "pairs": 492,
+    "renderVertices": 2694
+  },
+  "proxySurface": "radial-convex-envelope",
+  "selectionPolicy": {
+    "dominantComponentVertices": 1954,
+    "inwardFacingVertices": 87,
+    "method": "dominant-exterior-connected-surface-v1",
+    "componentSizes": [
+      1954,
+      166,
+      49,
+      49,
+      49,
+      49,
+      41,
+      41,
+      41,
+      41,
+      39,
+      39,
+      34,
+      34,
+      34,
+      34
+    ],
+    "eligibleVertices": 1867,
+    "excludedVertices": 827,
+    "annotationStatus": "not supplied; mechanical eligibility is computed from topology and surface orientation"
+  },
+  "thicknessMetres": 0.012
+}
