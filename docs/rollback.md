@@ -16,13 +16,10 @@ pose fixes is `backup/main-2026-10-19`, targeting `07e909f` (the merge of pull
 request #94). This is a read-only snapshot: do not add commits to it. Keep the
 existing `v1.0` tag and `backup/v1.0` branch unchanged.
 
-Publication is pending the repository publisher. Before publishing, confirm
-that `origin/main` still points to `07e909f`. If an existing origin branch
-other than `main` already points to that tip, use and record that branch as the
-restore point instead of creating a duplicate. Otherwise publish
-`backup/main-2026-10-19` at that exact commit. After publication, confirm the
-remote restore branch resolves to the same full commit SHA as `main` did when
-the snapshot was created; do not move the snapshot to include this doc update.
+Published and verified on 2026-10-19 at the exact historical main tip
+`07e909fb27ab24e11b8d841a21e69a936130905c`.
+No existing remote backup branch pointed to that commit. The later physics
+milestone commits remain outside this read-only snapshot.
 
 Restore using the recommended pull-request method below: fetch the backup,
 create a working branch from it (for example,
