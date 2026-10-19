@@ -14,7 +14,8 @@ class FakeWorker implements PhysicsWorker {
   emit(data: PhysicsResponse) { this.onmessage?.({ data } as MessageEvent<PhysicsResponse>); }
 }
 const asset = {
-  metadata: { version: 1, sourceHash: '', counts: { nodes: 1, tetrahedra: 0, edges: 0, renderVertices: 1 }, sections: [], units:{metresPerSourceUnit:1,verticalAxis:[0,0,1]}, normalization: { center: [0, 0, 0], scale: 1 } },
+  masses: new Float64Array([1]), pairs: new Uint32Array(),
+  metadata: { version: 2, sourceHash: '', counts: { nodes: 1, tetrahedra: 0, edges: 0, pairs: 0, renderVertices: 1 }, sections: [], units:{metresPerSourceUnit:1,verticalAxis:[0,0,1]}, normalization: { center: [0, 0, 0], scale: 1 } },
   tetrahedra: new Uint32Array(), embedding: new Float32Array([0, 1, 0, 0, 0]), nodes: new Float32Array([0, 0, 0]), labels: new Uint8Array([0]), edges: new Uint32Array(),
 };
 let sequence = 0;

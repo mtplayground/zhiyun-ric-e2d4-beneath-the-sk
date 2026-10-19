@@ -1,3 +1,4 @@
+import { metresToProxyUnits } from '../src/domain/physics/physical-units.mjs';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
@@ -91,8 +92,68 @@ export async function readFace(bytes, {metresPerSourceUnit}={}) {
   return {units,positions:positions.map(p=>p.map((v,i)=>(v-(min[i]+max[i])/2)/scale)), indices:p.indices===undefined?positions.map((_,i)=>i):accessor(p.indices).flat(), normalization:{center:min.map((v,i)=>(v+max[i])/2),scale}};
 }
 
-export function generate(face,{target=3000,thickness=0.001,mouthLine=-0.12,upAxis}={}) {
-  if(!Number.isInteger(target)||target<12||!Number.isFinite(thickness)||thickness<=0||!Number.isFinite(mouthLine)||(upAxis!==undefined&&![0,1,2].includes(upAxis))) throw Error('Invalid proxy options');
+// Simplification does not preserve triangle IDs. Associate a failed proxy triangle
+// with the closest original source triangle, rather than inventing provenance.
+export function offsetFailure(face,nodes,triangle,proxyTriangleIndex,thicknessMetres,reason) {
+  const points=triangle.map(i=>new Vector3(...nodes[i]));
+  const centroid=points.reduce((sum,p)=>sum.add(p),new Vector3()).multiplyScalar(1/3);
+  const normal=new Triangle(...points).getNormal(new Vector3());
+  let sourceTriangleIndex=-1, distance=Infinity;
+  for(let i=0;i<face.indices.length;i+=3) {
+    const tri=new Triangle(...face.indices.slice(i,i+3).map(k=>new Vector3(...face.positions[k])));
+    const d=tri.closestPointToPoint(centroid,new Vector3()).distanceToSquared(centroid);
+    if(d<distance) {distance=d;sourceTriangleIndex=i/3;}
+  }
+  const diagnostic={reason,proxyTriangleIndex,proxyVertexIndices:triangle,sourceTriangleIndex,
+    sourceVertexIndices:face.indices.slice(sourceTriangleIndex*3,sourceTriangleIndex*3+3),
+    sourceAssociation:'nearest triangle to proxy centroid',centroidProxy:centroid.toArray(),
+    centroidSource:centroid.toArray().map((v,i)=>v*face.normalization.scale+face.normalization.center[i]),
+    normal:normal.toArray(),requestedThicknessMetres:thicknessMetres,
+    requestedThicknessProxy:metresToProxyUnits(thicknessMetres,face),
+    nearestFacialRegion:'unknown: source has no anatomical region annotations'};
+  const error=new Error(`Tissue offset failed: ${JSON.stringify(diagnostic)}`);
+  error.diagnostic=diagnostic;
+  return error;
+}
+
+function segmentCrossesTriangle(a,b,triangle) {
+  const direction=b.clone().sub(a), edge1=triangle.b.clone().sub(triangle.a), edge2=triangle.c.clone().sub(triangle.a);
+  const h=direction.clone().cross(edge2), det=edge1.dot(h), eps=1e-9;
+  if(Math.abs(det)<eps) return false;
+  const s=a.clone().sub(triangle.a), u=s.dot(h)/det;
+  const q=s.clone().cross(edge1), v=direction.dot(q)/det, t=edge2.dot(q)/det;
+  return u>eps&&v>eps&&u+v<1-eps&&t>eps&&t<1-eps;
+}
+
+export function validateOffset(face,nodes,indices,n,thicknessMetres) {
+  const outer=[],inner=[];
+  for(let i=0;i<indices.length;i+=3) {
+    const ids=indices.slice(i,i+3);
+    const a=new Triangle(...ids.map(k=>new Vector3(...nodes[k])));
+    const b=new Triangle(...ids.map(k=>new Vector3(...nodes[k+n])));
+    if(a.getNormal(new Vector3()).dot(b.getNormal(new Vector3()))<=0) throw offsetFailure(face,nodes,ids,i/3,thicknessMetres,'Inner triangle folded or collapsed');
+    outer.push(a);inner.push(b);
+  }
+  function crosses(a,b) {
+    return [[a.a,a.b],[a.b,a.c],[a.c,a.a]].some(([p,q])=>segmentCrossesTriangle(p,q,b))||
+      [[b.a,b.b],[b.b,b.c],[b.c,b.a]].some(([p,q])=>segmentCrossesTriangle(p,q,a));
+  }
+  for(let i=0;i<inner.length;i++) {
+    for(let j=0;j<outer.length;j++) {
+      if(crosses(inner[i],outer[j])||(j>i&&crosses(inner[i],inner[j]))) {
+        const error=offsetFailure(face,nodes,indices.slice(i*3,i*3+3),i,thicknessMetres,'Offset surface intersection');
+        error.diagnostic.intersectingProxyTriangleIndex=j;
+        error.message=`Tissue offset failed: ${JSON.stringify(error.diagnostic)}`;
+        throw error;
+      }
+    }
+  }
+}
+
+export function generate(face,{target=3000,thicknessMetres=0.012,mouthLine=-0.12,upAxis}={}) {
+  if(!Number.isInteger(target)||target<12||!Number.isFinite(thicknessMetres)||thicknessMetres<=0||!Number.isFinite(mouthLine)||(upAxis!==undefined&&![0,1,2].includes(upAxis))) throw Error('Invalid proxy options');
+  const thickness=metresToProxyUnits(thicknessMetres,face);
+  const metresPerProxyUnit=1/metresToProxyUnits(1,face);
   const geometry=new BufferGeometry();
   geometry.setAttribute('position',new Float32BufferAttribute(face.positions.flat(),3)); geometry.setIndex(face.indices);
   // Collapse edges rather than dropping triangles, retaining a connected surface.
@@ -107,16 +168,25 @@ export function generate(face,{target=3000,thickness=0.001,mouthLine=-0.12,upAxi
   if(nodes.some(p=>p.some(v=>!Number.isFinite(v)))) throw Error('Non-finite proxy node');
   const vertical=upAxis===undefined?(face.units?.verticalAxis??[0,0,1]):[0,1,2].map(i=>i===upAxis?1:0);
   const labels=nodes.map((p,i)=>i<n?0:dot(p,vertical)<mouthLine?2:1);
+  const pairs=Array.from({length:n},(_,i)=>[i,i+n]);
   const tetrahedra=[];
   const indices=Array.from(proxy.index.array);
   for(let i=0;i<indices.length;i+=3) {
     const [a,b,c]=indices.slice(i,i+3).sort((x,y)=>x-y);
     const cells=[[a,b,c,c+n],[a,b,c+n,b+n],[a,b+n,c+n,a+n]];
     const volumes=cells.map(t=>determinant(...t.map(k=>nodes[k])));
-    if(volumes.some(v=>!Number.isFinite(v)||Math.abs(v)<1e-12)||volumes.some(v=>Math.sign(v)!==Math.sign(volumes[0]))) throw Error(`Inverted or near-zero layer cell ${i/3} (${volumes}); reduce thickness or increase target`);
+    if(volumes.some(v=>!Number.isFinite(v)||Math.abs(v)<1e-12)||volumes.some(v=>Math.sign(v)!==Math.sign(volumes[0]))) throw offsetFailure(face,nodes,indices.slice(i,i+3),i/3,thicknessMetres,'Inverted or near-zero layer cell');
     for(const t of cells) {if(volumes[0]<0) [t[0],t[1]]=[t[1],t[0]]; tetrahedra.push(t);}
   }
   if(!tetrahedra.length || tetrahedra.length >= 16777216) throw Error('Empty proxy or embedding index exceeds float32 precision');
+  // Detect folded inner faces and crossings, beyond per-prism determinant checks.
+  validateOffset(face,nodes,indices,n,thicknessMetres);
+  const masses=Array(nodes.length).fill(0);
+  for(const t of tetrahedra) {
+    const mass=determinant(...t.map(k=>nodes[k]))/6 * metresPerProxyUnit**3 * 1000;
+    for(const k of t) masses[k]+=mass/4;
+  }
+  if(masses.some(m=>!Number.isFinite(m)||m<=0)) throw Error('Non-positive or non-finite SI node mass');
   const edges=[...new Set(tetrahedra.flatMap(t=>t.flatMap((a,i)=>t.slice(i+1).map(b=>[Math.min(a,b),Math.max(a,b)].join(',')))))].map(s=>s.split(',').map(Number));
   const embedding=face.positions.map(p=>{
     let best=null, distance=Infinity;
@@ -137,22 +207,22 @@ export function generate(face,{target=3000,thickness=0.001,mouthLine=-0.12,upAxi
     if(!best||!best.every(Number.isFinite)) throw Error('Render vertex without embedding');
     return best;
   });
-  return {nodes,tetrahedra,edges,labels,embedding};
+  return {nodes,tetrahedra,edges,labels,embedding,pairs,masses};
 }
 
 export function encode(asset,metadata) {
-  const sections=[['nodes',Float32Array,asset.nodes.flat()],['tetrahedra',Uint32Array,asset.tetrahedra.flat()],['edges',Uint32Array,asset.edges.flat()],['labels',Uint8Array,asset.labels],['embedding',Float32Array,asset.embedding.flat()]];
+  const sections=[['nodes',Float32Array,asset.nodes.flat()],['tetrahedra',Uint32Array,asset.tetrahedra.flat()],['edges',Uint32Array,asset.edges.flat()],['labels',Uint8Array,asset.labels],['embedding',Float32Array,asset.embedding.flat()],['pairs',Uint32Array,asset.pairs.flat()],['masses',Float64Array,asset.masses]];
   let offset=0;
   const buffers=sections.map(([name,Type,values])=>{const buffer=Buffer.from(new Type(values).buffer); const entry={name,offset,bytes:buffer.length};offset+=buffer.length;return {entry,buffer};});
-  const header=Buffer.from(JSON.stringify({...metadata,version:1,counts:{nodes:asset.nodes.length,tetrahedra:asset.tetrahedra.length,edges:asset.edges.length,renderVertices:asset.embedding.length},sections:buffers.map(b=>b.entry)}));
+  const header=Buffer.from(JSON.stringify({...metadata,version:2,labelsPurpose:'visualization-only',densityKgPerCubicMetre:1000,counts:{nodes:asset.nodes.length,tetrahedra:asset.tetrahedra.length,edges:asset.edges.length,pairs:asset.pairs.length,renderVertices:asset.embedding.length},sections:buffers.map(b=>b.entry)}));
   const prefix=Buffer.alloc(8);prefix.write('STP1');prefix.writeUInt32LE(header.length,4);
   return Buffer.concat([prefix,header,...buffers.map(b=>b.buffer)]);
 }
 
 export async function main(args=process.argv.slice(2)) {
-  const options={source:DEFAULT_SOURCE,output:'public/data/facecap-soft-tissue.bin',target:3000,thickness:0.001,mouthLine:-0.12};
+  const options={source:DEFAULT_SOURCE,output:'public/data/facecap-soft-tissue.bin',target:3000,thicknessMetres:0.012,mouthLine:-0.12};
   for(let i=0;i<args.length;i+=2) {
-    const key={'--metres-per-source-unit':'metresPerSourceUnit','--source':'source','--output':'output','--target':'target','--thickness':'thickness','--mouth-line':'mouthLine'}[args[i]];
+    const key={'--metres-per-source-unit':'metresPerSourceUnit','--source':'source','--output':'output','--target':'target','--thickness-metres':'thicknessMetres','--mouth-line':'mouthLine'}[args[i]];
     if(!key||args[i+1]===undefined) throw Error(`Unknown or incomplete option ${args[i]}`);
     options[key]=['source','output'].includes(key)?args[i+1]:Number(args[i+1]);
   }
@@ -160,7 +230,7 @@ export async function main(args=process.argv.slice(2)) {
   if(/^https?:/.test(options.source)) {const response=await fetch(options.source);if(!response.ok) throw Error(`Source HTTP ${response.status}`);bytes=Buffer.from(await response.arrayBuffer());}
   else bytes=await readFile(options.source);
   const face=await readFace(bytes,options), asset=generate(face,options);
-  const output=encode(asset,{sourceHash:hash(bytes),source:options.source,normalization:face.normalization,units:face.units,options:{target:options.target,thickness:options.thickness,mouthLine:options.mouthLine,upAxis:options.upAxis,metresPerSourceUnit:options.metresPerSourceUnit},labels:{skin:0,skull:1,jaw:2}});
+  const output=encode(asset,{sourceHash:hash(bytes),source:options.source,normalization:face.normalization,units:face.units,options:{target:options.target,thicknessMetres:options.thicknessMetres,mouthLine:options.mouthLine,upAxis:options.upAxis,metresPerSourceUnit:options.metresPerSourceUnit},labels:{skin:0,skull:1,jaw:2}});
   await mkdir(new URL('../public/data/',import.meta.url),{recursive:true});
   await writeFile(options.output,output);
   console.log(`Wrote ${options.output}: ${asset.nodes.length} nodes, ${asset.tetrahedra.length} tetrahedra, ${asset.embedding.length} embeddings`);

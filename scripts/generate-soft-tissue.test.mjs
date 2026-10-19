@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { readFile } from 'node:fs/promises';
-import { generate, encode, readFace, hash, determinant, faceFrame, physicalUnits } from './generate-soft-tissue.mjs';
+import { generate, encode, readFace, hash, determinant, faceFrame, physicalUnits, offsetFailure, validateOffset } from './generate-soft-tissue.mjs';
 import { loadSoftTissueAsset } from '../src/domain/simulation/soft-tissue-asset';
 
-const fixture = {positions:[[0,0,0],[1,0,0],[0,1,0]],indices:[0,1,2]};
+const fixture = {normalization:{center:[0,0,0],scale:1},units:{metresPerSourceUnit:1,verticalAxis:[0,0,1]},positions:[[0,0,0],[1,0,0],[0,1,0]],indices:[0,1,2]};
 const buffer = b => Uint8Array.from(b).buffer;
 describe('soft tissue proxy', () => {
   it('creates positive tetrahedra, distinct attachments, edges and complete nearest embeddings', async () => {
@@ -29,27 +29,27 @@ describe('soft tissue proxy', () => {
     await expect(loadSoftTissueAsset(buffer(binary),buffer(source),3)).rejects.toThrow('does not match');
   });
   it('rejects invalid parameters and degenerate surfaces', () => {
-    expect(()=>generate(fixture,{thickness:0})).toThrow();
-    expect(()=>generate({positions:[[0,0,0],[1,0,0],[2,0,0]],indices:[0,1,2]},{target:12})).toThrow();
+    expect(()=>generate(fixture,{thicknessMetres:0})).toThrow();
+    expect(()=>generate({...fixture,positions:[[0,0,0],[1,0,0],[2,0,0]],indices:[0,1,2]},{target:12})).toThrow();
   });
-  it('reproduces the committed asset byte for byte from the exact upstream source, including the last embedding', async () => {
+  it('reproduces the recorded 12 mm failure from the exact source and rejects the retained legacy binary', async () => {
     const committed=await readFile(new URL('../public/data/facecap-soft-tissue.bin',import.meta.url));
-    const metadata=JSON.parse(committed.subarray(8,8+committed.readUInt32LE(4)).toString());
-    const response=await fetch(metadata.source);
+    const failure=JSON.parse(await readFile(new URL('../docs/soft-tissue-generation-failure.json',import.meta.url),'utf8'));
+    expect(hash(committed)).toBe(failure.retainedAssetSha256);
+    const response=await fetch(failure.source);
     expect(response.ok).toBe(true);
     const source=Buffer.from(await response.arrayBuffer());
-    expect(hash(source)).toBe(metadata.sourceHash);
-    const face=await readFace(source,metadata.options);
-    expect(face.units).toEqual(metadata.units);
-    expect(face.normalization).toEqual(metadata.normalization);
-    const asset=generate(face,metadata.options);
-    expect(asset.nodes.length).toBe(metadata.counts.nodes);
-    expect(asset.tetrahedra.length).toBe(metadata.counts.tetrahedra);
-    expect(asset.edges.length).toBe(metadata.counts.edges);
-    expect(asset.embedding.length).toBe(face.positions.length);
-    expect(asset.embedding.at(-1).every(Number.isFinite)).toBe(true);
-    expect(hash(encode(asset,metadata))).toBe(hash(committed));
-    await expect(loadSoftTissueAsset(buffer(committed),buffer(source),face.positions.length)).resolves.toBeDefined();
+    expect(hash(source)).toBe(failure.sourceHash);
+    const face=await readFace(source,failure.options);
+    expect(face.positions).toHaveLength(failure.renderVertices);
+    expect(face.positions.at(-1).every(Number.isFinite)).toBe(true);
+    try {
+      generate(face,failure.options);
+      expect.fail('The recorded source must fail at 12 mm until its geometry is repaired');
+    } catch(error) {
+      expect(error.diagnostic).toEqual(failure.diagnostic);
+    }
+    await expect(loadSoftTissueAsset(buffer(committed),buffer(source),face.positions.length)).rejects.toThrow('regenerate as version 2');
   },120000);
 });
 
@@ -79,5 +79,49 @@ describe('physical face frame', () => {
     expect(physicalUnits(positions,{...frame,metresPerSourceUnit:0.001}).scaleSource).toBe('gltf');
     for(const invalid of [0,-1,NaN,Infinity]) expect(()=>physicalUnits(positions,frame,invalid)).toThrow();
     expect(()=>physicalUnits([[0,0,0],[0.01,0.24,0]],frame)).toThrow('Implausible');
+  });
+});
+
+describe('version 2 SI layer data', () => {
+  it('stores explicit ordered outer/inner pairs and positive volume-lumped SI masses including the last node', async () => {
+    const asset=generate(fixture,{target:12});
+    expect(asset.pairs).toHaveLength(3);
+    const used=new Set();
+    for(const [outer,inner] of asset.pairs) {
+      used.add(outer);used.add(inner);
+      expect(Math.hypot(...asset.nodes[outer].map((v,i)=>v-asset.nodes[inner][i]))).toBeCloseTo(0.012,7);
+    }
+    expect(used.size).toBe(asset.nodes.length);
+    const reference=Array(asset.nodes.length).fill(0);
+    for(const t of asset.tetrahedra) {
+      const kg=determinant(...t.map(i=>asset.nodes[i]))/6*1000;
+      for(const i of t) reference[i]+=kg/4;
+    }
+    expect(asset.masses).toEqual(reference);
+    expect(asset.masses.reduce((a,b)=>a+b,0)).toBeCloseTo(6,5);
+    expect(asset.masses.at(-1)).toBeGreaterThan(0);
+    const source=new Uint8Array([1,2,3]);
+    const metadata={sourceHash:hash(source),units:fixture.units,normalization:fixture.normalization};
+    const bytes=encode(asset,metadata);
+    const loaded=await loadSoftTissueAsset(buffer(bytes),buffer(source),3);
+    expect(Array.from(loaded.pairs)).toEqual(asset.pairs.flat());
+    expect(Array.from(loaded.masses)).toEqual(asset.masses);
+    expect(hash(encode(asset,metadata))).toBe(hash(bytes));
+    const legacy=Buffer.from(bytes);
+    const headerLength=legacy.readUInt32LE(4);
+    const header=legacy.subarray(8,8+headerLength).toString().replace('"version":2','"version":1');
+    legacy.write(header,8);
+    await expect(loadSoftTissueAsset(buffer(legacy),buffer(source),3)).rejects.toThrow('regenerate as version 2');
+    for(const bad of [{...asset,pairs:[[0,0],[1,4],[2,5]]},{...asset,masses:[NaN,...asset.masses.slice(1)]}]) {
+      await expect(loadSoftTissueAsset(buffer(encode(bad,metadata)),buffer(source),3)).rejects.toThrow('Invalid simulation');
+    }
+  });
+  it('reports complete offset diagnostics without guessing anatomical annotations', () => {
+    const error=offsetFailure(fixture,fixture.positions,[0,1,2],7,0.012,'fixture failure');
+    expect(error.diagnostic).toMatchObject({proxyTriangleIndex:7,sourceTriangleIndex:0,
+      centroidProxy:[1/3,1/3,0],normal:[0,0,1],requestedThicknessMetres:0.012,
+      requestedThicknessProxy:0.012,nearestFacialRegion:'unknown: source has no anatomical region annotations'});
+    const nodes=[...fixture.positions,[0,0,-0.012],[0,1,-0.012],[1,0,-0.012]];
+    expect(()=>validateOffset(fixture,nodes,[0,1,2],3,0.012)).toThrow('Inner triangle folded');
   });
 });

@@ -51,6 +51,11 @@
       "number": 113,
       "title": "Establish physical units and the vertical axis for the face mesh",
       "body": "## Scope\n\nFix a single metres-per-source-unit scale for the face mesh. glTF assumes metres, so measure the loaded FaceCap face (width and height across the face) and check it against a plausible adult range. Record the scale explicitly. If the measurement is implausible, generation fails unless a scale is given explicitly.\nGet the world vertical axis from the glTF scene's actual node transforms instead of assuming one. Store the scale, the axis and the existing normalization factor in the soft-tissue asset. Provide shared helpers that convert metres to proxy units and m/s² to proxy units per second squared, so every later conversion happens once, in one place.\n\n## Files\n\nSoft-tissue asset generation script under `scripts/`, `src/domain/physics/` unit-conversion helpers and asset loader\n\n---\nUUID: 9b9d830f-2812-45f1-bdab-bfe988805e81"
+    },
+    {
+      "number": 114,
+      "title": "Regenerate the proxy with 12 mm thickness, explicit inner–outer pairing and SI masses",
+      "body": "## Scope\n\nRegenerate the committed soft-tissue asset:\n- **Thickness:** a tissue thickness of 0.012 m, converted to proxy units with the recorded scale. If the inward offset fails anywhere (expected risk areas are the nose and lips), do not thin the layer silently. Fail and report the source and proxy triangle indices, the centroid position, the normal, the requested thickness and the nearest facial region.\n- **Pairing:** store an explicit table linking each outer node to its inner counterpart, instead of relying on how the nodes happen to be ordered.\n- **Masses:** compute each node's mass from tetrahedron volumes in cubic metres. Each tetrahedron contributes volume × 1000 kg/m³ divided equally among its four corners. Store the resulting masses.\n- **Format:** keep node labels for visualization only. Bump the asset format version, and make the loader reject older assets with a clear diagnostic.\n\n## Files\n\nSoft-tissue asset generation script under `scripts/`, `src/domain/physics/` asset loader, `public/data/facecap-soft-tissue.bin`, soft-tissue asset format doc under `docs/`\n\n## Dependencies\n\nDepends on: Physical units and vertical axis\n\n---\nUUID: eb85476a-3336-4204-bbbf-ffda5a11a528"
     }
   ]
 }
