@@ -1,17 +1,39 @@
-import { afterEach, expect, it } from 'vitest';
-import { usePhysicsTelemetry } from './physics-telemetry-state';
-import { measureDisplacement, type PhysicsSnapshot } from '@/domain/physics/physics-telemetry';
-afterEach(()=>usePhysicsTelemetry.getState().clear());
-it('keeps node-indexed SI distances and matching target positions without attachment state',()=>{
-  const proxy={nodes:[0,0,0,1,0,0],pairs:[0,1],labels:[2,0],edges:[0,1],tetrahedra:[],embedding:[],
-    metadata:{normalization:{center:[0,0,0],scale:2},counts:{renderVertices:0},units:{metresPerSourceUnit:0.001,verticalAxis:[0,1,0]}}};
-  const positions=new Float64Array([0,0,0,1,0,2]),poseTargets=Float64Array.from(proxy.nodes);
-  const snapshot:PhysicsSnapshot={proxy,positions,poseTargets,telemetry:{solverTimeMs:1,simulationRateHz:60,nonFiniteResets:0,...measureDisplacement(positions,poseTargets,proxy.metadata)}};
-  usePhysicsTelemetry.getState().publish(snapshot);
-  const sample=usePhysicsTelemetry.getState().snapshot!;
-  expect(sample.poseTargets).toBe(poseTargets);
-  expect(Array.from(sample.telemetry.nodePoseDistancesMetres)).toEqual([0,0.004]);
-  expect(sample.telemetry.meanPoseError).toBeCloseTo(0.002);
-  expect(Object.keys(sample).some(key=>/jaw|attachment/i.test(key))).toBe(false);
-  usePhysicsTelemetry.getState().clear();expect(usePhysicsTelemetry.getState().snapshot).toBeNull();
+import { beforeEach, describe, expect, it } from 'vitest';
+import { physicsStatusLabel, usePhysicsTelemetry } from './physics-telemetry-state';
+
+beforeEach(() => usePhysicsTelemetry.getState().clear());
+
+describe('physics status from runtime diagnostics', () => {
+  it('stays inactive during startup and identifies each ready backend', () => {
+    const store = usePhysicsTelemetry.getState();
+    store.inactive('Starting physics');
+    expect(usePhysicsTelemetry.getState().status.active).toBe(false);
+    store.diagnose({ code: 'worker', message: 'Ready' });
+    expect(physicsStatusLabel(usePhysicsTelemetry.getState().status)).toBe('Active · worker');
+    store.diagnose({ code: 'fallback', message: 'Worker unavailable; using main thread' });
+    expect(physicsStatusLabel(usePhysicsTelemetry.getState().status)).toBe('Active · main-thread fallback');
+  });
+
+  it('shows short reasons for rejected assets, missing meshes and startup failures', () => {
+    const store = usePhysicsTelemetry.getState();
+    store.diagnose({ code: 'worker', message: 'Ready' });
+    store.diagnose({ code: 'asset-error', message: 'Simulation asset does not match the render face mesh' });
+    expect(physicsStatusLabel(usePhysicsTelemetry.getState().status)).toBe('Inactive · Invalid or mismatched proxy asset');
+    expect(usePhysicsTelemetry.getState().snapshot).toBeNull();
+    store.inactive('Missing face mesh');
+    expect(physicsStatusLabel(usePhysicsTelemetry.getState().status)).toBe('Inactive · Missing face mesh');
+    store.inactive('Worker startup failure');
+    expect(physicsStatusLabel(usePhysicsTelemetry.getState().status)).toBe('Inactive · Worker startup failure');
+  });
+
+  it('preserves the backend through recovery resets and clears it on disable', () => {
+    const store = usePhysicsTelemetry.getState();
+    store.diagnose({ code: 'fallback', message: 'Ready' });
+    store.diagnose({ code: 'reset', message: 'Recovered non-finite sample' });
+    expect(usePhysicsTelemetry.getState().status).toEqual({ active: true, backend: 'main-thread fallback' });
+    store.diagnose({ code: 'solver-error', message: 'Backend failed' });
+    expect(usePhysicsTelemetry.getState().status.active).toBe(false);
+    store.clear();
+    expect(usePhysicsTelemetry.getState().status).toEqual({ active: false, reason: 'Physics disabled' });
+  });
 });

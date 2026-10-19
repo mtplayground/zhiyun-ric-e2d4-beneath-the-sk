@@ -285,6 +285,7 @@ export default function KinematicProviderRuntime({
     physicsDiagnosticRef.current = null;
     asset?.applyVertexDeltas();
     usePhysicsTelemetry.getState().clear();
+    if (physicsEnabled) usePhysicsTelemetry.getState().inactive(asset?.physics ? 'Starting physics' : 'Missing face mesh');
     if (!asset) {
       initializedRef.current = false;
       currentWeightsRef.current = {};
@@ -307,6 +308,7 @@ export default function KinematicProviderRuntime({
           onSnapshot: snapshot => usePhysicsTelemetry.getState().publish(snapshot),
           onDiagnostic: diagnostic => {
             physicsDiagnosticRef.current = diagnostic;
+            usePhysicsTelemetry.getState().diagnose(diagnostic);
             const base = createCompatibilityDiagnostic({ asset, poseLabel: latestPoseLabelRef.current, targetWeights: latestActivationValuesRef.current });
             onDiagnosticChangeRef.current({ ...base,
               label: diagnostic.code === 'worker' ? 'Physics Active' : diagnostic.code === 'fallback' ? 'Physics Fallback' : 'Physics Diagnostic',
@@ -348,6 +350,7 @@ export default function KinematicProviderRuntime({
     } catch (error) {
       initializedRef.current = false;
       transitionRef.current = null;
+      if (physicsEnabled) usePhysicsTelemetry.getState().inactive('Worker startup failure');
       onDiagnosticChangeRef.current({
         label: 'Provider Error',
         message:

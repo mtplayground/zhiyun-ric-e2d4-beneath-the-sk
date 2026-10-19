@@ -1,3 +1,4 @@
+import { usePhysicsTelemetry, physicsStatusLabel, type PhysicsStatus } from '@/state/physics-telemetry-state';
 import PhysicsDebugOverlay from './physics-debug-overlay';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -208,6 +209,10 @@ export default function FaceViewport({
   assetUrl,
 }: FaceViewportProps) {
   const physicsEnabled = usePhysicsState(state => state.enabled);
+  const telemetryStatus = usePhysicsTelemetry(state => state.status);
+  const physicsStatus: PhysicsStatus = physicsEnabled ? telemetryStatus : { active: false, reason: 'Physics disabled' };
+  const physicsStatusText = physicsStatusLabel(physicsStatus);
+  const physicsActive = physicsEnabled && physicsStatus.active;
   const debugOverlay = usePhysicsState(state => state.debugOverlay);
   const setDebugOverlay = usePhysicsState(state => state.setDebugOverlay);
   const setPhysicsEnabled = usePhysicsState(state => state.setEnabled);
@@ -257,7 +262,7 @@ export default function FaceViewport({
         }}
       >
         <ViewportScene
-          debugOverlay={debugOverlay}
+          debugOverlay={physicsActive && debugOverlay}
           physicsEnabled={physicsEnabled}
           assetUrl={assetUrl}
           asset={headAsset.asset}
@@ -265,11 +270,11 @@ export default function FaceViewport({
           onDiagnosticChange={handleProviderDiagnosticChange}
         />
       </Canvas>
-      {physicsEnabled ? <>
+      {physicsActive ? <>
         <button type="button" aria-pressed={debugOverlay} data-testid="physics-debug-toggle"
-          className="absolute right-3 top-14 rounded-md border border-border bg-background/90 px-3 py-2 font-mono text-xs text-foreground"
+          className="absolute right-3 top-24 rounded-md border border-border bg-background/90 px-3 py-2 font-mono text-xs text-foreground"
           onClick={()=>setDebugOverlay(!debugOverlay)}>Proxy {debugOverlay ? 'Visible' : 'Hidden'}</button>
-        {debugOverlay ? <div data-testid="physics-debug-legend" className="pointer-events-none absolute right-3 top-24 grid gap-1 rounded-md border border-border bg-background/90 px-3 py-2 font-mono text-xs">
+        {debugOverlay ? <div data-testid="physics-debug-legend" className="pointer-events-none absolute right-3 top-36 grid gap-1 rounded-md border border-border bg-background/90 px-3 py-2 font-mono text-xs">
           <span className="text-cyan-300">● Skin · label 0</span><span className="text-amber-300">● Inner · label 1</span><span className="text-pink-400">● Inner · label 2</span>
           <span>Labels are coloring only</span><span className="text-green-300">— Node → pose target</span>
           <span>Inspect each distance in the numeric readout (m)</span>
@@ -277,7 +282,7 @@ export default function FaceViewport({
       </> : null}
       <button
         type="button"
-        aria-pressed={physicsEnabled}
+        aria-pressed={physicsActive}
         data-testid="physics-toggle"
         className="absolute right-3 top-3 rounded-md border border-border bg-background/90 px-3 py-2 font-mono text-xs text-foreground"
         onClick={() => {
@@ -286,8 +291,14 @@ export default function FaceViewport({
           setPhysicsEnabled(!physicsEnabled);
         }}
       >
-        Physics {physicsEnabled ? 'On' : 'Off'}
+        Physics {physicsActive ? 'On' : physicsEnabled ? 'Inactive' : 'Off'}
       </button>
+      <span role="status" data-testid="physics-status" className={cn(
+        'pointer-events-none absolute right-3 top-14 max-w-64 rounded-md border bg-background/90 px-3 py-2 font-mono text-xs',
+        physicsActive ? toneClass('green') : toneClass('amber'),
+      )}>
+        {physicsStatusText}
+      </span>
       <div className="pointer-events-none absolute left-3 top-3 grid gap-1 rounded-md border border-border bg-background/75 px-3 py-2 font-mono text-xs backdrop-blur">
         <span
           className={
@@ -326,6 +337,9 @@ export default function FaceViewport({
               (headAsset.status === 'error' ? 'Asset Error' : 'Standby')}
           </span>
         </div>
+        <p data-testid="provider-physics-status" className={physicsActive ? 'text-telemetry-green' : 'text-telemetry-amber'}>
+          Physics {physicsStatusText}
+        </p>
         <p className="text-muted-foreground">
           {providerDiagnostic?.message ??
             (headAsset.status === 'error'
