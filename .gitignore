@@ -22,3 +22,6 @@ pnpm-debug.log*
 .pipeline-state.json
 .gitkeep
 .progress
+
+.deploy_url
+verify-screenshot.png

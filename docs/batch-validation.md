@@ -92,3 +92,19 @@ Sprite, rebuilt there and restarted through its registered app service. The
 remote release marker and built asset bytes must match the checked final commit.
 Public reachability, watermark/share, no-preview marker, environment format and
 service registration are checked before reporting deployment complete.
+
+## Deployment URL verification repair
+
+The browser verification stage requires `.deploy_url` in the executor workspace.
+Run `bash scripts/capture-deploy-url.sh` after restarting the Sprite service and
+before verification; it reads the actual Sprite response and refuses a missing
+URL without overwriting a previously captured release. The metadata and browser
+screenshot are ignored by Git.
+
+Regression: `node --test scripts/capture-deploy-url.check.mjs` tests successful
+capture and a malformed response using an isolated CLI fixture. Public browser
+check: `NODE_PATH=/usr/local/lib/node_modules node scripts/verify-deployed-ui.cjs`
+checks loaded FaceCap, computed CSS, pose/keyboard/reset controls, worker physics,
+finite telemetry, watermark sharing, no preview banner, and browser/network errors.
+It saves `verify-screenshot.png`. This app has no protected login or internal
+route navigation; research resource buttons are explicitly disabled.
