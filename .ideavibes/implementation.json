@@ -1,0 +1,11 @@
+{
+  "batch_id": "d9cf7a58-985c-4d01-8471-1592364c1206",
+  "verification": "pending",
+  "issues": [
+    {
+      "number": 95,
+      "title": "Create a dated backup branch of the current main",
+      "body": "## Scope\n\nCreate a branch named `backup/main-2026-10-19` from the current tip of `main` (commit `07e909f`, the merge of pull request #94) and push it to origin.\nThe branch is a read-only snapshot: no commits go on it, and the existing `v1.0` tag and `backup/v1.0` branch stay as they are. Check that the pushed branch points to the same commit as `main` did when it was created.\nIf a branch already exists on origin that points to the current `main` tip, skip creating it and record that existing branch as the restore point instead.\nAdd a short entry to the existing rollback/versioning doc listing this branch as a restore point, described as the state after the texture/hair/tongue removal and the pose fixes. Restoring from it follows the existing method in that doc: make a branch from the backup and open a pull request into `main`.\n\n## Files\n\nRepository branches, rollback/versioning doc under `docs/`\n\n---\nUUID: f3e4d636-24e2-4974-b16b-2ac10dbf0572"
+    }
+  ]
+}
