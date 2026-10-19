@@ -1,3 +1,4 @@
+import PhysicsDebugOverlay from './physics-debug-overlay';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -148,10 +149,12 @@ function ViewportScene({
   onAssetStateChange,
   onDiagnosticChange,
   physicsEnabled,
+  debugOverlay,
 }: {
   assetUrl: string;
   asset: HeadAssetState['asset'];
   physicsEnabled: boolean;
+  debugOverlay: boolean;
   onAssetStateChange: (state: HeadAssetState) => void;
   onDiagnosticChange: (diagnostic: ProviderRuntimeDiagnostic | null) => void;
 }) {
@@ -178,6 +181,7 @@ function ViewportScene({
         assetUrl={assetUrl}
         onDiagnosticChange={onDiagnosticChange}
       />
+      {physicsEnabled && debugOverlay && asset?.physicsFace ? <PhysicsDebugOverlay face={asset.physicsFace} /> : null}
       <OrbitCameraControls />
     </>
   );
@@ -204,6 +208,8 @@ export default function FaceViewport({
   assetUrl,
 }: FaceViewportProps) {
   const physicsEnabled = usePhysicsState(state => state.enabled);
+  const debugOverlay = usePhysicsState(state => state.debugOverlay);
+  const setDebugOverlay = usePhysicsState(state => state.setDebugOverlay);
   const setPhysicsEnabled = usePhysicsState(state => state.setEnabled);
   const [headAsset, setHeadAsset] = useState<HeadAssetState>({
     status: 'idle',
@@ -251,6 +257,7 @@ export default function FaceViewport({
         }}
       >
         <ViewportScene
+          debugOverlay={debugOverlay}
           physicsEnabled={physicsEnabled}
           assetUrl={assetUrl}
           asset={headAsset.asset}
@@ -258,6 +265,14 @@ export default function FaceViewport({
           onDiagnosticChange={handleProviderDiagnosticChange}
         />
       </Canvas>
+      {physicsEnabled ? <>
+        <button type="button" aria-pressed={debugOverlay} data-testid="physics-debug-toggle"
+          className="absolute right-3 top-14 rounded-md border border-border bg-background/90 px-3 py-2 font-mono text-xs text-foreground"
+          onClick={()=>setDebugOverlay(!debugOverlay)}>Proxy {debugOverlay ? 'Visible' : 'Hidden'}</button>
+        {debugOverlay ? <div data-testid="physics-debug-legend" className="pointer-events-none absolute right-3 top-24 grid gap-1 rounded-md border border-border bg-background/90 px-3 py-2 font-mono text-xs">
+          <span className="text-cyan-300">● Skin</span><span className="text-amber-300">● Skull-attached</span><span className="text-pink-400">● Jaw-attached</span>
+        </div> : null}
+      </> : null}
       <button
         type="button"
         aria-pressed={physicsEnabled}

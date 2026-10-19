@@ -1,3 +1,6 @@
+import { usePhysicsState } from '@/state/physics-state';
+import { usePhysicsTelemetry } from '@/state/physics-telemetry-state';
+import type { PhysicsTelemetry } from '@/domain/physics/physics-telemetry';
 import { useMemo } from 'react';
 
 import { cn } from '@/lib/utils';
@@ -28,8 +31,23 @@ function getActivationRows(
     });
 }
 
+export function PhysicsTelemetryReadout({ telemetry }: { telemetry: PhysicsTelemetry }) {
+  const rows = [
+    ['Solver time / step', `${telemetry.solverTimeMs.toFixed(2)} ms`],
+    ['Effective simulation rate', `${telemetry.simulationRateHz.toFixed(1)} Hz`],
+    ['Maximum simulated displacement', `${telemetry.maxDisplacement.toFixed(5)} face extents`],
+    ['Mean pose-following error', `${telemetry.meanPoseError.toFixed(5)} face extents`],
+    ['Non-finite resets', String(telemetry.nonFiniteResets)],
+  ];
+  return <dl data-testid="physics-telemetry" className="grid gap-2 border-t border-border pt-3 font-mono text-xs">
+    {rows.map(([label,value])=><div key={label} className="flex justify-between gap-3"><dt className="text-muted-foreground">{label}</dt><dd className="text-right text-foreground">{value}</dd></div>)}
+  </dl>;
+}
+
 export default function LiveNumericReadout() {
   const readout = useControlReadout();
+  const physicsEnabled = usePhysicsState(state => state.enabled);
+  const telemetry = usePhysicsTelemetry(state => state.snapshot?.telemetry);
   const activationRows = useMemo(
     () => getActivationRows(readout.activationValues),
     [readout.activationValues],
@@ -86,6 +104,7 @@ export default function LiveNumericReadout() {
           </div>
         )}
       </div>
+      {physicsEnabled && telemetry ? <PhysicsTelemetryReadout telemetry={telemetry} /> : null}
     </div>
   );
 }

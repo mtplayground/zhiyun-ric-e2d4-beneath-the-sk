@@ -159,3 +159,21 @@ residual immediately, sends the latest pose to the backend, and invokes the
 solver's explicit reset path. The backend reports that reset with the matching
 pose target array. No simulation asset fetch, mesh reload or worker restart is
 needed for either tuning or resetting.
+
+## Telemetry and debug rendering
+
+The loop measures only `solver.step` execution with the local performance clock.
+It emits mean step cost per timer batch, completed-step/wall-time rate and a
+cumulative count of numerical recovery resets. Explicit reset commands do not
+increment the counter. Timing fields travel with the position/target pair through
+the worker protocol; reset totals survive output coalescing and backend fallback.
+`measureDisplacement` computes the maximum residual over all nodes and mean
+pose-following error over skin nodes. Sanitized solver targets are returned on
+recovery so invalid caller targets cannot contaminate telemetry.
+
+The provider publishes immutable sample references to a separate telemetry store,
+without changing activation/control state. Readout and chart consumers use those
+samples; optional overlay geometry reads the latest sample on the render loop.
+The overlay reverses proxy normalization and uses the original face mesh's world
+matrix. Debug visibility never changes simulation state, and owned geometries are
+disposed when hidden or unmounted.

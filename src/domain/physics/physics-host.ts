@@ -1,3 +1,4 @@
+import type { SolverTiming } from './physics-telemetry';
 import { loadSoftTissueAsset } from '../simulation/soft-tissue-asset';
 import { startPhysicsLoop } from './physics-loop';
 import type { PhysicsDiagnostic, PhysicsRequest, PhysicsResponse, WorkerSolverOptions } from './physics-protocol';
@@ -29,7 +30,7 @@ export interface PhysicsHostOptions {
   assetUrl?: string;
   solver?: Omit<WorkerSolverOptions, 'positions' | 'labels' | 'edges'>;
   fallbackSubsteps?: number;
-  onPositions(positions: Float64Array, result: StepResult, poseTargets: Float64Array): void;
+  onPositions(positions: Float64Array, result: StepResult, poseTargets: Float64Array, timing?: SolverTiming): void;
   onAssetReady?(asset: Awaited<ReturnType<typeof loadSoftTissueAsset>>): void;
   onDiagnostic?(diagnostic: PhysicsDiagnostic): void;
   workerFactory?: () => PhysicsWorker;
@@ -51,6 +52,7 @@ export function createPhysicsHost(options: PhysicsHostOptions): PhysicsHost {
   let latest: SolverFrame | undefined;
   let settings: SolverSettings = {};
   let resetPending = false;
+  let resetTotal = 0, lastBackendResets = 0;
   let frameInFlight = false;
   let workerReady = false;
   let startupTimer: ReturnType<typeof setTimeout> | undefined;
@@ -68,10 +70,15 @@ export function createPhysicsHost(options: PhysicsHostOptions): PhysicsHost {
     try { previous.postMessage({ type: 'stop' }); } catch { /* terminate also stops timers */ }
     previous.terminate();
   }
-  function output(positions: Float64Array, result: StepResult, poseTargets: Float64Array) {
+  function output(positions: Float64Array, result: StepResult, poseTargets: Float64Array, timing?: SolverTiming) {
     if (disposed) return;
     if (result.reset) diagnostic('reset', result.reason);
-    options.onPositions(positions, result, poseTargets);
+    if (timing) {
+      resetTotal += Math.max(0, timing.nonFiniteResets - lastBackendResets);
+      lastBackendResets = timing.nonFiniteResets;
+      timing = { ...timing, nonFiniteResets: resetTotal };
+    }
+    options.onPositions(positions, result, poseTargets, timing);
   }
   function flush() {
     if (!worker || !workerReady || frameInFlight || !latest || sentVersion === frameVersion) return;
@@ -83,6 +90,7 @@ export function createPhysicsHost(options: PhysicsHostOptions): PhysicsHost {
   function startFallback(reason: string) {
     if (disposed || fallback || !solverOptions) return;
     stopWorker();
+    lastBackendResets = 0;
     workerReady = false;
     const requested = solverOptions.substeps ?? 4;
     const substeps = Math.max(1, Math.min(options.fallbackSubsteps ?? 2, Math.max(1, requested - 1)));
@@ -115,7 +123,7 @@ export function createPhysicsHost(options: PhysicsHostOptions): PhysicsHost {
               frameInFlight = false;
               flush();
             } else if (data.type === 'positions') {
-              output(data.positions, data.result, data.poseTargets);
+              output(data.positions, data.result, data.poseTargets, data.timing);
               worker?.postMessage({ type: 'ack' });
             } else startFallback(data.message);
           } catch (error) { startFallback(String(error)); }

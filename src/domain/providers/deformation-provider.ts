@@ -1,3 +1,4 @@
+import type { PhysicsSnapshot } from '../physics/physics-telemetry';
 import type { SolverSettings } from '../physics/xpbd-solver';
 import type { PoseSurface } from '../physics/pose-target-mapper';
 import type { PhysicsDiagnostic } from '../physics/physics-protocol';
@@ -40,6 +41,7 @@ export type DeformationProviderContext = {
     surface: PoseSurface;
     simProxyUrl: string;
     settings?: SolverSettings;
+    onSnapshot?: (snapshot: PhysicsSnapshot) => void;
     onDiagnostic?: (diagnostic: PhysicsDiagnostic) => void;
   };
 };

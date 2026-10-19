@@ -1,3 +1,4 @@
+import { usePhysicsTelemetry } from '@/state/physics-telemetry-state';
 import { usePhysicsState } from '@/state/physics-state';
 import { toSolverSettings } from '@/domain/physics/physics-settings';
 import { useFrame } from '@react-three/fiber';
@@ -280,6 +281,7 @@ export default function KinematicProviderRuntime({
 
   useEffect(() => {
     physicsDiagnosticRef.current = null;
+    usePhysicsTelemetry.getState().clear();
     if (!asset) {
       initializedRef.current = false;
       currentWeightsRef.current = {};
@@ -299,6 +301,7 @@ export default function KinematicProviderRuntime({
           ...asset.physics,
           simProxyUrl: appConfig.assets.simProxyUrl,
           settings: toSolverSettings(physicsSettingsRef.current),
+          onSnapshot: snapshot => usePhysicsTelemetry.getState().publish(snapshot),
           onDiagnostic: diagnostic => {
             physicsDiagnosticRef.current = diagnostic;
             const base = createCompatibilityDiagnostic({ asset, poseLabel: latestPoseLabelRef.current, targetWeights: latestActivationValuesRef.current });
@@ -361,6 +364,7 @@ export default function KinematicProviderRuntime({
 
     return () => {
       provider.dispose?.();
+      usePhysicsTelemetry.getState().clear();
       asset.applyVertexDeltas();
       physicsDiagnosticRef.current = null;
       initializedRef.current = false;

@@ -36,6 +36,11 @@
       "number": 102,
       "title": "Add the physics control panel",
       "body": "## Scope\n\nA control panel section with:\n- a physics on/off toggle;\n- a tissue compliance control;\n- a pose-following compliance control;\n- a damping control;\n- a gravity strength control, scaled so the effect can be made visible on an upright face;\n- a reset-simulation action.\nShow it only when the new `VITE_ENABLE_PHYSICS_PANEL` flag is set, following the existing optional-panel pattern, and document the flag in the example env file. Settings apply live to the running solver.\n\n## Files\n\nNew panel under `src/components/controls/`, `src/layout/dashboard-regions.tsx`, `src/config/env.ts`, `.env.example`\n\n## Dependencies\n\nDepends on: Physics deformation provider\n\n---\nUUID: fdc89073-acd7-41cd-ae82-692ddcbc2cc4"
+    },
+    {
+      "number": 103,
+      "title": "Add the physics debug overlay and telemetry",
+      "body": "## Scope\n\nAn optional viewport overlay that draws the proxy as a wireframe and colors skull-attached, jaw-attached and skin nodes differently.\nWhen physics is active, extend the existing live readout with: solver time per step, effective simulation rate, maximum simulated displacement, mean pose-following error, and a count of any non-finite resets.\nThe deformation curve panel can also plot maximum simulated displacement next to activation energy, so settling and lag are visible over time.\n\n## Files\n\n`src/components/viewport/face-viewport.tsx`, `src/components/readout/live-numeric-readout.tsx`, `src/components/readout/deformation-curve-panel.tsx`\n\n## Dependencies\n\nDepends on: Physics deformation provider\n\n---\nUUID: f229bcee-76ff-4df1-89a9-dcc4ca38ade1"
     }
   ]
 }
