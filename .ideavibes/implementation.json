@@ -41,6 +41,11 @@
       "number": 103,
       "title": "Add the physics debug overlay and telemetry",
       "body": "## Scope\n\nAn optional viewport overlay that draws the proxy as a wireframe and colors skull-attached, jaw-attached and skin nodes differently.\nWhen physics is active, extend the existing live readout with: solver time per step, effective simulation rate, maximum simulated displacement, mean pose-following error, and a count of any non-finite resets.\nThe deformation curve panel can also plot maximum simulated displacement next to activation energy, so settling and lag are visible over time.\n\n## Files\n\n`src/components/viewport/face-viewport.tsx`, `src/components/readout/live-numeric-readout.tsx`, `src/components/readout/deformation-curve-panel.tsx`\n\n## Dependencies\n\nDepends on: Physics deformation provider\n\n---\nUUID: f229bcee-76ff-4df1-89a9-dcc4ca38ade1"
+    },
+    {
+      "number": 104,
+      "title": "Test and benchmark the physics milestone",
+      "body": "## Files\n\nUnit tests under `src/domain/physics/`, `e2e/`, new benchmark script under `scripts/`\n\n## Dependencies\n\nDepends on: Physics control panel, physics debug overlay and telemetry\n\n---\nUUID: 81af9e96-37e7-4fe0-8bf7-14be67c60eff"
     }
   ]
 }
