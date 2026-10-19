@@ -72,3 +72,16 @@ describe('SI physics controls',()=>{
     expect(Object.keys(settings).some(key=>/jaw|skull/i.test(key))).toBe(false);
   });
 });
+
+
+it('resets optional offset debug views on disable without touching solver settings',()=>{
+  const state=usePhysicsState.getState(),settings=state.settings;
+  state.setEnabled(true);state.setOffsetMagnification(50);state.setOffsetHeatmap(true);
+  expect(usePhysicsState.getState().offsetMagnification).toBe(50);
+  expect(usePhysicsState.getState().offsetHeatmap).toBe(true);
+  expect(usePhysicsState.getState().settings).toBe(settings);
+  state.setEnabled(false);state.setEnabled(true);
+  expect(usePhysicsState.getState().offsetMagnification).toBe(1);
+  expect(usePhysicsState.getState().offsetHeatmap).toBe(false);
+  expect(usePhysicsState.getState().settings).toBe(settings);
+});
