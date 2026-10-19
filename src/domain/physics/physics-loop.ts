@@ -9,7 +9,7 @@ export function startPhysicsLoop(
   error: (error: unknown) => void,
 ) {
   const solver = new XpbdSolver(options);
-  
+
   let previous = performance.now();
   let accumulator = 0;
   const started = previous;

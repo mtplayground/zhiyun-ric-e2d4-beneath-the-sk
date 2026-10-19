@@ -108,3 +108,14 @@ checks loaded FaceCap, computed CSS, pose/keyboard/reset controls, worker physic
 finite telemetry, watermark sharing, no preview banner, and browser/network errors.
 It saves `verify-screenshot.png`. This app has no protected login or internal
 route navigation; research resource buttons are explicitly disabled.
+
+## Current deployment validation
+
+The complete batch is reviewed against historical main `07e909f`, with the later
+SI and paired-layer requirements taking precedence over the earlier rigid-jaw
+model. The production build and static runtime-validator gate, all 143 unit tests,
+exact binary regeneration, independent SI mass checks and both benchmark modes
+were executed again for this deployment. Browser acceptance includes the actual
+upstream FaceCap and corrupted-asset diagnostics. Deployment uses a Git archive
+of the final checked commit, excluding private pipeline metadata and original
+attachments; the Sprite rebuild is compared with the local production artifacts.
