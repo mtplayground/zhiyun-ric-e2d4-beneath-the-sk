@@ -5,7 +5,7 @@ build-time precomputation; ordinary application builds use the checked-in binary
 The default input is the same FaceCap GLB configured by the application. No original
 attachments were supplied (the original-files manifest is empty).
 
-Options: `--source URL_OR_GLB_PATH`, `--output PATH`, `--target 3000`,
+Options: `--topology-report PATH` (default `docs/facecap-topology.json`), `--source URL_OR_GLB_PATH`, `--output PATH`, `--target 3000`,
 `--thickness-metres 0.012`, `--mouth-line -0.12`, `--metres-per-source-unit NUMBER`.
 The target is an approximate tetrahedron budget; boundary topology means the actual
 count differs. The committed proxy has 2,310 tetrahedra and 2,694 render embeddings.
@@ -54,11 +54,15 @@ These shared helpers are the entry point for future physical conversions.
 The unit helper implementation is shared as an `.mjs` module so generation and
 the TypeScript runtime use the same conversion code.
 
-Edge collapse simplifies the surface. Normals are split at 30-degree creases before
-inward extrusion, avoiding offsets across hard folds; smooth adjacent triangles
-share nodes. Crease splits create independent layer boundaries, so this proxy is
-not a watertight anatomical volume. Each ordered triangle prism uses a consistent
-three-tetrahedron split. Positive volumes are checked on float32 node positions.
+Edge collapse simplifies the surface. Mechanical vertices are then welded using
+position alone, with a Euclidean tolerance of 1e-6 normalized proxy units. The
+weld checks neighboring spatial hash cells and ignores shading normal/UV
+attributes. Area-weighted vertex normals are computed only after welding for the
+inward offset. No physical cut boundaries are annotated on this skin, so no
+mechanical splits are retained; sharp rendering features remain in the original
+render geometry. Each ordered triangle prism uses a consistent three-tetrahedron
+split. Positive volumes are checked on float32 node positions. See
+`docs/forehead-seam.md` for the recorded before/after topology investigation.
 Embedding uses containment first, otherwise the exact closest point on the nearest
 tetrahedron boundary with nonnegative barycentric weights. Nearest embeddings may
 project vertices onto the proxy surface; they do not promise exact rest reconstruction.
@@ -93,12 +97,12 @@ the kinematic provider does not start a solver.
 
 The 12 mm generation attempt at target 3000 failed before writing any output:
 
-- Proxy triangle: 34, node indices [85, 86, 87].
-- Nearest source triangle: 429, source indices [242, 234, 233]. Simplification
+- Proxy triangle: 0, node indices [7, 0, 2].
+- Nearest source triangle: 7, source indices [3, 7, 9]. Simplification
   changes topology, so this is a nearest-surface association, not exact lineage.
-- Centroid in proxy coordinates: [0.0931976711, 0.2581272324, 0.2795516551].
-- Centroid in source coordinates: [6719.666646, 10645.000112, 11570.999958].
-- Outward triangle normal: [0.4417421180, 0.8796951608, 0.1760690922].
+- Centroid in proxy coordinates: [0.0127940003, 0.3591557046, 0.3017205695].
+- Centroid in source coordinates: [5747.666669, 11866.333313, 11838.999965].
+- Outward triangle normal: [-0.0933855608, 0.9842436946, 0.1501448853].
 - Requested thickness: 0.012 m = 0.050920577164946065 proxy units.
 - Reason: inverted or near-zero layer cell.
 - Nearest facial region: unknown. No anatomical region annotations were supplied;

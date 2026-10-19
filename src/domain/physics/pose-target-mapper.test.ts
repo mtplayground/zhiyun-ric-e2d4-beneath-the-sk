@@ -51,6 +51,23 @@ describe('pose target mapper', () => {
     expect(array(proxy.nodes)).toEqual([0,0,0,1,0,0,0,0,1,0,-1,-1,1,1,0]);
   });
 
+  it('gives covered and uncovered coincident skin nodes one pooled displacement', () => {
+    const duplicated: PoseProxy={...proxy,nodes:[...array(proxy.nodes),0,0,0],labels:[...array(proxy.labels),0]};
+    const mapped=createPoseTargetMapper(surface,duplicated).map({mouthSmileLeft:1});
+    close(array(mapped.poseTargets).slice(15,18),array(mapped.poseTargets).slice(0,3));
+    close(createPoseTargetMapper(surface,duplicated).map({}).poseTargets,duplicated.nodes);
+  });
+
+  it('averages tied render accessors for every coincident uncovered fallback node', () => {
+    const duplicateSurface: PoseSurface={...surface,positions:[10,20,30,10,20,30,11,22,30],
+      morphTargets:{mouthSmile_L:[0,0,1,0,0,3,0,0,0]}};
+    // Nodes 4 and 5 have no embedding contributors; both are closest to the
+    // duplicated accessors 0 and 1, which must not be selected by accessor order.
+    const duplicateProxy: PoseProxy={...proxy,nodes:[...array(proxy.nodes).slice(0,12),0.1,0,0,0.1,0,0],labels:[0,0,1,2,0,0]};
+    const mapped=createPoseTargetMapper(duplicateSurface,duplicateProxy).map({mouthSmileLeft:1});
+    close(array(mapped.poseTargets).slice(12,18),[0.1,0,1,0.1,0,1]);
+  });
+
   it('drives AA jaw nodes with a rigid pivot rotation and keeps skull nodes fixed', () => {
     const mapper = createPoseTargetMapper(surface,proxy);
     const aa = findPoseMappingById('phoneme-aa')!;

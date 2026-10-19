@@ -11,33 +11,33 @@
   },
   "diagnostic": {
     "reason": "Inverted or near-zero layer cell",
-    "proxyTriangleIndex": 34,
+    "proxyTriangleIndex": 0,
     "proxyVertexIndices": [
-      85,
-      86,
-      87
+      7,
+      0,
+      2
     ],
-    "sourceTriangleIndex": 429,
+    "sourceTriangleIndex": 7,
     "sourceVertexIndices": [
-      242,
-      234,
-      233
+      3,
+      7,
+      9
     ],
     "sourceAssociation": "nearest triangle to proxy centroid",
     "centroidProxy": [
-      0.09319767107566197,
-      0.25812723239262897,
-      0.2795516550540924
+      0.012794000251839558,
+      0.35915570457776386,
+      0.3017205695311228
     ],
     "centroidSource": [
-      6719.666645633677,
-      10645.000112394491,
-      11570.999957948923
+      5747.666669044488,
+      11866.333312640587,
+      11838.999965061743
     ],
     "normal": [
-      0.4417421179947052,
-      0.8796951608092336,
-      0.1760690922290701
+      -0.09338556078115728,
+      0.9842436946487834,
+      0.15014488529983652
     ],
     "requestedThicknessMetres": 0.012,
     "requestedThicknessProxy": 0.050920577164946065,

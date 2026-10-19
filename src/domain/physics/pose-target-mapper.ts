@@ -1,3 +1,4 @@
+import { positionGroups } from './position-groups.mjs';
 import { interpolateBlendshapeWeights } from '../providers/kinematic-blendshape-provider';
 import { createMorphTargetNameResolver } from '../poses/morph-target-aliases';
 import type { DeformationFrameInput } from '../providers/deformation-provider';
@@ -78,19 +79,22 @@ export function createPoseTargetMapper(surface: PoseSurface, proxy: PoseProxy, j
       totals[node] += weight;
     }
   }
-  // Some coarse skin nodes receive no embedding coefficient (notably crease
-  // splits). Transfer their nearest neutral render vertex displacement instead.
-  const nearest = new Map<number, number>();
-  labels.forEach((label, node) => {
-    if (label !== 0 || totals[node] > 1e-12) return;
-    let best = Infinity, index = 0;
-    for (let vertex = 0; vertex < count; vertex++) {
-      let distance = 0;
-      for (let axis = 0; axis < 3; axis++) distance += ((rest[vertex*3+axis]-center[axis])/scale-nodes[node*3+axis])**2;
-      if (distance < best) { best = distance; index = vertex; }
-    }
-    nearest.set(node, index);
-  });
+  // Pool displacement contributors at coincident skin positions. A surviving
+  // intentional shading split must not select a different fallback on each side.
+  // This complements generator welding; it does not repair disconnected mechanics.
+  const skinNodes=labels.flatMap((label,node)=>label===0?[node]:[]);
+  const skinGroups=positionGroups(skinNodes.map(node=>Array.from(nodes.slice(node*3,node*3+3))))
+    .map(group=>group.map(i=>skinNodes[i]));
+  const fallback=new Map<number,number[]>();
+  for(const group of skinGroups) {
+    if(group.some(node=>totals[node]>1e-12)) continue;
+    const node=group[0];
+    const distances=Array.from({length:count},(_,vertex)=>Math.hypot(...[0,1,2].map(axis=>(rest[vertex*3+axis]-center[axis])/scale-nodes[node*3+axis])));
+    const best=Math.min(...distances);
+    // Average coincident/equidistant render accessors rather than letting accessor
+    // ordering choose different sides of a UV/normal seam.
+    fallback.set(node,distances.flatMap((distance,vertex)=>Math.abs(distance-best)<=1e-10?[vertex]:[]));
+  }
   jawRotation(0, jaw); // Validate settings eagerly and copy caller-owned settings.
   const copyVector = (v: Vec3): Vec3 => [v[0], v[1], v[2]];
   const settings: JawSettings = { pivot: copyVector(jaw.pivot ?? [0,0.05,0.02]), axis: copyVector(jaw.axis ?? [1,0,0]), maxAngle: jaw.maxAngle };
@@ -110,10 +114,13 @@ export function createPoseTargetMapper(surface: PoseSurface, proxy: PoseProxy, j
     for (const { render, node, weight } of contributors) {
       for (let axis = 0; axis < 3; axis++) displacement[node*3+axis] += weight * delta[render*3+axis];
     }
-    labels.forEach((label, node) => {
-      if (label !== 0) return;
-      for (let axis = 0; axis < 3; axis++) targets[node*3+axis] += totals[node] > 1e-12 ? displacement[node*3+axis]/totals[node] : delta[nearest.get(node)!*3+axis];
-    });
+    for(const group of skinGroups) {
+      const total=group.reduce((sum,node)=>sum+totals[node],0);
+      const deltaGroup=[0,1,2].map(axis=>total>1e-12
+        ?group.reduce((sum,node)=>sum+displacement[node*3+axis],0)/total
+        :fallback.get(group[0])!.reduce((sum,vertex)=>sum+delta[vertex*3+axis],0)/fallback.get(group[0])!.length);
+      for(const node of group) for(let axis=0;axis<3;axis++) targets[node*3+axis]+=deltaGroup[axis];
+    }
     const jawTransform = jawRotation(jawName ? evaluated[jawName] ?? 0 : 0, settings);
     labels.forEach((label, node) => {
       if (label !== 2) return;

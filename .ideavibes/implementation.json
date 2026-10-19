@@ -56,6 +56,11 @@
       "number": 114,
       "title": "Regenerate the proxy with 12 mm thickness, explicit inner–outer pairing and SI masses",
       "body": "## Scope\n\nRegenerate the committed soft-tissue asset:\n- **Thickness:** a tissue thickness of 0.012 m, converted to proxy units with the recorded scale. If the inward offset fails anywhere (expected risk areas are the nose and lips), do not thin the layer silently. Fail and report the source and proxy triangle indices, the centroid position, the normal, the requested thickness and the nearest facial region.\n- **Pairing:** store an explicit table linking each outer node to its inner counterpart, instead of relying on how the nodes happen to be ordered.\n- **Masses:** compute each node's mass from tetrahedron volumes in cubic metres. Each tetrahedron contributes volume × 1000 kg/m³ divided equally among its four corners. Store the resulting masses.\n- **Format:** keep node labels for visualization only. Bump the asset format version, and make the loader reject older assets with a clear diagnostic.\n\n## Files\n\nSoft-tissue asset generation script under `scripts/`, `src/domain/physics/` asset loader, `public/data/facecap-soft-tissue.bin`, soft-tissue asset format doc under `docs/`\n\n## Dependencies\n\nDepends on: Physical units and vertical axis\n\n---\nUUID: eb85476a-3336-4204-bbbf-ffda5a11a528"
+    },
+    {
+      "number": 115,
+      "title": "Investigate and fix the forehead seam",
+      "body": "## Scope\n\nAdd a generator check that finds proxy vertices at the same or nearly the same position that ended up in disconnected parts of the mesh. Report their source locations, and check the forehead region specifically. Record in the physics docs whether the visible forehead seam lies on a crease-split edge.\nThen fix the split: across smooth regions, both sides share the same nodes, or the region isn't split at all. Keep a split only where a sharp feature really needs one. Regenerate the asset so offsets are continuous across the forehead.\n\n## Files\n\nSoft-tissue asset generation script under `scripts/`, `src/domain/physics/` pose-target mapper (the fallback for split skin nodes), physics docs under `docs/`\n\n## Dependencies\n\nDepends on: 12 mm proxy regeneration\n\n---\nUUID: 21986abe-0195-4b97-9236-f862bc8651d6"
     }
   ]
 }
