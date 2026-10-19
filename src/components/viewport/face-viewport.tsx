@@ -7,7 +7,7 @@ import {
 } from 'three';
 import { OrbitControls as OrbitControlsImpl } from 'three/examples/jsm/controls/OrbitControls.js';
 
-import { appConfig } from '@/config/env';
+import { usePhysicsState } from '@/state/physics-state';
 import { cn } from '@/lib/utils';
 import { useGltfHeadAsset, type HeadAssetState } from './gltf-head-loader';
 import KinematicProviderRuntime, {
@@ -203,7 +203,8 @@ export default function FaceViewport({
   activePoseLabel,
   assetUrl,
 }: FaceViewportProps) {
-  const [physicsEnabled, setPhysicsEnabled] = useState(appConfig.deformationProvider === 'xpbd-soft-tissue');
+  const physicsEnabled = usePhysicsState(state => state.enabled);
+  const setPhysicsEnabled = usePhysicsState(state => state.setEnabled);
   const [headAsset, setHeadAsset] = useState<HeadAssetState>({
     status: 'idle',
     progress: 0,
@@ -221,6 +222,9 @@ export default function FaceViewport({
     },
     [],
   );
+  useEffect(() => usePhysicsState.subscribe((state, previous) => {
+    if (!state.enabled && previous.enabled) headAsset.asset?.applyVertexDeltas();
+  }), [headAsset.asset]);
   const morphTargetCount = headAsset.asset?.morphTargetNames.length ?? 0;
   const statusLabel =
     headAsset.status === 'loading'
@@ -262,7 +266,7 @@ export default function FaceViewport({
         onClick={() => {
           // Restore the original geometry/material immediately on disable.
           if (physicsEnabled) headAsset.asset?.applyVertexDeltas();
-          setPhysicsEnabled(enabled => !enabled);
+          setPhysicsEnabled(!physicsEnabled);
         }}
       >
         Physics {physicsEnabled ? 'On' : 'Off'}

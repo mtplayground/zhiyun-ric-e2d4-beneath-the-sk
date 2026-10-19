@@ -1,3 +1,5 @@
+import { usePhysicsState } from '@/state/physics-state';
+import { toSolverSettings } from '@/domain/physics/physics-settings';
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 
@@ -194,6 +196,11 @@ export default function KinematicProviderRuntime({
   const activePoseLabel = useActivePoseLabel();
   const activeControlMode = useActiveControlMode();
   const activationValues = useActivationValues();
+  const physicsSettings = usePhysicsState(state => state.settings);
+  const resetRequest = usePhysicsState(state => state.resetRequest);
+  const lastResetRequestRef = useRef(resetRequest);
+  const physicsSettingsRef = useRef(physicsSettings);
+  physicsSettingsRef.current = physicsSettings;
   const providerId = physicsEnabled ? 'xpbd-soft-tissue' : 'kinematic-blendshape';
   const provider = useMemo(() => getProviderRegistryEntry(providerId).createProvider(), [providerId]);
   const initializedRef = useRef(false);
@@ -291,6 +298,7 @@ export default function KinematicProviderRuntime({
         physics: physicsEnabled && asset.physics ? {
           ...asset.physics,
           simProxyUrl: appConfig.assets.simProxyUrl,
+          settings: toSolverSettings(physicsSettingsRef.current),
           onDiagnostic: diagnostic => {
             physicsDiagnosticRef.current = diagnostic;
             const base = createCompatibilityDiagnostic({ asset, poseLabel: latestPoseLabelRef.current, targetWeights: latestActivationValuesRef.current });
@@ -359,6 +367,18 @@ export default function KinematicProviderRuntime({
       transitionRef.current = null;
     };
   }, [asset, assetUrl, provider, physicsEnabled]);
+
+  useEffect(() => {
+    provider.configurePhysics?.(toSolverSettings(physicsSettings));
+  }, [provider, physicsSettings]);
+
+  useEffect(() => {
+    if (lastResetRequestRef.current === resetRequest) return;
+    lastResetRequestRef.current = resetRequest;
+    provider.updateVertexDeltas?.(currentWeightsRef.current);
+    provider.resetSimulation?.();
+    asset?.applyVertexDeltas();
+  }, [resetRequest, provider, asset]);
 
   useFrame(() => {
     frameIndexRef.current += 1;

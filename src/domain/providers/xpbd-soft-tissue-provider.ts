@@ -37,7 +37,7 @@ export function createXpbdSoftTissueProvider(): DeformationProvider {
           sourceMesh: physics.sourceMesh,
           renderVertexCount: physics.surface.positions.length / 3,
           assetUrl: physics.simProxyUrl,
-          solver: { gravity: [0, 0, -0.5], distanceCompliance: 0.00001, poseCompliance: 0.0001 },
+          solver: { gravity: [0, 0, -0.5], distanceCompliance: 0.00001, poseCompliance: 0.0001, ...physics.settings },
           onAssetReady(asset) {
             if (token !== generation) return;
             proxy = asset;
@@ -61,6 +61,12 @@ export function createXpbdSoftTissueProvider(): DeformationProvider {
     evaluateFrame(input) {
       const frame = kinematic.evaluateFrame(input);
       return { ...frame, vertexDeltas: updateVertexDeltas(frame.blendshapeWeights) };
+    },
+    configurePhysics: settings => host?.configure(settings),
+    resetSimulation: () => {
+      offsets = undefined;
+      if (mapper && host) host.sendFrame(mapper.map(currentWeights));
+      host?.reset();
     },
     updateVertexDeltas,
     precompute: poses => kinematic.precompute!(poses),

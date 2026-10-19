@@ -144,3 +144,18 @@ transferable buffer. Rendering adds the embedded residual after morph evaluation
 through a dedicated shader attribute. Skin base positions and morph targets stay
 unchanged; switching off restores the original geometry/material immediately.
 The viewport's physics toggle owns backend cleanup without reloading the GLB.
+
+## Live controls
+
+The opt-in physics panel uses `usePhysicsState`, shared with the viewport toggle.
+The runtime translates its settings through `toSolverSettings` and calls the
+provider's `configurePhysics` method. The host forwards `configure` to the worker
+or fallback loop; `XpbdSolver.configure` updates built-in constraint compliance,
+gravity and damping in place. Particle positions and velocities survive tuning.
+Settings received during initialization are applied when the backend starts.
+
+The independent reset request calls `resetSimulation`, clears the rendered
+residual immediately, sends the latest pose to the backend, and invokes the
+solver's explicit reset path. The backend reports that reset with the matching
+pose target array. No simulation asset fetch, mesh reload or worker restart is
+needed for either tuning or resetting.

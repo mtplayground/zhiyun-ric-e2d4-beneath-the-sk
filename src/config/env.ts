@@ -8,6 +8,7 @@ export type FeatureFlags = {
   readoutPanel: boolean;
   deformationCurvePanel: boolean;
   precomputePanel: boolean;
+  physicsPanel: boolean;
 };
 
 export type AppConfig = {
@@ -29,6 +30,7 @@ type RawEnv = Pick<
   | 'VITE_ENABLE_READOUT_PANEL'
   | 'VITE_ENABLE_DEFORMATION_CURVE_PANEL'
   | 'VITE_ENABLE_PRECOMPUTE_PANEL'
+  | 'VITE_ENABLE_PHYSICS_PANEL'
 >;
 
 const defaultConfig = {
@@ -39,6 +41,7 @@ const defaultConfig = {
   readoutPanel: true,
   deformationCurvePanel: true,
   precomputePanel: true,
+  physicsPanel: false,
 } satisfies Record<string, string | boolean>;
 
 function normalizePath(value: string | undefined, fallback: string) {
@@ -99,6 +102,7 @@ export function loadAppConfig(env: RawEnv = import.meta.env): AppConfig {
     },
     deformationProvider: parseProvider(env.VITE_DEFORMATION_PROVIDER),
     features: {
+      physicsPanel: parseBooleanFlag(env.VITE_ENABLE_PHYSICS_PANEL, defaultConfig.physicsPanel, 'VITE_ENABLE_PHYSICS_PANEL'),
       readoutPanel: parseBooleanFlag(
         env.VITE_ENABLE_READOUT_PANEL,
         defaultConfig.readoutPanel,

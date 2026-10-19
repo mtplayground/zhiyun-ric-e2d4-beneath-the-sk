@@ -147,3 +147,33 @@ describe('XpbdSolver', () => {
     expect(() => new XpbdSolver(base).step({ poseTargets: [] })).toThrow('dimensions');
   });
 });
+
+it('applies live gravity, damping and pose compliance without replacing particle state', () => {
+  const solver = new XpbdSolver({ ...base, poseCompliance:1e20 });
+  solver.velocities[0]=2;
+  const positions=solver.positions, velocities=solver.velocities;
+  solver.configure({gravity:[0,-10,0],damping:Math.log(2)/0.1,poseCompliance:1e20,distanceCompliance:0.01});
+  expect(solver.positions).toBe(positions);expect(solver.velocities).toBe(velocities);
+  expect(solver.velocities[0]).toBe(2);
+  solver.step({poseTargets:[0,0,0]});
+  expect(solver.velocities[0]).toBeCloseTo(1);
+  expect(solver.positions[1]).toBeCloseTo(-0.1);
+  solver.configure({poseCompliance:0});
+  solver.step({poseTargets:[1,2,3]});
+  expect(Array.from(solver.positions)).toEqual([1,2,3]);
+});
+
+it('applies live tissue compliance and resets to current attachments with zero velocity', () => {
+  const solver=new XpbdSolver({...base,positions:[0,0,0,1,0,0],labels:[1,0],edges:[0,1],poseCompliance:1e20});
+  solver.positions[3]=2;
+  solver.configure({distanceCompliance:1});
+  solver.step({poseTargets:[0,0,0,1,0,0]});
+  expect(solver.positions[3]).toBeGreaterThan(1.9);
+  solver.configure({distanceCompliance:0});
+  solver.step({poseTargets:[0,0,0,1,0,0]});
+  expect(solver.positions[3]).toBeCloseTo(1);
+  const result=solver.reset({poseTargets:[0,0,0,2,3,4],skullTransform:translate(1,0,0)});
+  expect(result).toEqual({reset:true,reason:'Simulation reset requested'});
+  expect(Array.from(solver.positions)).toEqual([1,0,0,2,3,4]);
+  expect(Array.from(solver.velocities)).toEqual([0,0,0,0,0,0]);
+});

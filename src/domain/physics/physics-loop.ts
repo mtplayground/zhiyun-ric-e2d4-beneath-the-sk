@@ -1,4 +1,4 @@
-import { XpbdSolver, type SolverFrame, type SolverOptions, type StepResult } from './xpbd-solver';
+import { XpbdSolver, type SolverFrame, type SolverOptions, type SolverSettings, type StepResult } from './xpbd-solver';
 
 /** Timer delivery is variable; simulation increments are always fixed. Long
  * background pauses are dropped rather than causing unbounded catch-up work. */
@@ -42,6 +42,13 @@ export function startPhysicsLoop(
         skullTransform: next.skullTransform && [...next.skullTransform],
         jawTransform: next.jawTransform && [...next.jawTransform],
       };
+    },
+    configure(settings: SolverSettings) { if (!stopped) solver.configure(settings); },
+    reset() {
+      if (stopped) return;
+      accumulator = 0; previous = performance.now();
+      const result = solver.reset(frame);
+      output(solver.positions.slice(), result, Float64Array.from(frame.poseTargets));
     },
     stop() { stopped = true; clearInterval(timer); },
   };

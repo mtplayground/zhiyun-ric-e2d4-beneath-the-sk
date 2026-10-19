@@ -107,3 +107,24 @@ units. A sample carries the targets used by its solve, so worker latency cannot
 accidentally subtract a different pose. Coincident simulated/target nodes yield
 zero offsets; the neutral render surface is never reconstructed from the coarse
 proxy. Physics shading currently retains the blendshape normal field.
+
+### Optional physics controls
+
+Set `VITE_ENABLE_PHYSICS_PANEL=true` to show the **Soft-tissue physics** section
+in the Control Panel. It is hidden by default, independently of provider
+selection. The panel and viewport on/off switches share the same enabled state.
+
+Tissue compliance controls edge softness; pose-following compliance controls how
+strongly skin follows the current blendshape pose. Higher compliance means softer
+constraints. Damping controls how quickly velocity decays. Gravity strength ranges
+from 0× to 20×: 1× is 0.5 normalized face extents/s² and 20× is 10 extents/s²,
+downward along FaceCap's upright local Z axis. For a visible sag, increase gravity
+and pose-following compliance; zero gravity disables that force.
+
+Changes apply live to the active worker or main-thread fallback without replacing
+particle state, reloading the face, or restarting the worker. They are retained
+while physics is off and used when it is enabled again. **Reset simulation**
+restores the current pose and jaw attachments and clears velocities and constraint
+multipliers. It leaves control activations, the selected preset, and physics
+settings unchanged. Settings are session state and are not persisted across page
+reloads.

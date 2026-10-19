@@ -1,7 +1,7 @@
 import { loadSoftTissueAsset } from '../simulation/soft-tissue-asset';
 import { startPhysicsLoop } from './physics-loop';
 import type { PhysicsDiagnostic, PhysicsRequest, PhysicsResponse, WorkerSolverOptions } from './physics-protocol';
-import type { SolverFrame, StepResult } from './xpbd-solver';
+import type { SolverFrame, SolverSettings, StepResult } from './xpbd-solver';
 
 const assets = new Map<string, Promise<ArrayBuffer>>();
 function assetBytes(url: string) {
@@ -37,6 +37,8 @@ export interface PhysicsHostOptions {
 export interface PhysicsHost {
   ready: Promise<void>;
   sendFrame(frame: SolverFrame): void;
+  configure(settings: SolverSettings): void;
+  reset(): void;
   dispose(): void;
 }
 
@@ -47,6 +49,8 @@ export function createPhysicsHost(options: PhysicsHostOptions): PhysicsHost {
   let fallback: ReturnType<typeof startPhysicsLoop> | undefined;
   let solverOptions: WorkerSolverOptions | undefined;
   let latest: SolverFrame | undefined;
+  let settings: SolverSettings = {};
+  let resetPending = false;
   let frameInFlight = false;
   let workerReady = false;
   let startupTimer: ReturnType<typeof setTimeout> | undefined;
@@ -82,8 +86,9 @@ export function createPhysicsHost(options: PhysicsHostOptions): PhysicsHost {
     workerReady = false;
     const requested = solverOptions.substeps ?? 4;
     const substeps = Math.max(1, Math.min(options.fallbackSubsteps ?? 2, Math.max(1, requested - 1)));
-    fallback = startPhysicsLoop({ ...solverOptions, substeps }, output, error => diagnostic('solver-error', String(error)));
+    fallback = startPhysicsLoop({ ...solverOptions, ...settings, substeps }, output, error => diagnostic('solver-error', String(error)));
     if (latest) fallback.setFrame(latest);
+    if (resetPending) { resetPending = false; fallback.reset(); }
     diagnostic('fallback', `${reason}; using main-thread physics with ${substeps} substep(s)`);
   }
   const ready = (async () => {
@@ -93,7 +98,7 @@ export function createPhysicsHost(options: PhysicsHostOptions): PhysicsHost {
       const asset = await loadSoftTissueAsset(bytes, options.sourceMesh, options.renderVertexCount);
       if (disposed) return;
       options.onAssetReady?.(asset);
-      solverOptions = { ...options.solver, positions: asset.nodes, labels: asset.labels, edges: asset.edges };
+      solverOptions = { ...options.solver, ...settings, positions: asset.nodes, labels: asset.labels, edges: asset.edges };
       try {
         worker = options.workerFactory ? options.workerFactory() : new Worker(new URL('./physics.worker.ts', import.meta.url), { type: 'module' });
         worker.onmessage = ({ data }) => {
@@ -103,7 +108,9 @@ export function createPhysicsHost(options: PhysicsHostOptions): PhysicsHost {
               clearTimeout(startupTimer);
               workerReady = true;
               diagnostic('worker', 'Physics running in a dedicated worker');
+              if (Object.keys(settings).length) worker?.postMessage({ type: 'configure', settings });
               flush();
+              if (resetPending) { worker?.postMessage({ type: 'reset' }); resetPending = false; }
             } else if (data.type === 'frame-accepted') {
               frameInFlight = false;
               flush();
@@ -132,6 +139,28 @@ export function createPhysicsHost(options: PhysicsHostOptions): PhysicsHost {
       try {
         fallback?.setFrame(latest);
         flush();
+      } catch (error) { diagnostic('solver-error', String(error)); }
+    },
+    configure(next) {
+      if (disposed) return;
+      settings = { ...settings, ...next, ...(next.gravity ? { gravity: [...next.gravity] as [number, number, number] } : {}) };
+      try {
+        fallback?.configure(settings);
+        if (workerReady) worker?.postMessage({ type: 'configure', settings });
+      } catch (error) { diagnostic('solver-error', String(error)); }
+    },
+    reset() {
+      if (disposed) return;
+      try {
+        if (fallback) fallback.reset();
+        else if (workerReady) {
+          // Do not reset against a stale coalesced frame.
+          if (latest && worker) {
+            const poseTargets = Float64Array.from(latest.poseTargets);
+            worker.postMessage({ type: 'frame', frame: { ...latest, poseTargets } }, [poseTargets.buffer]);
+          }
+          worker?.postMessage({ type: 'reset' });
+        } else resetPending = true;
       } catch (error) { diagnostic('solver-error', String(error)); }
     },
     dispose() {

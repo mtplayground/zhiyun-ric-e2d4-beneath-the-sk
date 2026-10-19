@@ -30,6 +30,16 @@ it('transfers worker positions, bounds outstanding output and closes its timer',
   send({ type: 'ack' });
   vi.advanceTimersByTime(10);
   expect(messages.filter(m => m.type === 'positions')).toHaveLength(2);
+  send({ type: 'ack' });
+  send({ type: 'configure', settings: { poseCompliance: 0.01, damping: 3, gravity: [0,0,-5], distanceCompliance: 0.02 } });
+  send({ type: 'frame', frame: { poseTargets: new Float64Array([4,5,6]) } });
+  send({ type: 'reset' });
+  const reset = messages.at(-1)!;
+  expect(reset.type).toBe('positions');
+  if (reset.type === 'positions') {
+    expect(Array.from(reset.positions)).toEqual([4,5,6]);
+    expect(reset.result.reset).toBe(true);
+  }
   send({ type: 'stop' });
   expect(scope.close).toHaveBeenCalledOnce();
   expect(vi.getTimerCount()).toBe(0);

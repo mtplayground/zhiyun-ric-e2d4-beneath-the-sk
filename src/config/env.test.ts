@@ -17,6 +17,7 @@ describe('loadAppConfig', () => {
         readoutPanel: true,
         deformationCurvePanel: true,
         precomputePanel: true,
+        physicsPanel: false,
       },
     });
   });
@@ -41,6 +42,7 @@ describe('loadAppConfig', () => {
       readoutPanel: false,
       deformationCurvePanel: false,
       precomputePanel: true,
+      physicsPanel: false,
     });
   });
 
@@ -67,6 +69,13 @@ describe('loadAppConfig', () => {
     expect(() =>
       loadAppConfig({ VITE_DEFORMATION_PROVIDER: 'texture-transfer' }),
     ).toThrow(/Unsupported VITE_DEFORMATION_PROVIDER/);
+  });
+
+  it('only enables the physics panel with an explicit valid flag', () => {
+    expect(loadAppConfig({}).features.physicsPanel).toBe(false);
+    expect(loadAppConfig({VITE_ENABLE_PHYSICS_PANEL:'true'}).features.physicsPanel).toBe(true);
+    expect(loadAppConfig({VITE_ENABLE_PHYSICS_PANEL:'0'}).features.physicsPanel).toBe(false);
+    expect(() => loadAppConfig({VITE_ENABLE_PHYSICS_PANEL:'sometimes'})).toThrow('VITE_ENABLE_PHYSICS_PANEL');
   });
 
   it('rejects invalid retained boolean flags', () => {
