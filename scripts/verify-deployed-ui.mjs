@@ -1,6 +1,8 @@
-const fs = require('node:fs');
-const assert = require('node:assert/strict');
-const { chromium } = require('playwright');
+/* global document, getComputedStyle */
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+const { chromium } = createRequire(import.meta.url)('playwright');
 (async () => {
   const url = fs.existsSync('.deploy_url') ? fs.readFileSync('.deploy_url', 'utf8').trim() : '';
   if (!url) throw new Error('.deploy_url empty or missing; run bash scripts/capture-deploy-url.sh');
@@ -24,12 +26,12 @@ const { chromium } = require('playwright');
     for(const label of ['Paper','Video','Code']) assert.equal(await page.getByRole('button',{name:new RegExp(label)}).getAttribute('aria-disabled'),'true');
     assert.equal(await page.getByRole('button',{name:/log\s*out|sign\s*out/i}).count(),0,'Unexpected auth UI');
     const pose=async(name)=>page.getByText(new RegExp('Current Pose: '+name+' \\| Frame:')).waitFor();
-    await page.getByLabel('Expressions / Emotions',{exact:true}).selectOption('expression-smile'); await pose('Smile');
+    await page.getByRole('combobox',{name:/Expressions \/ Emotions/i}).selectOption('expression-smile'); await pose('Smile');
     await page.getByTestId('physics-toggle').click();
     await page.getByText('Physics Active',{exact:true}).waitFor({timeout:90000});
     const telemetry=page.getByTestId('physics-telemetry'); await telemetry.waitFor();
     assert(!/NaN|Infinity/.test(await telemetry.innerText()),'Non-finite physics telemetry');
-    await page.getByLabel('Expressions / Emotions',{exact:true}).selectOption('expression-frown'); await pose('Frown');
+    await page.getByRole('combobox',{name:/Expressions \/ Emotions/i}).selectOption('expression-frown'); await pose('Frown');
     await page.getByText(/Mode: preset \| Activations: 5/).waitFor({timeout:15000});
     await page.getByTestId('physics-toggle').click(); await telemetry.waitFor({state:'detached'});
     await page.getByRole('button',{name:'Reset to Neutral (Reopen Rest Pose)'}).click(); await pose('Neutral');

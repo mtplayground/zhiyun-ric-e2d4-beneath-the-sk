@@ -103,7 +103,7 @@ screenshot are ignored by Git.
 
 Regression: `node --test scripts/capture-deploy-url.check.mjs` tests successful
 capture and a malformed response using an isolated CLI fixture. Public browser
-check: `NODE_PATH=/usr/local/lib/node_modules node scripts/verify-deployed-ui.cjs`
+check: `NODE_PATH=/usr/local/lib/node_modules node scripts/verify-deployed-ui.mjs`
 checks loaded FaceCap, computed CSS, pose/keyboard/reset controls, worker physics,
 finite telemetry, watermark sharing, no preview banner, and browser/network errors.
 It saves `verify-screenshot.png`. This app has no protected login or internal
