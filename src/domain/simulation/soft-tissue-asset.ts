@@ -1,9 +1,12 @@
+import { validatePhysicalUnits, type PhysicalUnits } from '../physics/physical-units';
+
 /** STP1 uses little-endian scalar arrays; sections may be unaligned. */
 export type SoftTissueMetadata = {
   version: number;
   sourceHash: string;
   counts: { nodes: number; tetrahedra: number; edges: number; renderVertices: number };
   sections: { name: string; offset: number; bytes: number }[];
+  units: PhysicalUnits;
   normalization: { center: number[]; scale: number };
 };
 
@@ -22,6 +25,7 @@ export async function loadSoftTissueAsset(
   if (metadata.version !== 1 || metadata.sourceHash !== hash || metadata.counts.renderVertices !== renderVertexCount) {
     throw new Error('Simulation asset does not match the render face mesh');
   }
+  validatePhysicalUnits(metadata);
   const expected: Record<string, [number, 'float' | 'uint' | 'byte']> = {
     nodes: [metadata.counts.nodes * 3, 'float'],
     tetrahedra: [metadata.counts.tetrahedra * 4, 'uint'],
