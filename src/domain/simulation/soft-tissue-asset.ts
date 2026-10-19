@@ -17,15 +17,24 @@ export async function loadSoftTissueAsset(
   sourceMesh: ArrayBuffer,
   renderVertexCount: number,
 ) {
+  const digest = await crypto.subtle.digest('SHA-256', sourceMesh);
+  const hash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
+  return validateSoftTissueAsset(buffer, hash, renderVertexCount);
+}
+
+/** Shared runtime/build validator; expected identity must come from the source, not the asset header. */
+export function validateSoftTissueAsset(
+  buffer: ArrayBuffer,
+  expectedSourceHash: string,
+  renderVertexCount: number,
+) {
   const view = new DataView(buffer);
   if (view.byteLength < 8 || view.getUint32(0, true) !== 0x31505453) throw new Error('Invalid simulation asset');
   const headerEnd = 8 + view.getUint32(4, true);
   if (headerEnd > buffer.byteLength) throw new Error('Truncated simulation asset');
   const metadata = JSON.parse(new TextDecoder().decode(buffer.slice(8, headerEnd))) as SoftTissueMetadata;
   if (metadata.version !== 3) throw new Error(`Unsupported simulation asset version ${metadata.version}; regenerate as version 3 with bounded embeddings, SI masses and explicit pairs`);
-  const digest = await crypto.subtle.digest('SHA-256', sourceMesh);
-  const hash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
-  if (metadata.sourceHash !== hash || metadata.counts.renderVertices !== renderVertexCount) {
+  if (metadata.sourceHash !== expectedSourceHash || metadata.counts.renderVertices !== renderVertexCount) {
     throw new Error('Simulation asset does not match the render face mesh');
   }
   validatePhysicalUnits(metadata);
