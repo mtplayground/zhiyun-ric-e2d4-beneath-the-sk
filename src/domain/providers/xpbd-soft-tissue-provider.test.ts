@@ -11,7 +11,8 @@ const asset = {
   nodes: new Float32Array([0,0,0, 1,0,0, 0,1,0, 0,0,-1]),
   labels: new Uint8Array([0,0,1,2]), tetrahedra: new Uint32Array([0,1,2,3]), edges: new Uint32Array([0,1]),
   embedding: new Float32Array([0,0.25,0.25,0.25,0.25]),
-  metadata: { version:1, sourceHash:'test', sections:[], units:{metresPerSourceUnit:1,verticalAxis:[0,0,1]}, normalization:{center:[0,0,0],scale:2},counts:{nodes:4,tetrahedra:1,edges:1,renderVertices:1} },
+  masses: new Float64Array([1]), pairs: new Uint32Array(),
+  metadata: { version:2, sourceHash:'test', sections:[], units:{metresPerSourceUnit:1,verticalAxis:[0,0,1]}, normalization:{center:[0,0,0],scale:2},counts:{nodes:4,tetrahedra:1,edges:1,pairs:2,renderVertices:1} },
 };
 const context: DeformationProviderContext = {
   assetUrl: '/face.glb', availableBlendshapes:['jaw_open'],initialBlendshapeWeights:{},
