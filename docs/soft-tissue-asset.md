@@ -11,7 +11,7 @@ The target is an approximate tetrahedron budget; boundary topology means the act
 count differs. The committed proxy has 2,310 tetrahedra and 2,694 render embeddings.
 Invalid/inverted layer cells fail generation rather than being silently omitted.
 The requested 12 mm layer is never reduced automatically. The current generation
-fails; the retained version 1 binary is deliberately rejected by the version 2
+fails; the retained version 1 binary is deliberately rejected by the version 3
 loader. It is not a regenerated 12 mm asset. See the recorded failure below.
 
 The source must be a GLB v2 containing exactly one morph-bearing face primitive.
@@ -67,7 +67,7 @@ Embedding uses containment first, otherwise the exact closest point on the neare
 tetrahedron boundary with nonnegative barycentric weights. Nearest embeddings may
 project vertices onto the proxy surface; they do not promise exact rest reconstruction.
 
-Version 2 retains the STP1 container magic: four ASCII magic bytes, uint32 little-endian JSON header byte length,
+Version 3 retains the STP1 container magic: four ASCII magic bytes, uint32 little-endian JSON header byte length,
 UTF-8 JSON header, then packed sections. Header contains version, exact source GLB
 SHA-256 (no normalization of bytes), normalization, physical units, generation options, counts and
 section offsets relative to the payload. Sections are float32 XYZ nodes, uint32
@@ -89,7 +89,7 @@ little-endian. The low-thousands tetrahedron budget keeps indices exactly
 representable in embedding float32 records.
 
 `loadSoftTissueAsset` checks the original GLB bytes and face vertex count before
-returning the arrays. It rejects every header version other than 2 with an explicit
+returning the arrays. It rejects every header version other than 3 with an explicit
 regeneration diagnostic, validates physical units, complete unique pairing and
 positive finite SI masses. Legacy assets must be regenerated. Call it with the fetched source mesh bytes before using an
 asset with a render mesh. The XPBD provider loads the simulation proxy on demand when physics is enabled;
@@ -112,7 +112,7 @@ The exact diagnostic, source SHA-256, parameters and retained binary SHA-256 are
 recorded in `docs/soft-tissue-generation-failure.json`. The generation command
 above reproduces this failure. Geometry or supplied region annotations need to
 be addressed before a valid replacement binary can be committed. No invalid
-version 2 binary is emitted, and the old binary is not relabeled as version 2.
+version 3 binary is emitted, and the old binary is not relabeled as version 2.
 
 Offset validation also rejects collapsed/reversed inner triangles and proper
 triangle crossings between inner/outer surfaces and among inner triangles.
@@ -143,3 +143,79 @@ individual distances; the debug overlay draws each node-to-target residual and
 keeps the three label colors for visual categorization only. No label implies a
 jaw or skull attachment. Pose-target positions travel with each snapshot so the
 residual corresponds to the submitted pose for that simulation output.
+
+## Bounded embeddings (version 3)
+
+Version 3 adds per-render-vertex sections: uint8 `embeddingFlags`, float32
+`embeddingFade`, float64 `embeddingThickness`, and float64 `embeddingMaxOffsets`.
+Thickness and caps use normalized proxy units. Flag bit 1 means outside the
+simulated volume beyond tolerance; bit 2 means anatomically excluded. Both bits
+may be set. The existing five-component embedding remains tetrahedron index plus
+four **nonnegative, convex** barycentric weights. Weights are float32, so runtime
+normalizes their sum to remove serialization roundoff. Extrapolation is rejected.
+Version 1 and 2 assets are rejected with a version 3 regeneration diagnostic.
+
+For an outside vertex, the generator finds the exact nearest point among all
+four faces of every tetrahedron. It stores that clamped point's barycentric
+weights. Inside or within 0.00001 m of the volume, fade is 1. Beyond that tolerance,
+fade decreases linearly to zero over one local tissue thickness. Local thickness
+is the convexly weighted distance between each contributing node and its
+explicitly paired counterpart, including inner-node contributors.
+
+Options are `--max-offset-fraction 0.5` (positive and at most 1),
+`--outside-tolerance-metres 0.00001`, and `--fade-distance-thicknesses 1`.
+Header `embeddingPolicy` stores all three values. The default maximum displacement
+is half the local thickness (6 mm for a uniform 12 mm layer). Generation and
+encoding fail if coefficients extrapolate or any cap exceeds this fraction of
+the independently computed local thickness. The loader repeats validation on
+serialized values, including the last record.
+
+A finite displacement guarantee is impossible from weights alone when solver
+node displacements are arbitrary. Rendering therefore fades the convex residual
+and clips the resulting vector to the stored cap before reversing normalization.
+It also guards against float32 rounding expanding the vector beyond that cap.
+The bound is on the **simulation offset relative to the blendshape pose**; it
+does not clamp the expression itself. This is a visual displacement limit, not a
+solver collision constraint.
+
+Render accessors at coincident/nearly coincident positions (the shared 1e-6 proxy
+position tolerance) receive identical tetrahedron, weights, flags, fade, thickness
+and cap records. If any copy is excluded, every copy is excluded, preventing a
+render seam at a region boundary. Excluded vertices have zero fade and zero cap.
+The pose-target mapper ignores excluded contributors and weights other
+contributors by their fade.
+
+Separate teeth and eye meshes are outside the selected morph-bearing face
+primitive and never receive the offset attribute. Within the face primitive,
+anatomical exclusions require an explicit `simulationRegions` array in primitive
+or mesh extras, or a source-bound JSON file supplied as `--regions PATH`:
+
+```json
+{
+  "sourceHash": "SHA-256 of the exact GLB bytes",
+  "regions": ["skin", "teeth", "inner-mouth", "eyes"]
+}
+```
+
+The example shows valid labels, not annotations for FaceCap. An actual file must
+have one label per original POSITION accessor vertex, in order, with no missing,
+unknown or ambiguous entries, including the last vertex. The importer checks the
+GLB hash, full record count and every field, and records the raw annotation file's
+SHA-256 in the generation options. It does not infer anatomy from position or
+filenames, and does not copy annotation files or original attachments into public
+assets. The annotation path/hash are recorded for deliberate reproduction.
+
+No FaceCap anatomical annotations were supplied. Even after the existing 12 mm
+inversion is repaired, region annotations are required before a valid bounded
+asset can be emitted; inner-mouth vertices are not guessed. Regeneration still
+fails at proxy triangle 0 (nearest source triangle 7), without thinning or
+replacing the retained legacy binary. The failure report records both this
+inversion and missing region annotations.
+
+`scripts/bounded-embedding.test.mjs` covers exact nearest points, outside flags,
+near-boundary tolerance, monotonic fade, anatomical exclusions, shared-position
+records, source-hash/count/field validation, excessive bound rejection and exact
+serialization hashes. Runtime tests cover arbitrary residual directions,
+float32-safe caps, zero excluded offsets, and the last render vertex. The existing
+upstream integrity test still reproduces the source-hashed failed generation and
+retained binary hash. Tests/builds were not run in this implementation step.

@@ -192,7 +192,7 @@ disposed when hidden or unmounted.
 
 The required 12 mm FaceCap layer still fails generation as recorded in
 `docs/soft-tissue-generation-failure.json`. The committed legacy version 1 binary
-is rejected by the version 2 loader. This issue does not change that binary or
+is rejected by the version 3 loader. This issue does not change that binary or
 weaken its validation. The solver and mapper regression cases use explicit valid
 SI/pairing fixtures, including all preset and slider-mix equilibrium cases.
 Tests/builds and visual retuning were not run in this implementation step.

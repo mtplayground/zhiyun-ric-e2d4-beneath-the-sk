@@ -9,14 +9,14 @@ const bytes=readFileSync(path);
 const metadata=JSON.parse(bytes.toString('utf8',8,8+bytes.readUInt32LE(4)));
 describe('committed physics milestone asset',()=>{
   it('refuses the retained pre-SI asset while 12 mm generation is blocked',()=>{
-    if(metadata.version===2) {
+    if(metadata.version===3) {
       const {asset}=readMilestoneProxy();
       expect(asset.pairs.length).toBe(asset.metadata.counts.nodes);
       expect(asset.masses.length).toBe(asset.metadata.counts.nodes);
       expect(Array.from(asset.masses).every(m=>m>0&&Number.isFinite(m))).toBe(true);
       return;
     }
-    expect(()=>readMilestoneProxy()).toThrow('Regenerate simulation asset as version 2');
+    expect(()=>readMilestoneProxy()).toThrow('Regenerate simulation asset as version 3');
     const failure=JSON.parse(readFileSync(new URL('../../../docs/soft-tissue-generation-failure.json',import.meta.url),'utf8'));
     expect(failure.options.thicknessMetres).toBe(0.012);
     expect(failure.diagnostic.reason).toBe('Inverted or near-zero layer cell');
@@ -25,8 +25,8 @@ describe('committed physics milestone asset',()=>{
   it('keeps zero residual on valid SI data with all three edge classes at a mixed pose',()=>{
     const nodes=[0,0,0,1,0,0,0,0,-0.05,1,0,-0.05],pairs=[0,2,1,3];
     const targets=[0.1,0.2,0.3,1.2,-0.3,0.4,0.1,0.2,0.25,1.2,-0.3,0.35];
-    const proxy={nodes,pairs,labels:[0,0,1,2],tetrahedra:[0,1,2,3],embedding:[0,1,0,0,0,0,0,1,0,0],
-      metadata:{normalization:{center:[0,0,0],scale:2},counts:{renderVertices:2}}};
+    const proxy={nodes,pairs,embeddingFlags:[0,0],embeddingFade:[1,1],embeddingThickness:[0.05,0.05],embeddingMaxOffsets:[0.025,0.025],labels:[0,0,1,2],tetrahedra:[0,1,2,3],embedding:[0,1,0,0,0,0,0,1,0,0],
+      metadata:{embeddingPolicy:{maxOffsetFraction:0.5},normalization:{center:[0,0,0],scale:2},counts:{renderVertices:2}}};
     const a=new XpbdSolver({positions:nodes,pairs,masses:[0.002,0.003,0.004,0.005],edges:[0,1,2,3,0,2,1,3,0,3,1,2],gravity:[0,0,0]});
     a.reset({poseTargets:targets});
     for(let frame=0;frame<60;frame++) expect(a.step()).toEqual({reset:false});
