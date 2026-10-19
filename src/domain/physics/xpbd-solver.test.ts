@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DistanceConstraint, IDENTITY_TRANSFORM, PoseTargetConstraint, XpbdSolver,
+  DistanceConstraint, PoseTargetConstraint, XpbdSolver,
   type ConstraintContext, type SolverOptions, type XpbdConstraint,
 } from './xpbd-solver';
 
@@ -11,13 +11,8 @@ function context(positions: number[], masses: number[], timestep = 0.1): Constra
     poseTargets: new Float64Array(positions.length),
   };
 }
-const translate = (x: number, y: number, z: number) => {
-  const matrix = [...IDENTITY_TRANSFORM];
-  matrix[12] = x; matrix[13] = y; matrix[14] = z;
-  return matrix;
-};
 const base: SolverOptions = {
-  positions: [0, 0, 0], labels: [0], gravity: [0, 0, 0],
+  positions: [0,0,0,0,0,-0.05], masses: [0.002,0.003], pairs: [0,1], gravity: [0,0,0],
   damping: 0, timestep: 0.1, substeps: 1, iterations: 1,
 };
 
@@ -60,120 +55,94 @@ describe('XPBD constraints', () => {
 });
 
 describe('XpbdSolver', () => {
-  it('moves skull and jaw nodes by separate rest-space transforms at zero inverse mass', () => {
-    const solver = new XpbdSolver({ ...base, positions: [1, 0, 0, 0, 1, 0, 0, 0, 0], labels: [1, 2, 0], inverseMasses: [9, 9, 1], poseCompliance: 0, substeps: 3 });
-    const rotation = [0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1, 0, 2, 0, 0, 1];
-    const frame = { poseTargets: [9, 9, 9, 9, 9, 9, 0, 0, 2], skullTransform: rotation, jawTransform: translate(0, -2, 0) };
-    expect(solver.step(frame)).toEqual({ reset: false });
-    expect(Array.from(solver.inverseMasses)).toEqual([0, 0, 1]);
-    expect(Array.from(solver.positions)).toEqual([2, 1, 0, 0, -1, 0, 0, 0, 2]);
-    solver.step(frame); // transforms must not accumulate
-    expect(Array.from(solver.positions)).toEqual([2, 1, 0, 0, -1, 0, 0, 0, 2]);
-    expect(Array.from(solver.velocities.slice(0, 6))).toEqual([0, 0, 0, 0, 0, 0]);
+  it('uses every stored SI mass and applies soft targets to both paired nodes', () => {
+    const solver=new XpbdSolver({...base,poseCompliance:0.02,innerPoseCompliance:0.00002});
+    expect(Array.from(solver.inverseMasses)).toEqual([500,1/0.003]);
+    solver.step({poseTargets:[1,0,0,1,0,-0.05]});
+    expect(solver.positions[0]).toBeGreaterThan(0);
+    expect(solver.positions[0]).toBeLessThan(1);
+    expect(solver.positions[3]).toBeGreaterThan(solver.positions[0]);
+    expect(solver.positions[3]).toBeLessThan(1);
+    expect(solver.velocities[3]).toBeGreaterThan(0);
   });
 
-  it('integrates gravity over configurable fixed substeps and damps velocity', () => {
-    // Zero inverse mass skin stays fixed; freely moving skin has negligible pose pull.
-    const solver = new XpbdSolver({ ...base, poseCompliance: 1e20, gravity: [0, -10, 0], substeps: 2 });
-    solver.step({ poseTargets: [0, 0, 0] });
+  it('sets all edge lengths from the submitted pose, including inner and layer edges',()=>{
+    const positions=[0,0,0,1,0,0,0,0,-0.05,1,0,-0.05];
+    const targets=[0,0,0,2,0.4,0.3,0,0,-0.05,2,0.4,0.25];
+    const edges=[0,1,2,3,0,2,1,3,0,3,1,2];
+    const solver=new XpbdSolver({...base,positions,masses:[0.001,0.002,0.003,0.004],pairs:[0,2,1,3],edges,substeps:4,iterations:5});
+    solver.reset({poseTargets:targets});
+    for(let i=0;i<20;i++) expect(solver.step()).toEqual({reset:false});
+    expect(Array.from(solver.positions)).toEqual(targets);
+    expect(solver.velocities.every(v=>v===0)).toBe(true);
+  });
+
+  it('updates edge targets once per submission, before any substeps',()=>{
+    const solver=new XpbdSolver({...base,edges:[0,1],substeps:4});
+    const first=[0,0,0,1,0,0];solver.reset({poseTargets:first});
+    first[3]=20; // caller mutation cannot change submitted targets
+    solver.step();
+    expect(Array.from(solver.positions)).toEqual([0,0,0,1,0,0]);
+    solver.reset({poseTargets:[0,0,0,2,0,0]});
+    solver.step();expect(Array.from(solver.positions)).toEqual([0,0,0,2,0,0]);
+  });
+
+  it('integrates gravity on inner and outer nodes and damps velocity',()=>{
+    const solver=new XpbdSolver({...base,poseCompliance:1e20,innerPoseCompliance:1e20,gravity:[0,-10,0],substeps:2});
+    solver.step({poseTargets:base.positions});
     expect(solver.positions[1]).toBeCloseTo(-0.075);
-    expect(solver.velocities[1]).toBeCloseTo(-1);
-    const damped = new XpbdSolver({ ...base, poseCompliance: 1e20, damping: Math.log(2) / 0.1 });
-    damped.velocities[0] = 2;
-    damped.step({ poseTargets: [0, 0, 0] });
-    expect(damped.velocities[0]).toBeCloseTo(1);
-    const fixed = new XpbdSolver({ ...base, inverseMasses: [0], gravity: [0, -10, 0] });
-    fixed.step({ poseTargets: [2, 2, 2] });
-    expect(Array.from(fixed.positions)).toEqual([0, 0, 0]);
+    expect(solver.positions[4]).toBeCloseTo(-0.075);
+    const damped=new XpbdSolver({...base,poseCompliance:1e20,innerPoseCompliance:1e20,damping:Math.log(2)/0.1});
+    damped.velocities[0]=2;damped.velocities[3]=2;
+    damped.step();expect(damped.velocities[0]).toBeCloseTo(1);expect(damped.velocities[3]).toBeCloseTo(1);
   });
 
-  it('makes stronger compliant pose pulls and remains deterministic over repeated frames', () => {
-    const stiff = new XpbdSolver({ ...base, poseCompliance: 0.001 });
-    const soft = new XpbdSolver({ ...base, poseCompliance: 1 });
-    stiff.step({ poseTargets: [1, 0, 0] }); soft.step({ poseTargets: [1, 0, 0] });
-    expect(stiff.positions[0]).toBeGreaterThan(soft.positions[0]);
-    const options = { ...base, positions: [0, 0, 0, 1, 0, 0], labels: [1, 0], edges: [0, 1], substeps: 4, iterations: 3, distanceCompliance: 0.001 };
-    const a = new XpbdSolver(options), b = new XpbdSolver(options);
-    for (let i = 0; i < 30; i++) {
-      const frame = { poseTargets: [0, 0, 0, 1, i / 30, 0], skullTransform: translate(i / 100, 0, 0) };
-      expect(a.step(frame)).toEqual(b.step(frame));
-      expect(a.positions).toEqual(b.positions);
-      expect(a.velocities).toEqual(b.velocities);
+  it('applies independent live skin and inner stiffness without replacing state',()=>{
+    const solver=new XpbdSolver({...base,poseCompliance:1e20,innerPoseCompliance:1e20});
+    const positions=solver.positions,velocities=solver.velocities;
+    solver.configure({poseCompliance:1,innerPoseCompliance:0.00001,damping:4});
+    solver.step({poseTargets:[1,0,0,1,0,-0.05]});
+    expect(solver.positions).toBe(positions);expect(solver.velocities).toBe(velocities);
+    expect(solver.positions[3]).toBeGreaterThan(solver.positions[0]);
+    expect(()=>solver.configure({poseCompliance:0})).toThrow('soft');
+    expect(()=>solver.configure({innerPoseCompliance:0})).toThrow('soft');
+  });
+
+  it('recovers every node to the current finite target, clears velocities and restores masses',()=>{
+    const solver=new XpbdSolver(base),targets=[1,2,3,4,5,6];
+    solver.positions[0]=NaN;solver.velocities[5]=Infinity;solver.inverseMasses[1]=0;
+    expect(solver.step({poseTargets:targets}).reset).toBe(true);
+    expect(Array.from(solver.positions)).toEqual(targets);
+    expect(solver.velocities.every(v=>v===0)).toBe(true);
+    expect(solver.inverseMasses[1]).toBe(1/0.003);
+    expect(solver.step()).toEqual({reset:false});
+    expect(solver.reset({poseTargets:[0,0,0,1,1,1]})).toEqual({reset:true,reason:'Simulation reset requested'});
+    expect(Array.from(solver.positions)).toEqual([0,0,0,1,1,1]);
+  });
+
+  it('retains finite target coordinates and recovers from extension constraint failure',()=>{
+    const solver=new XpbdSolver(base);solver.reset({poseTargets:[1,2,3,4,5,6]});
+    expect(solver.step({poseTargets:[NaN,4,Infinity,4,5,6]}).reset).toBe(true);
+    expect(Array.from(solver.positions)).toEqual([1,4,3,4,5,6]);
+    const extra: XpbdConstraint={reset(){},project(state){state.positions[0]=Infinity;}};
+    const extended=new XpbdSolver({...base,constraints:[extra]});
+    expect(extended.step().reset).toBe(true);expect(Array.from(extended.positions)).toEqual(base.positions);
+  });
+
+  it('is deterministic across changes in the submitted expression',()=>{
+    const a=new XpbdSolver({...base,edges:[0,1]}),b=new XpbdSolver({...base,edges:[0,1]});
+    for(let i=0;i<30;i++) {
+      const frame={poseTargets:[i/30,0,0,i/30,0,-0.05]};
+      expect(a.step(frame)).toEqual(b.step(frame));expect(a.positions).toEqual(b.positions);expect(a.velocities).toEqual(b.velocities);
     }
   });
 
-  it('resets corrupt state to the current pose, clears velocity and resumes', () => {
-    const solver = new XpbdSolver(base);
-    solver.positions[0] = NaN; solver.velocities[2] = Infinity;
-    expect(solver.step({ poseTargets: [1, 2, 3] }).reset).toBe(true);
-    expect(Array.from(solver.positions)).toEqual([1, 2, 3]);
-    expect(Array.from(solver.velocities)).toEqual([0, 0, 0]);
-    expect(solver.step({ poseTargets: [1, 2, 3] })).toEqual({ reset: false });
-  });
-
-  it('uses last finite target coordinates for invalid targets and reports invalid transforms', () => {
-    const solver = new XpbdSolver({ ...base, poseCompliance: 0 });
-    solver.step({ poseTargets: [1, 2, 3] });
-    expect(solver.step({ poseTargets: [NaN, 4, Infinity] }).reset).toBe(true);
-    expect(Array.from(solver.positions)).toEqual([1, 4, 3]);
-    expect(solver.step({ poseTargets: [3, 2, 1], jawTransform: [NaN] }).reset).toBe(true);
-    expect(Array.from(solver.positions)).toEqual([3, 2, 1]);
-  });
-
-  it('supports additional constraints and recovers from non-finite constraint output', () => {
-    let resets = 0;
-    const extra: XpbdConstraint = {
-      reset() { resets++; },
-      project(state) { state.positions[0] = Infinity; },
-    };
-    const solver = new XpbdSolver({ ...base, constraints: [extra] });
-    expect(solver.step({ poseTargets: [4, 5, 6] }).reset).toBe(true);
-    expect(Array.from(solver.positions)).toEqual([4, 5, 6]);
-    expect(resets).toBe(2); // start substep plus recovery
-  });
-
-  it('detects finite-input arithmetic overflow and restores attachments on reset', () => {
-    const solver = new XpbdSolver({ ...base, positions: [1, 0, 0, 0, 0, 0], labels: [1, 0], gravity: [Number.MAX_VALUE, 0, 0], timestep: 2 });
-    const result = solver.step({ poseTargets: [1, 0, 0, 3, 2, 1], skullTransform: translate(2, 0, 0) });
-    expect(result.reset).toBe(true);
-    expect(Array.from(solver.positions)).toEqual([3, 0, 0, 3, 2, 1]);
-    expect(solver.velocities.every(v => v === 0)).toBe(true);
-  });
-
-  it('rejects malformed topology and invalid configuration before stepping', () => {
-    for (const patch of [{ timestep: 0 }, { substeps: 1.5 }, { iterations: 0 }, { damping: -1 }, { poseCompliance: NaN }, { inverseMasses: [-1] }, { edges: [0, 2] }, { edges: [0] }, { labels: [7] }, { positions: [Infinity, 0, 0] }]) {
-      expect(() => new XpbdSolver({ ...base, ...patch })).toThrow();
+  it('rejects hard pins, invalid masses, malformed pairs and invalid configuration',()=>{
+    for(const patch of [{masses:[0,1]},{masses:[-1,1]},{masses:[NaN,1]},{masses:[Infinity,1]},
+      {pairs:[0,0]},{pairs:[0,2]},{pairs:[]},{poseCompliance:0},{innerPoseCompliance:0},{poseCompliance:NaN},
+      {timestep:0},{substeps:1.5},{iterations:0},{damping:-1},{edges:[0,2]},{edges:[0]},{positions:[Infinity,0,0,0,0,0]}]) {
+      expect(()=>new XpbdSolver({...base,...patch})).toThrow();
     }
-    expect(() => new XpbdSolver(base).step({ poseTargets: [] })).toThrow('dimensions');
+    expect(()=>new XpbdSolver(base).step({poseTargets:[]})).toThrow('dimensions');
   });
-});
-
-it('applies live gravity, damping and pose compliance without replacing particle state', () => {
-  const solver = new XpbdSolver({ ...base, poseCompliance:1e20 });
-  solver.velocities[0]=2;
-  const positions=solver.positions, velocities=solver.velocities;
-  solver.configure({gravity:[0,-10,0],damping:Math.log(2)/0.1,poseCompliance:1e20,distanceCompliance:0.01});
-  expect(solver.positions).toBe(positions);expect(solver.velocities).toBe(velocities);
-  expect(solver.velocities[0]).toBe(2);
-  solver.step({poseTargets:[0,0,0]});
-  expect(solver.velocities[0]).toBeCloseTo(1);
-  expect(solver.positions[1]).toBeCloseTo(-0.1);
-  solver.configure({poseCompliance:0});
-  solver.step({poseTargets:[1,2,3]});
-  expect(Array.from(solver.positions)).toEqual([1,2,3]);
-});
-
-it('applies live tissue compliance and resets to current attachments with zero velocity', () => {
-  const solver=new XpbdSolver({...base,positions:[0,0,0,1,0,0],labels:[1,0],edges:[0,1],poseCompliance:1e20});
-  solver.positions[3]=2;
-  solver.configure({distanceCompliance:1});
-  solver.step({poseTargets:[0,0,0,1,0,0]});
-  expect(solver.positions[3]).toBeGreaterThan(1.9);
-  solver.configure({distanceCompliance:0});
-  solver.step({poseTargets:[0,0,0,1,0,0]});
-  expect(solver.positions[3]).toBeCloseTo(1);
-  const result=solver.reset({poseTargets:[0,0,0,2,3,4],skullTransform:translate(1,0,0)});
-  expect(result).toEqual({reset:true,reason:'Simulation reset requested'});
-  expect(Array.from(solver.positions)).toEqual([1,0,0,2,3,4]);
-  expect(Array.from(solver.velocities)).toEqual([0,0,0,0,0,0]);
 });

@@ -9,7 +9,7 @@ export function startPhysicsLoop(
   error: (error: unknown) => void,
 ) {
   const solver = new XpbdSolver(options);
-  let frame: SolverFrame = { poseTargets: solver.positions.slice() };
+  
   let previous = performance.now();
   let accumulator = 0;
   const started = previous;
@@ -31,7 +31,7 @@ export function startPhysicsLoop(
     try {
       while (accumulator + 1e-12 >= solver.timestep) {
         const stepStart = performance.now();
-        const next = solver.step(frame);
+        const next = solver.step();
         elapsed += performance.now()-stepStart;
         steps++; totalSteps++;
         if (next.reset) nonFiniteResets++;
@@ -53,17 +53,13 @@ export function startPhysicsLoop(
     setFrame(next: SolverFrame) {
       if (stopped) return;
       if (next.poseTargets.length !== solver.positions.length) throw new Error('Invalid pose target dimensions');
-      frame = {
-        poseTargets: Float64Array.from(next.poseTargets),
-        skullTransform: next.skullTransform && [...next.skullTransform],
-        jawTransform: next.jawTransform && [...next.jawTransform],
-      };
+      solver.submitFrame({ poseTargets: Float64Array.from(next.poseTargets) });
     },
     configure(settings: SolverSettings) { if (!stopped) solver.configure(settings); },
     reset() {
       if (stopped) return;
       accumulator = 0; previous = performance.now();
-      const result = solver.reset(frame);
+      const result = solver.reset();
       output(solver.positions.slice(), result, solver.getPoseTargets(), timing());
     },
     stop() { stopped = true; clearInterval(timer); },

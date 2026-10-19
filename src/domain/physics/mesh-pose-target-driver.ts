@@ -1,4 +1,4 @@
-import { createPoseTargetMapper, type JawSettings, type PoseProxy } from './pose-target-mapper';
+import { createPoseTargetMapper, type PoseProxy } from './pose-target-mapper';
 import type { SolverFrame } from './xpbd-solver';
 
 /** Structural subset of Three's mesh/attribute API; no Three runtime dependency. */
@@ -35,12 +35,11 @@ export function createMeshPoseTargetDriver(
   mesh: MorphFaceMesh,
   proxy: PoseProxy,
   sendFrame: (frame: SolverFrame) => void,
-  jaw?: JawSettings,
 ) {
   const surface = readMorphFaceSurface(mesh);
   const mapper = createPoseTargetMapper({
     ...surface,
-  }, proxy, jaw);
+  }, proxy);
   return {
     mapper,
     update() {

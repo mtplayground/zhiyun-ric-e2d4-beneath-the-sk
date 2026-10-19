@@ -23,13 +23,14 @@ try {
     server.ssrLoadModule('/src/domain/physics/physics-telemetry.ts'),
   ]);
   const {asset,assetHash}=readMilestoneProxy();
-  const solver=new XpbdSolver({positions:asset.nodes,labels:asset.labels,edges:asset.edges,substeps:options.substeps,iterations:options.iterations,gravity:[0,0,-0.5],distanceCompliance:0.00001,poseCompliance:0.0001});
+  const solver=new XpbdSolver({positions:asset.nodes,masses:asset.masses,pairs:asset.pairs,edges:asset.edges,substeps:options.substeps,iterations:options.iterations,gravity:[0,0,0]});
   const timings=[],embeddingTimings=[];
   let resets=0,maximumDisplacement=0,checksum=0;
   // Synthetic skin pulse over the real committed topology. This is explicitly a
   // solver/embedding benchmark, not a claim about an anatomical Smile/AA pose.
   for(let frame=0;frame<options.warmup+options.steps;frame++) {
-    const targets=Float64Array.from(asset.nodes,(v,i)=>asset.labels[Math.floor(i/3)]===0&&i%3===2?v+0.01*Math.sin(frame*0.1):v);
+    const targets=Float64Array.from(asset.nodes);
+    for(let i=0;i<asset.pairs.length;i+=2) for(const node of [asset.pairs[i],asset.pairs[i+1]]) targets[node*3+2]+=0.01*Math.sin(frame*0.1);
     const start=performance.now();
     const result=solver.step({poseTargets:targets});
     const stepMs=performance.now()-start;

@@ -5,3 +5,4 @@ export * from './use-physics-host';
 export * from './pose-target-mapper';
 export * from './mesh-pose-target-driver';
 export * from './physical-units';
+export * from './gravity';

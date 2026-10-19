@@ -1,3 +1,4 @@
+import { gravityFromMetadata } from './gravity';
 import type { SolverTiming } from './physics-telemetry';
 import { loadSoftTissueAsset } from '../simulation/soft-tissue-asset';
 import { startPhysicsLoop } from './physics-loop';
@@ -23,12 +24,14 @@ export interface PhysicsWorker {
   postMessage(message: PhysicsRequest, transfer?: Transferable[]): void;
   terminate(): void;
 }
+export type PhysicsHostSettings = SolverSettings & { gravityStrength?: number };
+
 export interface PhysicsHostOptions {
   /** Exact GLB bytes used to load the current render face, not a separate fetch. */
   sourceMesh: ArrayBuffer;
   renderVertexCount: number;
   assetUrl?: string;
-  solver?: Omit<WorkerSolverOptions, 'positions' | 'labels' | 'edges'>;
+  solver?: Omit<WorkerSolverOptions, 'positions' | 'masses' | 'pairs' | 'edges'> & { gravityStrength?: number };
   fallbackSubsteps?: number;
   onPositions(positions: Float64Array, result: StepResult, poseTargets: Float64Array, timing?: SolverTiming): void;
   onAssetReady?(asset: Awaited<ReturnType<typeof loadSoftTissueAsset>>): void;
@@ -38,7 +41,7 @@ export interface PhysicsHostOptions {
 export interface PhysicsHost {
   ready: Promise<void>;
   sendFrame(frame: SolverFrame): void;
-  configure(settings: SolverSettings): void;
+  configure(settings: PhysicsHostSettings): void;
   reset(): void;
   dispose(): void;
 }
@@ -50,7 +53,16 @@ export function createPhysicsHost(options: PhysicsHostOptions): PhysicsHost {
   let fallback: ReturnType<typeof startPhysicsLoop> | undefined;
   let solverOptions: WorkerSolverOptions | undefined;
   let latest: SolverFrame | undefined;
-  let settings: SolverSettings = {};
+  let settings: PhysicsHostSettings = {};
+  let baseGravity: readonly [number, number, number] | undefined;
+  function resolveSettings(next: PhysicsHostSettings): SolverSettings {
+    const { gravityStrength, ...solver } = next;
+    if (gravityStrength !== undefined) {
+      if (!Number.isFinite(gravityStrength) || gravityStrength < 0) throw new Error('Invalid gravity strength');
+      if (baseGravity) solver.gravity = baseGravity.map(value => value * gravityStrength) as [number, number, number];
+    }
+    return solver;
+  }
   let resetPending = false;
   let resetTotal = 0, lastBackendResets = 0;
   let frameInFlight = false;
@@ -94,7 +106,7 @@ export function createPhysicsHost(options: PhysicsHostOptions): PhysicsHost {
     workerReady = false;
     const requested = solverOptions.substeps ?? 4;
     const substeps = Math.max(1, Math.min(options.fallbackSubsteps ?? 2, Math.max(1, requested - 1)));
-    fallback = startPhysicsLoop({ ...solverOptions, ...settings, substeps }, output, error => diagnostic('solver-error', String(error)));
+    fallback = startPhysicsLoop({ ...solverOptions, ...resolveSettings(settings), substeps }, output, error => diagnostic('solver-error', String(error)));
     if (latest) fallback.setFrame(latest);
     if (resetPending) { resetPending = false; fallback.reset(); }
     diagnostic('fallback', `${reason}; using main-thread physics with ${substeps} substep(s)`);
@@ -106,7 +118,12 @@ export function createPhysicsHost(options: PhysicsHostOptions): PhysicsHost {
       const asset = await loadSoftTissueAsset(bytes, options.sourceMesh, options.renderVertexCount);
       if (disposed) return;
       options.onAssetReady?.(asset);
-      solverOptions = { ...options.solver, ...settings, positions: asset.nodes, labels: asset.labels, edges: asset.edges };
+      baseGravity = gravityFromMetadata(asset.metadata);
+      const initial = { ...options.solver, ...settings };
+      const resolved = resolveSettings(initial);
+      solverOptions = { ...initial, ...resolved, gravity: resolved.gravity ?? baseGravity,
+        positions: asset.nodes, masses: asset.masses, pairs: asset.pairs, edges: asset.edges };
+      delete (solverOptions as WorkerSolverOptions & {gravityStrength?: number}).gravityStrength;
       try {
         worker = options.workerFactory ? options.workerFactory() : new Worker(new URL('./physics.worker.ts', import.meta.url), { type: 'module' });
         worker.onmessage = ({ data }) => {
@@ -116,7 +133,7 @@ export function createPhysicsHost(options: PhysicsHostOptions): PhysicsHost {
               clearTimeout(startupTimer);
               workerReady = true;
               diagnostic('worker', 'Physics running in a dedicated worker');
-              if (Object.keys(settings).length) worker?.postMessage({ type: 'configure', settings });
+              if (Object.keys(settings).length) worker?.postMessage({ type: 'configure', settings: resolveSettings(settings) });
               flush();
               if (resetPending) { worker?.postMessage({ type: 'reset' }); resetPending = false; }
             } else if (data.type === 'frame-accepted') {
@@ -142,7 +159,7 @@ export function createPhysicsHost(options: PhysicsHostOptions): PhysicsHost {
     ready,
     sendFrame(frame) {
       if (disposed) return;
-      latest = { poseTargets: Float64Array.from(frame.poseTargets), jawTransform: frame.jawTransform && [...frame.jawTransform], skullTransform: frame.skullTransform && [...frame.skullTransform] };
+      latest = { poseTargets: Float64Array.from(frame.poseTargets) };
       frameVersion++;
       try {
         fallback?.setFrame(latest);
@@ -152,9 +169,11 @@ export function createPhysicsHost(options: PhysicsHostOptions): PhysicsHost {
     configure(next) {
       if (disposed) return;
       settings = { ...settings, ...next, ...(next.gravity ? { gravity: [...next.gravity] as [number, number, number] } : {}) };
+      if (next.gravity) delete settings.gravityStrength;
+      if (next.gravityStrength !== undefined) delete settings.gravity;
       try {
-        fallback?.configure(settings);
-        if (workerReady) worker?.postMessage({ type: 'configure', settings });
+        fallback?.configure(resolveSettings(settings));
+        if (workerReady) worker?.postMessage({ type: 'configure', settings: resolveSettings(settings) });
       } catch (error) { diagnostic('solver-error', String(error)); }
     },
     reset() {

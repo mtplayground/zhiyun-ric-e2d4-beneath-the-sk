@@ -11,7 +11,7 @@ const asset = {
   nodes: new Float32Array([0,0,0, 1,0,0, 0,1,0, 0,0,-1]),
   labels: new Uint8Array([0,0,1,2]), tetrahedra: new Uint32Array([0,1,2,3]), edges: new Uint32Array([0,1]),
   embedding: new Float32Array([0,0.25,0.25,0.25,0.25]),
-  masses: new Float64Array([1]), pairs: new Uint32Array(),
+  masses: new Float64Array([0.002,0.003,0.004,0.005]), pairs: new Uint32Array([0,2,1,3]),
   metadata: { version:2, sourceHash:'test', sections:[], units:{metresPerSourceUnit:1,verticalAxis:[0,0,1]}, normalization:{center:[0,0,0],scale:2},counts:{nodes:4,tetrahedra:1,edges:1,pairs:2,renderVertices:1} },
 };
 const context: DeformationProviderContext = {
@@ -39,7 +39,7 @@ describe('XPBD provider', () => {
     const kinematic=createKinematicBlendshapeProvider(); kinematic.initialize(context);
     const frame=provider.evaluateFrame(input);
     expect(frame.blendshapeWeights).toEqual(kinematic.evaluateFrame(input).blendshapeWeights);
-    expect(host.sendFrame).toHaveBeenCalledWith(expect.objectContaining({poseTargets:expect.any(Float64Array),jawTransform:expect.any(Array)}));
+    expect(host.sendFrame).toHaveBeenCalledWith(expect.objectContaining({poseTargets:expect.any(Float64Array)}));
     provider.dispose!();
   });
   it('returns zero offsets at the pose and embeds only simulated residuals', () => {

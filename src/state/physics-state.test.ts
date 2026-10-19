@@ -32,9 +32,14 @@ describe('physics controls', () => {
     expect(usePhysicsState.getState().settings).toBe(settings);
     expect(useControlState.getState()).toBe(controls);
   });
-  it('scales gravity downward in upright FaceCap coordinates', () => {
-    expect(toSolverSettings(DEFAULT_PHYSICS_SETTINGS).gravity).toEqual([0,0,-0.5]);
-    expect(toSolverSettings({...DEFAULT_PHYSICS_SETTINGS,gravityStrength:20}).gravity).toEqual([0,0,-10]);
-    expect(toSolverSettings({...DEFAULT_PHYSICS_SETTINGS,gravityStrength:0}).gravity![2]).toBeCloseTo(0);
+  it('keeps dimensionless gravity strength for the asset-aware host and separate soft pose settings', () => {
+    expect(toSolverSettings(DEFAULT_PHYSICS_SETTINGS).gravityStrength).toBe(1);
+    expect(toSolverSettings({...DEFAULT_PHYSICS_SETTINGS,gravityStrength:0}).gravityStrength).toBe(0);
+    expect(toSolverSettings(DEFAULT_PHYSICS_SETTINGS).gravity).toBeUndefined();
+    expect(DEFAULT_PHYSICS_SETTINGS.innerPoseCompliance).toBeLessThan(DEFAULT_PHYSICS_SETTINGS.poseCompliance/100);
+    initial.setSetting('innerPoseCompliance',0);
+    expect(usePhysicsState.getState().settings.innerPoseCompliance).toBeGreaterThan(0);
+    initial.setSetting('poseCompliance',0);
+    expect(usePhysicsState.getState().settings.poseCompliance).toBeGreaterThan(0);
   });
 });
