@@ -1,16 +1,25 @@
+import type { SolverTiming } from './physics-telemetry';
 import { XpbdSolver, type SolverFrame, type SolverOptions, type SolverSettings, type StepResult } from './xpbd-solver';
 
 /** Timer delivery is variable; simulation increments are always fixed. Long
  * background pauses are dropped rather than causing unbounded catch-up work. */
 export function startPhysicsLoop(
   options: SolverOptions,
-  output: (positions: Float64Array, result: StepResult, poseTargets: Float64Array) => void,
+  output: (positions: Float64Array, result: StepResult, poseTargets: Float64Array, timing: SolverTiming) => void,
   error: (error: unknown) => void,
 ) {
   const solver = new XpbdSolver(options);
   let frame: SolverFrame = { poseTargets: solver.positions.slice() };
   let previous = performance.now();
   let accumulator = 0;
+  const started = previous;
+  let totalSteps = 0, nonFiniteResets = 0;
+  let lastSolverMs = 0;
+  const timing = (): SolverTiming => ({
+    solverTimeMs: lastSolverMs,
+    simulationRateHz: totalSteps / Math.max((performance.now()-started)/1000, 1e-6),
+    nonFiniteResets,
+  });
   let stopped = false;
   const timer = setInterval(() => {
     if (stopped) return;
@@ -18,15 +27,22 @@ export function startPhysicsLoop(
     accumulator = Math.min(accumulator + Math.max(0, now - previous) / 1000, solver.timestep * 4);
     previous = now;
     let result: StepResult = { reset: false };
-    let stepped = false;
+    let steps = 0, elapsed = 0;
     try {
       while (accumulator + 1e-12 >= solver.timestep) {
+        const stepStart = performance.now();
         const next = solver.step(frame);
+        elapsed += performance.now()-stepStart;
+        steps++; totalSteps++;
+        if (next.reset) nonFiniteResets++;
         if (next.reset) result = next;
         accumulator = Math.max(0, accumulator - solver.timestep);
-        stepped = true;
+
       }
-      if (stepped) output(solver.positions.slice(), result, Float64Array.from(frame.poseTargets));
+      if (steps) {
+        lastSolverMs = elapsed / steps;
+        output(solver.positions.slice(), result, solver.getPoseTargets(), timing());
+      }
     } catch (cause) {
       stopped = true;
       clearInterval(timer);
@@ -48,7 +64,7 @@ export function startPhysicsLoop(
       if (stopped) return;
       accumulator = 0; previous = performance.now();
       const result = solver.reset(frame);
-      output(solver.positions.slice(), result, Float64Array.from(frame.poseTargets));
+      output(solver.positions.slice(), result, solver.getPoseTargets(), timing());
     },
     stop() { stopped = true; clearInterval(timer); },
   };

@@ -17,6 +17,7 @@ export type HeadAssetStatus = 'idle' | 'loading' | 'loaded' | 'error';
 export type LoadedHeadAsset = {
   scene: Object3D;
   morphTargetNames: string[];
+  physicsFace?: Mesh;
   physics?: { sourceMesh: ArrayBuffer; surface: PoseSurface };
   applyVertexDeltas: (deltas?: VertexDeltaFrame) => void;
   dispose: () => void;
@@ -107,6 +108,7 @@ export function prepareNeutralHeadAsset(gltf: GLTF, sourceMesh: ArrayBuffer): Lo
   const offsets = face ? createRenderOffsetLayer(face) : undefined;
   return {
     physics,
+    physicsFace: face,
     applyVertexDeltas: deltas => offsets?.apply(deltas?.positions),
     dispose: () => offsets?.dispose(),
     scene: gltf.scene,

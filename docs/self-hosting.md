@@ -128,3 +128,26 @@ restores the current pose and jaw attachments and clears velocities and constrai
 multipliers. It leaves control activations, the selected preset, and physics
 settings unchanged. Settings are session state and are not persisted across page
 reloads.
+
+### Physics diagnostics
+
+While physics is enabled, the viewport's **Proxy Hidden/Visible** button toggles
+an optional wireframe and particle overlay. Cyan identifies skin nodes, amber
+skull-attached nodes, and pink jaw-attached nodes. Edges include the tetrahedral
+interior. The overlay follows the face's complete scene transform and draws
+through the surface so attached inner nodes remain visible. It is hidden by
+default and disappears when physics is disabled.
+
+The Live Readout reports average solver milliseconds per fixed step in the most
+recent timer batch, effective completed fixed steps per wall-clock second since
+backend startup, maximum node displacement relative to the matching pose target,
+and mean skin-node distance from that target. Distances are in normalized face
+extent units. Numerical resets are counted in the solver loop, including samples
+dropped by output backpressure; manual Reset simulation actions do not increment
+this counter. The counter is retained across worker-to-main-thread fallback and
+cleared when a new physics session starts. Fallback starts a new rate/timing window.
+
+The Deformation Curve can show maximum displacement in pink on the right axis,
+alongside activation energy in cyan on the left. Use its checkbox to hide that
+series. Missing/inactive physics samples are gaps rather than invented zeros.
+Both curves continue sampling during an unchanged pose, making settling visible.

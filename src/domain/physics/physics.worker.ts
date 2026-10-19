@@ -21,11 +21,11 @@ scope.onmessage = ({ data }) => {
         loop?.stop();
         awaitingAck = false;
         pendingReset = { reset: false };
-        loop = startPhysicsLoop(data.options, (positions, result, poseTargets) => {
+        loop = startPhysicsLoop(data.options, (positions, result, poseTargets, timing) => {
           if (result.reset) pendingReset = result;
           if (awaitingAck) return;
           awaitingAck = true;
-          scope.postMessage({ type: 'positions', positions, poseTargets, result: pendingReset }, [positions.buffer as ArrayBuffer, poseTargets.buffer as ArrayBuffer]);
+          scope.postMessage({ type: 'positions', positions, poseTargets, timing, result: pendingReset }, [positions.buffer as ArrayBuffer, poseTargets.buffer as ArrayBuffer]);
           pendingReset = { reset: false };
         }, fail);
         scope.postMessage({ type: 'ready' });

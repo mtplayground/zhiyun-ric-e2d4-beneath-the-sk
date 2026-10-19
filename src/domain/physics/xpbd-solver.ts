@@ -177,6 +177,8 @@ export class XpbdSolver implements ParticleState {
     this.constraints.push(...(options.constraints ?? []));
   }
 
+  getPoseTargets(): Float64Array { return this.targets.slice(); }
+
   /** Apply tunables without recreating particles or discarding velocities. */
   configure(settings: SolverSettings) {
     if (settings.distanceCompliance !== undefined) nonnegative(settings.distanceCompliance, 'distance compliance');
