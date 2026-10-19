@@ -39,7 +39,7 @@ test('worker physics supports reference poses, live tuning, overlay, reset and r
   await testInfo.attach('kinematic-face',{body:baseline,contentType:'image/png'});
   await testInfo.attach('simulated-face',{body:simulated,contentType:'image/png'});
   for(const [label,id,pose] of [['Expressions / Emotions','expression-smile','Smile'],['Phoneme','phoneme-aa','AA'],['Phoneme','phoneme-neutral','neutral']]) {
-    await page.getByLabel(label,{exact:true}).selectOption(id);
+    await page.getByRole('combobox',{name:label,exact:true}).selectOption(id);
     await expect(page.getByText(new RegExp(`Current Pose: ${pose} \\| Frame:`))).toBeVisible();
     await expect(page.getByTestId('physics-telemetry')).toBeVisible();
   }
