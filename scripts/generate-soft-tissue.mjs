@@ -423,7 +423,7 @@ export async function main(args=process.argv.slice(2)) {
     if(error instanceof Error) {
       let retainedAssetSha256=null;
       try {retainedAssetSha256=hash(await readFile(options.output));} catch { /* first generation may have no asset */ }
-      await writeFile('docs/soft-tissue-generation-failure.json',JSON.stringify({source:options.source,sourceHash:hash(bytes),retainedAssetSha256,renderVertices:face.positions.length,missingRequirements:face.regions?[]:['Source-bound per-vertex skin/teeth/inner-mouth/eyes region annotations'],
+      await writeFile('docs/soft-tissue-generation-failure.json',JSON.stringify({source:options.source,sourceHash:hash(bytes),retainedAssetSha256,renderVertices:face.positions.length,missingRequirements:face.regions||face.simulationMask?[]:['Source-bound per-vertex skin/teeth/inner-mouth/eyes region annotations'],
         options:{target:options.target,thicknessMetres:options.thicknessMetres,mouthLine:options.mouthLine,metresPerSourceUnit:options.metresPerSourceUnit,maxOffsetFraction:options.maxOffsetFraction,outsideToleranceMetres:options.outsideToleranceMetres,fadeDistanceThicknesses:options.fadeDistanceThicknesses,regionsHash:options.regionsHash,regionsPath:options.regionsPath},diagnostic:error.diagnostic??{reason:error.message}},null,2)+'\n');
     }
     throw error;

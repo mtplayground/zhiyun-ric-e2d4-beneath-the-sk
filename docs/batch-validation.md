@@ -37,6 +37,13 @@ connectivity and orientation: 1,867 eligible vertices and 827 excluded vertices.
 No anatomical annotations are fabricated. Unknown sources still require explicit
 region input instead of silently inheriting this selection.
 
+Real FaceCap browser validation also exposed an activation-normalization mismatch:
+small interpolated weights removed from the readout were being interpreted as a
+new user target, freezing transitions. Runtime feedback now uses the same
+normalization as the control store; geometry still receives the full evaluated
+weights. The real expression sweep checks exact resolved influences and catches
+this regression, including Smile-to-Frown with low-weight channels.
+
 A uniformly sampled radial convex envelope supplies the coarse simulation
 surface. It bridges openings and smooths concavities; it is not a detailed
 anatomical reconstruction. This approximation affects simulated residuals only:

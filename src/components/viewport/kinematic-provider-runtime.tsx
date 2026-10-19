@@ -23,6 +23,7 @@ import {
 } from '@/domain/providers';
 import {
   controlActions,
+  normalizeActivationValues,
   useControlState,
   useActivationValues,
   useActiveControlMode,
@@ -316,7 +317,7 @@ export default function KinematicProviderRuntime({
         } : undefined,
       });
       currentWeightsRef.current = initialBlendshapeWeights;
-      providerLastWeightsRef.current = initialBlendshapeWeights;
+      providerLastWeightsRef.current = normalizeActivationValues(initialBlendshapeWeights);
       currentPoseLabelRef.current = latestPoseLabelRef.current;
       latestDiagnosticPoseLabelRef.current = latestPoseLabelRef.current;
       initializedRef.current = true;
@@ -442,7 +443,10 @@ export default function KinematicProviderRuntime({
       ? provider.updateVertexDeltas?.(evaluatedFrame.blendshapeWeights)
       : evaluatedFrame.vertexDeltas);
     currentWeightsRef.current = evaluatedFrame.blendshapeWeights;
-    providerLastWeightsRef.current = evaluatedFrame.blendshapeWeights;
+    // The readout drops weights <= its activation epsilon. Compare future
+    // feedback with that same representation, so tiny transition weights cannot
+    // be mistaken for a fresh user target and freeze the transition.
+    providerLastWeightsRef.current = normalizeActivationValues(evaluatedFrame.blendshapeWeights);
     controlActions.setActivationValues(evaluatedFrame.blendshapeWeights, {
       frameIndex: evaluatedFrame.frameIndex,
       mode: latestControlModeRef.current,
