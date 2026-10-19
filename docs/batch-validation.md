@@ -35,3 +35,10 @@ output. No real-time hardware guarantee or arbitrary performance gate is claimed
 Deployment audits: static SPA, no database, object storage, upload/download,
 email API, same-origin gate or blob URL lifecycle. No fabricated credentials.
 Platform watermark/share remain at the application root; no preview banner.
+
+Live visual verification exposed a FaceCap-specific render regression: Three's
+geometry clone shared-buffer cache discarded the byte offsets of quantized morph
+accessors. The physics offset layer now copies accessors independently, preserving
+raw components and normalization. A regression test uses separate typed views of
+one buffer and checks the actual morphed vertex before/after enabling offsets and
+again after disable. This supplements the generated floating-point browser fixture.

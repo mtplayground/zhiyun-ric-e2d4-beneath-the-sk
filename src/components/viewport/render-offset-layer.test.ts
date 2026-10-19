@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BufferGeometry, Float32BufferAttribute, Mesh, MeshStandardMaterial } from 'three';
+import { BufferGeometry, Float32BufferAttribute, InterleavedBuffer, InterleavedBufferAttribute, Vector3, Mesh, MeshStandardMaterial } from 'three';
 import { createRenderOffsetLayer } from './render-offset-layer';
 
 describe('render offset layer', () => {
@@ -31,4 +31,25 @@ describe('render offset layer', () => {
     expect(()=>layer.apply(new Float32Array(0))).toThrow();
     layer.dispose(); geometry.dispose();mesh.material.dispose();
   });
+});
+
+it('preserves quantized morph accessors at distinct offsets of a shared GLB buffer', () => {
+  const bytes = new ArrayBuffer(32);
+  new Uint16Array(bytes, 0, 4).set([100, 200, 300, 0]);
+  new Int16Array(bytes, 16, 4).set([10, -20, 30, 0]);
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new InterleavedBufferAttribute(new InterleavedBuffer(new Uint16Array(bytes, 0, 4), 4), 3, 0));
+  geometry.morphAttributes.position = [new InterleavedBufferAttribute(new InterleavedBuffer(new Int16Array(bytes, 16, 4), 4), 3, 0)];
+  geometry.morphTargetsRelative = true;
+  const mesh = new Mesh(geometry, new MeshStandardMaterial());
+  mesh.morphTargetInfluences = [0.9];
+  const before = mesh.getVertexPosition(0, new Vector3()).toArray();
+  const layer = createRenderOffsetLayer(mesh);
+  layer.apply(new Float32Array([0, 0, 0]));
+  expect(mesh.getVertexPosition(0, new Vector3()).toArray()).toEqual(before);
+  expect(mesh.geometry.morphAttributes.position![0].getY(0)).toBe(-20);
+  layer.apply();
+  expect(mesh.geometry).toBe(geometry);
+  expect(mesh.getVertexPosition(0, new Vector3()).toArray()).toEqual(before);
+  layer.dispose(); geometry.dispose(); mesh.material.dispose();
 });
