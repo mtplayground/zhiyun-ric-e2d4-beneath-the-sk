@@ -106,6 +106,11 @@
       "number": 132,
       "title": "Add a magnified view and heatmap of the physics offsets",
       "body": "## Scope\n\nAdd two optional debug views to the existing debug overlay:\n- **Magnified offsets:** draw the face with the simulated offsets multiplied by a selectable factor (1×, 10×, 50×, 100×). This affects the display only, never the solver. Whenever the factor isn't 1×, show it clearly in the viewport.\n- **Offset heatmap:** color the face by how far each vertex is displaced from its pose target, with a scale legend in millimetres.\nBoth views turn off when physics is off and add no cost when hidden.\n\n## Files\n\n`src/components/viewport/render-offset-layer.ts`, debug overlay in `src/components/viewport/face-viewport.tsx`, `src/state/physics-state.ts`\n\n## Dependencies\n\nDepends on: Physics presets and default panel\n\n---\nUUID: 405d057b-df3e-44a2-8e1e-ac6bda136ced"
+    },
+    {
+      "number": 133,
+      "title": "Test that physics actually runs on the real FaceCap mesh",
+      "body": "## Scope\n\nExtend the physics browser tests to use the real default FaceCap mesh and the committed proxy, not only the test proxy. Assert:\n- the proxy passes validation and the status shows **active**;\n- with the Physical preset, gravity off and Smile selected, displacement telemetry stays at the resting state within tolerance;\n- with the Visible demonstration preset, the maximum displacement and the canvas difference from the kinematic render are both above a set threshold;\n- turning physics off returns a canvas identical to the kinematic render;\n- a deliberately corrupted proxy shows the **inactive** status with its reason.\n\n## Files\n\n`e2e/physics.spec.ts`, physics browser test config\n\n## Dependencies\n\nDepends on: Valid FaceCap proxy, magnified view and heatmap\n\n---\nUUID: 9ef0b959-e536-4a19-947d-f53ad3c8973b"
     }
   ]
 }
