@@ -80,3 +80,55 @@ buffer and worker factory stable to avoid restarting the host unnecessarily.
 The hook loads nothing while disabled. Failed asset fetches may be retried;
 successful fetches remain cached across enable/disable cycles, but validation
 runs for each new loaded face.
+
+## Blendshape pose targets
+
+`createPoseTargetMapper(surface, proxy, jawSettings)` captures neutral render
+accessor positions and relative morph deltas (or absolute morph targets), plus
+the validated proxy embedding. `map(evaluatedBlendshapeWeights)` accepts the same
+per-frame weights applied by the kinematic runtime. It reuses the kinematic
+provider's alias resolution, duplicate-alias maximum, clamping and activation
+threshold. It does not apply transition smoothing again. For consumers holding
+an unevaluated transition, `evaluateFrame(input)` applies the provider's existing
+smoothstep interpolation before mapping. There are no preset-specific branches.
+
+The posed surface is `base + sum(weight * delta)` for relative morphs, or
+`base + sum(weight * (target - base))` for absolute morphs. Evaluation stays in
+accessor coordinates before the mesh node and viewport transforms. Displacements
+are divided by the asset's normalization scale to enter proxy space. Surface
+positions are returned alongside solver inputs for diagnostics and acceptance.
+
+A render-to-tetrahedron embedding is not directly invertible. The mapper scatters
+render displacements back to the tetrahedron's **skin** nodes using barycentric
+coefficients, then normalizes each node by its total coefficient. This is a
+weighted transpose transfer, not an exact inverse or a new tetrahedral solve.
+It preserves constant displacements and returns exact proxy rest positions for
+Neutral, including when the stored embedding projects onto a nearest tetrahedron.
+Uncovered skin nodes (such as duplicate crease nodes) receive their nearest
+neutral render vertex's displacement; that association is computed once and is
+deterministic. Skull targets remain at rest. Jaw targets and the attachment
+transform use the same rigid rotation, so numerical recovery also respects the
+current jaw pose.
+
+Jaw opening defaults to a 25-degree rotation about local X at full jaw-open
+weight, around proxy-space pivot [0, 0.05, 0.02]. The positive angle moves a point
+on FaceCap's forward/lower (-Y/-Z) jaw downward in Z. Pivot, axis and maximum
+angle are explicit tuning parameters, not inferred anatomical measurements.
+The transform is computed about the fixed pivot each frame; it never accumulates.
+Smile/Neutral with no jaw-open weight keep the jaw at identity. AA uses the
+existing library's 0.9 jaw-open activation, yielding 22.5 degrees.
+
+`createMeshPoseTargetDriver(faceMesh, proxy, frame => host.sendFrame(frame))`
+bridges a loaded morph face to the worker host without importing Three. Its
+structural mesh interface reads decoded position/morph attributes once, then
+reads current applied morph influences on each `update()`. Call `update()` after
+the kinematic provider applies influences, every render frame, including idle
+frames. This means presets, keyboard transitions, cached frames and sliders all
+use the same surface actually displayed by the kinematic path. Pass the face
+primitive used for source/count validation, excluding separate eyes and teeth.
+The driver supplies solver inputs; rendering solver output is a separate step.
+It does not modify geometry, controls, pose definitions or scene transforms.
+
+Unit coverage includes Neutral, Smile and AA; every actual library/keyboard pose;
+slider and transition weights; malformed embeddings; rigid pivot invariants;
+and comparison to Three's CPU morph evaluator for relative and absolute targets.
