@@ -119,3 +119,8 @@ were executed again for this deployment. Browser acceptance includes the actual
 upstream FaceCap and corrupted-asset diagnostics. Deployment uses a Git archive
 of the final checked commit, excluding private pipeline metadata and original
 attachments; the Sprite rebuild is compared with the local production artifacts.
+
+The preset sweep now waits for the actual 52-blendshape mesh before submitting
+poses. Metadata alone can appear before asynchronous GLB initialization. Its
+whole-sweep budget accommodates the real mesh on software WebGL; individual
+activation assertions retain their original limits.

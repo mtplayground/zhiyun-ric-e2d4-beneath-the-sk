@@ -214,13 +214,18 @@ test.describe('preset coverage', () => {
   test('every phoneme, expression, and action-unit preset changes visible activation telemetry and resets', async ({
     page,
   }) => {
-    test.setTimeout(120_000);
+    test.setTimeout(300_000);
     await page.goto('/');
 
     await expect(
       page.getByRole('heading', { name: /Beneath the Skin/i }),
     ).toBeVisible();
     await expectReadoutPose(page, 'Neutral');
+    // Preset metadata is available before the asynchronous GLB has loaded.
+    // Sweep the actual loaded face rather than racing its initialization.
+    await expect(page.getByText('52 blendshapes', { exact: true })).toBeVisible({
+      timeout: 90_000,
+    });
 
     for (const group of presetGroups) {
       const dropdown = page.getByLabel(group.dropdownLabel);
