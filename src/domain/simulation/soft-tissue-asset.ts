@@ -37,5 +37,12 @@ export async function loadSoftTissueAsset(
     const start = headerEnd + section.offset;
     arrays[name] = type === 'byte' ? new Uint8Array(buffer.slice(start, start + bytes)) : type === 'float' ? Float32Array.from({ length: count }, (_, i) => view.getFloat32(start + i * 4, true)) : Uint32Array.from({ length: count }, (_, i) => view.getUint32(start + i * 4, true));
   }
-  return { metadata, ...arrays };
+  return {
+    metadata,
+    nodes: arrays.nodes as Float32Array,
+    tetrahedra: arrays.tetrahedra as Uint32Array,
+    edges: arrays.edges as Uint32Array,
+    labels: arrays.labels as Uint8Array,
+    embedding: arrays.embedding as Float32Array,
+  };
 }

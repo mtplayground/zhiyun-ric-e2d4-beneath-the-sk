@@ -43,3 +43,40 @@ reset. Invalid transforms or overflowing attachment calculations fall back to
 finite pose targets. Malformed array dimensions and invalid constructor inputs
 throw. Determinism assumes identical inputs and extension behavior on the same
 JavaScript numeric implementation; the solver uses float64 and no randomness.
+
+## Worker host
+
+`createPhysicsHost` loads the simulation binary once per URL and validates it
+against the **exact bytes used for the loaded render GLB** and its face primitive
+vertex count. Pass these as `sourceMesh` and `renderVertexCount`; do not separately
+fetch a potentially changed mesh to validate against. `ready` rejects with an
+`asset-error` diagnostic on mismatch or load failure. It resolves when asset
+validation and backend initialization have been dispatched; backend readiness is
+reported by a `worker` or `fallback` diagnostic. Physics never starts on mismatch.
+
+The host owns a module worker bundled by Vite's standard
+`new Worker(new URL(..., import.meta.url), { type: 'module' })` pattern. No special
+worker configuration or cross-origin isolation is required. The worker advances
+a fixed-timestep accumulator independently of render callbacks, limits catch-up
+to four steps after background pauses, and transfers float64 position buffers.
+Only one output waits for acknowledgement. Per-frame inputs are coalesced while
+an earlier frame is in flight. Arrays sent by callers are copied before transfer,
+so caller-owned targets and cached simulation data are never detached.
+
+Call `sendFrame({ poseTargets, jawTransform, skullTransform })` each render frame
+with **proxy node targets** and transforms in the same space as the asset. Receive
+node positions and reset reports via `onPositions`; render embedding/deformation
+remains a separate consumer. This module does not change the blendshape viewport
+or derive proxy pose targets. Worker construction errors, runtime errors, message
+errors and a five-second startup timeout switch to main-thread physics, normally
+two substeps instead of four (one is the minimum). Diagnostics report that switch.
+
+Call `dispose()` when physics is disabled or the viewport unmounts. It is
+idempotent, cancels timer/startup work, terminates the worker and suppresses late
+callbacks, including if asset loading is still pending. `usePhysicsHost(enabled,
+options)` provides this cleanup through a React effect and returns a stable
+`sendFrame` callback for a viewport's frame loop. Keep solver options, source byte
+buffer and worker factory stable to avoid restarting the host unnecessarily.
+The hook loads nothing while disabled. Failed asset fetches may be retried;
+successful fetches remain cached across enable/disable cycles, but validation
+runs for each new loaded face.
