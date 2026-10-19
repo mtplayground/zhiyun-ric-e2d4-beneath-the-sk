@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { expect, test, type Page } from '@playwright/test';
 import { servePhysicsFixture } from './physics-fixture';
 
@@ -206,4 +208,135 @@ test('offset debug views show display scale and SI legend and turn off with phys
   await toggle.click();
   await expect(magnification).toHaveValue('1');
   await expect(page.getByRole('checkbox',{name:'Offset heatmap',exact:true})).not.toBeChecked();
+});
+
+
+// Release acceptance uses the real configured FaceCap request and committed
+// binary. There are no fixture routes, substitute proxies, or skip conditions.
+const realProbePath='/e2e/physics-browser-probe.ts';
+const REST_TOLERANCE_METRES=1e-9;
+const DEMO_MIN_DISPLACEMENT_METRES=1e-4; // 0.1 mm, above numerical noise
+const DEMO_MIN_CHANGED_PIXEL_FRACTION=0.001; // >0.1% of the 256×256 canvas
+const DEMO_MIN_MEAN_CHANNEL_DIFFERENCE=0.05; // raw 8-bit channel levels
+
+async function realSmile(page:Page) {
+  await page.goto('/');
+  await expect(page.getByText(/\d+ blendshapes/)).toBeVisible({timeout:90_000});
+  const identity=await page.evaluate(async path=>(await import(/* @vite-ignore */ path)).rememberFace(),realProbePath);
+  expect(identity.vertices).toBe(2694);
+  expect(identity.morphs).toBeGreaterThan(3);
+  await page.getByRole('combobox',{name:'Expressions / Emotions',exact:true}).selectOption('expression-smile');
+  await expect.poll(()=>page.evaluate(async path=>(await import(/* @vite-ignore */ path)).poseReady('expression-smile'),realProbePath)).toBe(true);
+}
+function canvasDifference(reference:number[],actual:number[]) {
+  expect(actual.length).toBe(reference.length);
+  let changed=0,total=0;
+  for(let i=0;i<reference.length;i+=4) {
+    const difference=Math.max(...[0,1,2].map(channel=>Math.abs(reference[i+channel]-actual[i+channel])));
+    if(difference>2) changed++;
+    total+=difference;
+  }
+  return {changedFraction:changed/(reference.length/4),meanDifference:total/(reference.length/4)};
+}
+async function realPixels(page:Page):Promise<number[]> {
+  return page.evaluate(async path=>(await import(/* @vite-ignore */ path)).pixels(),realProbePath);
+}
+
+test('real FaceCap: validated proxy rests with Physical, visibly simulates with demonstration, and restores exact kinematic pixels',async({page},testInfo)=>{
+  test.setTimeout(180_000);
+  const report=JSON.parse(await readFile(new URL('../docs/facecap-asset-integrity.json',import.meta.url),'utf8'));
+  const committed=await readFile(new URL('../public/data/facecap-soft-tissue.bin',import.meta.url));
+  const sourceResponse=page.waitForResponse(response=>response.url()==='https://threejs.org/examples/models/gltf/facecap.glb',{timeout:90_000});
+  await realSmile(page);
+  const source=await sourceResponse;
+  expect(source.ok()).toBe(true);
+  expect(createHash('sha256').update(await source.body()).digest('hex')).toBe(report.sourceHash);
+  const baseline=await realPixels(page);
+  // A blank canvas must not satisfy restoration or resting parity.
+  const colors=new Set(baseline.filter((_,i)=>i%4===0).map((_,pixel)=>baseline.slice(pixel*4,pixel*4+3).join(',')));
+  expect(colors.size).toBeGreaterThan(32);
+  const preset=page.getByRole('combobox',{name:'Physics preset',exact:true});
+  await preset.selectOption('physical');
+  await setSlider(page,'Gravity',0); // Editing this override correctly displays Custom.
+  const toggle=page.getByRole('switch',{name:'Enable soft-tissue physics'});
+  const proxyResponse=page.waitForResponse(response=>response.url().endsWith('/data/facecap-soft-tissue.bin'));
+  await toggle.click();
+  const proxy=await proxyResponse;
+  expect(proxy.ok()).toBe(true);
+  const served=await proxy.body();
+  expect(served.equals(committed)).toBe(true);
+  expect(createHash('sha256').update(served).digest('hex')).toBe(report.assetSha256);
+  const metadata=JSON.parse(served.subarray(8,8+served.readUInt32LE(4)).toString());
+  expect(metadata.version).toBe(3);
+  expect(metadata.sourceHash).toBe(report.sourceHash);
+  expect(metadata.counts).toEqual(report.counts);
+  expect(metadata.counts.renderVertices).toBe(2694);
+  expect(metadata.options.thicknessMetres).toBe(0.012);
+  // The host emits worker readiness only after its production asset validator succeeds.
+  await expect(page.getByTestId('physics-status')).toHaveText('Active · worker',{timeout:30_000});
+  await expect(page.getByTestId('physics-toggle')).toHaveAttribute('aria-pressed','true');
+  await expect(page.getByRole('combobox',{name:'Magnified offsets',exact:true})).toHaveValue('1');
+  await expect(page.getByRole('checkbox',{name:'Offset heatmap',exact:true})).not.toBeChecked();
+  await page.getByRole('button',{name:'Reset simulation',exact:true}).click();
+  await expect.poll(()=>page.evaluate(async({path,tolerance})=>{
+    const sample=(await import(/* @vite-ignore */ path)).sample();
+    return sample.ready&&sample.finite&&sample.maxDistance<=tolerance;
+  },{path:realProbePath,tolerance:REST_TOLERANCE_METRES})).toBe(true);
+  // Sample across 60 rendered frames: a single transient resting sample is insufficient.
+  const resting=await page.evaluate(async path=>{
+    const probe=await import(/* @vite-ignore */ path),samples=[];
+    for(let frame=0;frame<60;frame++) {
+      await new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));
+      samples.push(probe.sample());
+    }
+    return samples;
+  },realProbePath);
+  for(const sample of resting) {
+    expect(sample.ready&&sample.finite).toBe(true);
+    expect(sample.maxDistance).toBeLessThanOrEqual(REST_TOLERANCE_METRES);
+    expect(sample.maxOffsetMetres).toBeLessThanOrEqual(REST_TOLERANCE_METRES);
+    expect(sample.resets).toBe(0);
+    expect(sample.webglError).toBe(0);
+  }
+  await preset.selectOption('visible-demonstration');
+  await expect(page.getByText('Exaggerated demonstration — not physically accurate.',{exact:true})).toBeVisible();
+  await expect.poll(()=>page.evaluate(async path=>{
+    const sample=(await import(/* @vite-ignore */ path)).sample();
+    return sample.ready&&sample.finite ? sample.maxDistance : 0;
+  },realProbePath)).toBeGreaterThan(DEMO_MIN_DISPLACEMENT_METRES);
+  let demonstration:number[]=[];
+  await expect.poll(async()=>{
+    demonstration=await realPixels(page);
+    const difference=canvasDifference(baseline,demonstration);
+    return difference.changedFraction>DEMO_MIN_CHANGED_PIXEL_FRACTION&&difference.meanDifference>DEMO_MIN_MEAN_CHANNEL_DIFFERENCE;
+  }).toBe(true);
+  const sample=await page.evaluate(async path=>(await import(/* @vite-ignore */ path)).sample(),realProbePath);
+  expect(sample.finite).toBe(true);expect(sample.resets).toBe(0);
+  expect(sample.maxDistance).toBeGreaterThan(DEMO_MIN_DISPLACEMENT_METRES);
+  expect(sample.boundRatio).toBeLessThanOrEqual(1);
+  await testInfo.attach('real-facecap-demo-measurements',{body:Buffer.from(JSON.stringify({sample,difference:canvasDifference(baseline,demonstration),thresholds:{REST_TOLERANCE_METRES,DEMO_MIN_DISPLACEMENT_METRES,DEMO_MIN_CHANGED_PIXEL_FRACTION,DEMO_MIN_MEAN_CHANNEL_DIFFERENCE}},null,2)),contentType:'application/json'});
+  await testInfo.attach('real-facecap-demonstration',{body:await page.locator('canvas').first().screenshot(),contentType:'image/png'});
+  await toggle.click();
+  await expect(page.getByTestId('physics-status')).toHaveText('Inactive · Physics disabled');
+  await expect(page.getByTestId('physics-toggle')).toHaveAttribute('aria-pressed','false');
+  expect(await realPixels(page)).toEqual(baseline);
+  const integrity=await page.evaluate(async path=>(await import(/* @vite-ignore */ path)).integrity(false),realProbePath);
+  expect(integrity).toMatchObject({sameMesh:true,sameGeometry:true,sameBase:true,sameMorphs:true,sameBytes:true,originalMaterial:true,cullingRestored:true,offsetAttribute:false});
+});
+
+test('real FaceCap: corrupted committed proxy reports inactive with a reason and preserves kinematic pixels',async({page})=>{
+  test.setTimeout(180_000);
+  const corrupted=Buffer.from(await readFile(new URL('../public/data/facecap-soft-tissue.bin',import.meta.url)));
+  corrupted[0]^=0xff; // Break STP1 magic; all remaining bytes are the committed proxy.
+  await page.route('**/data/facecap-soft-tissue.bin',route=>route.fulfill({contentType:'application/octet-stream',body:corrupted}));
+  // Only the corrupt proxy is intercepted; the real default face remains unmodified.
+  await realSmile(page);
+  const baseline=await realPixels(page);
+  await page.getByRole('switch',{name:'Enable soft-tissue physics'}).click();
+  await expect(page.getByTestId('physics-status')).toHaveText('Inactive · Invalid or mismatched proxy asset');
+  await expect(page.getByTestId('provider-physics-status')).toContainText('Inactive · Invalid or mismatched proxy asset');
+  await expect(page.getByText('Invalid simulation asset',{exact:true})).toBeVisible();
+  await expect(page.getByTestId('physics-toggle')).toHaveAttribute('aria-pressed','false');
+  await expect(page.getByTestId('physics-telemetry')).toHaveCount(0);
+  expect(await realPixels(page)).toEqual(baseline);
 });
