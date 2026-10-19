@@ -3,11 +3,11 @@ import { readFile } from 'node:fs/promises';
 import { generate, encode, readFace, hash, determinant, faceFrame, physicalUnits, offsetFailure, validateOffset, prepareSurface } from './generate-soft-tissue.mjs';
 import { loadSoftTissueAsset } from '../src/domain/simulation/soft-tissue-asset';
 
-const fixture = {normalization:{center:[0,0,0],scale:1},units:{metresPerSourceUnit:1,verticalAxis:[0,0,1]},positions:[[0,0,0],[1,0,0],[0,1,0]],indices:[0,1,2]};
+const fixture = {regions:['skin','skin','skin'],normalization:{center:[0,0,0],scale:1},units:{metresPerSourceUnit:1,verticalAxis:[0,0,1]},positions:[[0,0,0],[1,0,0],[0,1,0]],indices:[0,1,2]};
 const buffer = b => Uint8Array.from(b).buffer;
 describe('soft tissue proxy', () => {
   it('creates positive tetrahedra, distinct attachments, edges and complete nearest embeddings', async () => {
-    const face={...fixture,positions:[...fixture.positions,[0.2,0.2,0.2]]};
+    const face={...fixture,regions:[...fixture.regions,'skin'],positions:[...fixture.positions,[0.2,0.2,0.2]]};
     const asset=generate(face,{target:12,upAxis:1,mouthLine:0.5});
     expect(asset.tetrahedra).toHaveLength(3);
     for(const tet of asset.tetrahedra) expect(determinant(...tet.map(i=>asset.nodes[i]))).toBeGreaterThan(1e-12);
@@ -56,7 +56,7 @@ describe('soft tissue proxy', () => {
     } catch(error) {
       expect(error.diagnostic).toEqual(failure.diagnostic);
     }
-    await expect(loadSoftTissueAsset(buffer(committed),buffer(source),face.positions.length)).rejects.toThrow('regenerate as version 2');
+    await expect(loadSoftTissueAsset(buffer(committed),buffer(source),face.positions.length)).rejects.toThrow('regenerate as version 3');
   },120000);
 });
 
@@ -89,7 +89,7 @@ describe('physical face frame', () => {
   });
 });
 
-describe('version 2 SI layer data', () => {
+describe('version 3 SI layer data', () => {
   it('stores explicit ordered outer/inner pairs and positive volume-lumped SI masses including the last node', async () => {
     const asset=generate(fixture,{target:12});
     expect(asset.pairs).toHaveLength(3);
@@ -116,12 +116,11 @@ describe('version 2 SI layer data', () => {
     expect(hash(encode(asset,metadata))).toBe(hash(bytes));
     const legacy=Buffer.from(bytes);
     const headerLength=legacy.readUInt32LE(4);
-    const header=legacy.subarray(8,8+headerLength).toString().replace('"version":2','"version":1');
+    const header=legacy.subarray(8,8+headerLength).toString().replace('"version":3','"version":2');
     legacy.write(header,8);
-    await expect(loadSoftTissueAsset(buffer(legacy),buffer(source),3)).rejects.toThrow('regenerate as version 2');
-    for(const bad of [{...asset,pairs:[[0,0],[1,4],[2,5]]},{...asset,masses:[NaN,...asset.masses.slice(1)]}]) {
-      await expect(loadSoftTissueAsset(buffer(encode(bad,metadata)),buffer(source),3)).rejects.toThrow('Invalid simulation');
-    }
+    await expect(loadSoftTissueAsset(buffer(legacy),buffer(source),3)).rejects.toThrow('regenerate as version 3');
+    expect(()=>encode({...asset,pairs:[[0,0],[1,4],[2,5]]},metadata)).toThrow('node pairs');
+    await expect(loadSoftTissueAsset(buffer(encode({...asset,masses:[NaN,...asset.masses.slice(1)]},metadata)),buffer(source),3)).rejects.toThrow('Invalid simulation');
   });
   it('reports complete offset diagnostics without guessing anatomical annotations', () => {
     const error=offsetFailure(fixture,fixture.positions,[0,1,2],7,0.012,'fixture failure');

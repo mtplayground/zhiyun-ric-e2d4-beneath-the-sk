@@ -1,3 +1,4 @@
+import { EMBEDDING_EXCLUDED } from './bounded-embedding.mjs';
 import { innerNodeMask } from './node-pairing';
 import { positionGroups } from './position-groups.mjs';
 import { interpolateBlendshapeWeights } from '../providers/kinematic-blendshape-provider';
@@ -17,7 +18,11 @@ export interface PoseProxy {
   tetrahedra: ArrayLike<number>;
   /** Records: tetrahedron index followed by four barycentric weights. */
   embedding: ArrayLike<number>;
-  metadata: { normalization: { center: number[]; scale: number }; counts: { renderVertices: number } };
+  embeddingFlags?: ArrayLike<number>;
+  embeddingFade?: ArrayLike<number>;
+  embeddingThickness?: ArrayLike<number>;
+  embeddingMaxOffsets?: ArrayLike<number>;
+  metadata: { embeddingPolicy?: { maxOffsetFraction: number }; normalization: { center: number[]; scale: number }; counts: { renderVertices: number } };
 }
 const finite = (values: ArrayLike<number>) => Array.from(values).every(Number.isFinite);
 
@@ -47,8 +52,9 @@ export function createPoseTargetMapper(surface: PoseSurface, proxy: PoseProxy) {
     const record = vertex * 5, tet = embedding[record];
     const weights = embedding.slice(record+1, record+5);
     if (!Number.isInteger(tet) || tet < 0 || tet * 4 + 3 >= tetrahedra.length || !finite(weights) || weights.some(w => w < -1e-6 || w > 1+1e-6) || Math.abs(weights.reduce((a,b)=>a+b,0)-1)>1e-5) throw new Error('Invalid render embedding');
+    if ((proxy.embeddingFlags?.[vertex] ?? 0) & EMBEDDING_EXCLUDED) continue;
     for (let corner = 0; corner < 4; corner++) {
-      const node = tetrahedra[tet*4+corner], weight = Math.max(0, weights[corner]);
+      const node = tetrahedra[tet*4+corner], weight = Math.max(0, weights[corner]) * (proxy.embeddingFade?.[vertex] ?? 1);
       if (inner[node] !== 0 || weight === 0) continue;
       contributors.push({ render: vertex, node, weight });
       totals[node] += weight;

@@ -38,9 +38,11 @@ export function physicsFixture() {
   const arrays={nodes:new Float32Array([...positions,...inner]),tetrahedra:new Uint32Array([0,1,2,3,4,5,6,7]),
     edges:new Uint32Array(edges),labels:new Uint8Array([0,0,0,0,1,1,2,2]),pairs,masses:new Float64Array(8).fill(0.002),
     embedding:new Float32Array([0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1])};
+  const local=Float64Array.from({length:4},(_,i)=>Math.hypot(...[0,1,2].map(axis=>arrays.nodes[i*3+axis]-arrays.nodes[(i+4)*3+axis])));
+  const boundedArrays={...arrays,embeddingFlags:new Uint8Array(4),embeddingFade:new Float32Array(4).fill(1),embeddingThickness:local,embeddingMaxOffsets:local.map(value=>value*0.5)};
   const sections:{name:string;offset:number;bytes:number}[]=[];const payload:Buffer[]=[];offset=0;
-  for(const [name,array] of Object.entries(arrays)) {const bytes=Buffer.from(array.buffer);sections.push({name,offset,bytes:bytes.length});payload.push(bytes);offset+=bytes.length;}
-  const metadata={version:2,sourceHash:createHash('sha256').update(glb).digest('hex'),counts:{nodes:8,tetrahedra:2,edges:28,pairs:4,renderVertices:4},normalization:{center:[0,0,0],scale:1},units:{metresPerSourceUnit:0.2,verticalAxis:[0,1,0]},sections};
+  for(const [name,array] of Object.entries(boundedArrays)) {const bytes=Buffer.from(array.buffer);sections.push({name,offset,bytes:bytes.length});payload.push(bytes);offset+=bytes.length;}
+  const metadata={version:3,embeddingPolicy:{maxOffsetFraction:0.5,outsideToleranceMetres:0.00001,fadeDistanceThicknesses:1},sourceHash:createHash('sha256').update(glb).digest('hex'),counts:{nodes:8,tetrahedra:2,edges:28,pairs:4,renderVertices:4},normalization:{center:[0,0,0],scale:1},units:{metresPerSourceUnit:0.2,verticalAxis:[0,1,0]},sections};
   function proxy(mismatch=false) {
     const header=Buffer.from(JSON.stringify({...metadata,sourceHash:mismatch?'0'.repeat(64):metadata.sourceHash}));
     const prefix=Buffer.alloc(8);prefix.write('STP1');prefix.writeUInt32LE(header.length,4);

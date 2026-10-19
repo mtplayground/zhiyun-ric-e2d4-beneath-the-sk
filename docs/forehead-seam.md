@@ -62,7 +62,7 @@ npm run generate:soft-tissue -- --metres-per-source-unit 0.0000194938469
 locations. `soft-tissue-generation-failure.json` records the current 12 mm offset
 failure at proxy triangle 0, nearest source triangle 7. The requested thickness
 remains 0.012 m; the invalid layer is not saved. Consequently the committed
-binary is still the old version 1 binary and is rejected by the version 2 loader.
+binary is still the old version 1 binary and is rejected by the version 3 loader.
 The surface topology fix is implemented, but a valid regenerated volume and
 visible forehead continuity remain blocked by that offset inversion.
 

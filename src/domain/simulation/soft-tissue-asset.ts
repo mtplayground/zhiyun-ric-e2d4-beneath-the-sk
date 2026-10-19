@@ -1,8 +1,10 @@
+import { validateBoundedEmbedding } from '../physics/bounded-embedding.mjs';
 import { validatePhysicalUnits, type PhysicalUnits } from '../physics/physical-units';
 
 /** STP1 uses little-endian scalar arrays; sections may be unaligned. */
 export type SoftTissueMetadata = {
   version: number;
+  embeddingPolicy: { maxOffsetFraction: number; outsideToleranceMetres: number; fadeDistanceThicknesses: number };
   sourceHash: string;
   counts: { nodes: number; tetrahedra: number; edges: number; pairs: number; renderVertices: number };
   sections: { name: string; offset: number; bytes: number }[];
@@ -20,7 +22,7 @@ export async function loadSoftTissueAsset(
   const headerEnd = 8 + view.getUint32(4, true);
   if (headerEnd > buffer.byteLength) throw new Error('Truncated simulation asset');
   const metadata = JSON.parse(new TextDecoder().decode(buffer.slice(8, headerEnd))) as SoftTissueMetadata;
-  if (metadata.version !== 2) throw new Error(`Unsupported simulation asset version ${metadata.version}; regenerate as version 2 with SI masses and explicit pairs`);
+  if (metadata.version !== 3) throw new Error(`Unsupported simulation asset version ${metadata.version}; regenerate as version 3 with bounded embeddings, SI masses and explicit pairs`);
   const digest = await crypto.subtle.digest('SHA-256', sourceMesh);
   const hash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
   if (metadata.sourceHash !== hash || metadata.counts.renderVertices !== renderVertexCount) {
@@ -39,6 +41,10 @@ export async function loadSoftTissueAsset(
     embedding: [metadata.counts.renderVertices * 5, 'float'],
     pairs: [metadata.counts.pairs * 2, 'uint'],
     masses: [metadata.counts.nodes, 'double'],
+    embeddingFlags: [metadata.counts.renderVertices, 'byte'],
+    embeddingFade: [metadata.counts.renderVertices, 'float'],
+    embeddingThickness: [metadata.counts.renderVertices, 'double'],
+    embeddingMaxOffsets: [metadata.counts.renderVertices, 'double'],
   };
   const arrays: Record<string, Float32Array | Float64Array | Uint32Array | Uint8Array> = {};
   for (const [name, [count, type]] of Object.entries(expected)) {
@@ -57,7 +63,12 @@ export async function loadSoftTissueAsset(
     paired.add(index);
   }
   if (masses.some(mass => !Number.isFinite(mass) || mass <= 0)) throw new Error('Invalid simulation SI masses');
+  const embeddingData={nodes:arrays.nodes as Float32Array,tetrahedra:arrays.tetrahedra as Uint32Array,pairs,
+    embedding:arrays.embedding as Float32Array,embeddingFlags:arrays.embeddingFlags as Uint8Array,
+    embeddingFade:arrays.embeddingFade as Float32Array,embeddingThickness:arrays.embeddingThickness as Float64Array,embeddingMaxOffsets:arrays.embeddingMaxOffsets as Float64Array};
+  validateBoundedEmbedding(embeddingData,metadata.embeddingPolicy?.maxOffsetFraction ?? NaN);
   return {
+    ...embeddingData,
     metadata,
     pairs,
     masses,

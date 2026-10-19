@@ -8,7 +8,7 @@ export function readMilestoneProxy(path = new URL('../../../public/data/facecap-
   if (bytes.toString('ascii',0,4)!=='STP1') throw new Error('Invalid proxy magic');
   const end = 8+bytes.readUInt32LE(4);
   const metadata = JSON.parse(bytes.toString('utf8',8,end)) as SoftTissueMetadata;
-  if(metadata.version!==2) throw new Error('Regenerate simulation asset as version 2');
+  if(metadata.version!==3) throw new Error('Regenerate simulation asset as version 3');
   function section(name:string, kind:'float'|'double'|'uint'|'byte') {
     const section=metadata.sections.find(s=>s.name===name);
     if(!section || section.offset<0 || end+section.offset+section.bytes>bytes.length) throw new Error(`Invalid ${name} section`);
@@ -20,7 +20,7 @@ export function readMilestoneProxy(path = new URL('../../../public/data/facecap-
     return kind==='float'?Float64Array.from(values):Uint32Array.from(values);
   }
   return {
-    asset: {metadata,pairs:section('pairs','uint'),masses:section('masses','double'),nodes:section('nodes','float'),tetrahedra:section('tetrahedra','uint'),edges:section('edges','uint'),labels:section('labels','byte'),embedding:section('embedding','float')},
+    asset: {metadata,embeddingFlags:section('embeddingFlags','byte'),embeddingFade:section('embeddingFade','float'),embeddingThickness:section('embeddingThickness','double'),embeddingMaxOffsets:section('embeddingMaxOffsets','double'),pairs:section('pairs','uint'),masses:section('masses','double'),nodes:section('nodes','float'),tetrahedra:section('tetrahedra','uint'),edges:section('edges','uint'),labels:section('labels','byte'),embedding:section('embedding','float')},
     assetHash:createHash('sha256').update(bytes).digest('hex'),
   };
 }

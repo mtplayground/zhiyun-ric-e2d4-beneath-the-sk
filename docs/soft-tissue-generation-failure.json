@@ -3,11 +3,17 @@
   "sourceHash": "6bfce6d0fcbb5839f5102b79733007859fef7c5df6d9eb49e2264542810b5f64",
   "retainedAssetSha256": "0a12070e71de44703f3b4b610b00619861d1e1609673a615bb2f221161b63507",
   "renderVertices": 2694,
+  "missingRequirements": [
+    "Source-bound per-vertex skin/teeth/inner-mouth/eyes region annotations"
+  ],
   "options": {
     "target": 3000,
     "thicknessMetres": 0.012,
     "mouthLine": -0.12,
-    "metresPerSourceUnit": 0.0000194938469
+    "metresPerSourceUnit": 0.0000194938469,
+    "maxOffsetFraction": 0.5,
+    "outsideToleranceMetres": 0.00001,
+    "fadeDistanceThicknesses": 1
   },
   "diagnostic": {
     "reason": "Inverted or near-zero layer cell",
