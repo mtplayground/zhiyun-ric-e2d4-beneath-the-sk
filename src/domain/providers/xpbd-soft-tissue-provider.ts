@@ -38,7 +38,7 @@ export function createXpbdSoftTissueProvider(): DeformationProvider {
           sourceMesh: physics.sourceMesh,
           renderVertexCount: physics.surface.positions.length / 3,
           assetUrl: physics.simProxyUrl,
-          solver: { gravity: [0, 0, -0.5], distanceCompliance: 0.00001, poseCompliance: 0.0001, ...physics.settings },
+          solver: physics.settings,
           onAssetReady(asset) {
             if (token !== generation) return;
             proxy = asset;

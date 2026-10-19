@@ -16,12 +16,13 @@ it('transfers worker positions, bounds outstanding output and closes its timer',
   vi.resetModules();
   await import('./physics.worker');
   const send = (data: PhysicsRequest) => scope.onmessage!({ data } as MessageEvent<PhysicsRequest>);
-  send({ type: 'init', options: { positions: [0, 0, 0], labels: [0], timestep: 0.01, substeps: 1, iterations: 1, gravity: [0, 0, 0], poseCompliance: 0 } });
+  send({ type: 'init', options: { positions: [0, 0, 0,0,0,0], masses: [0.002,0.003], pairs: [0,1], timestep: 0.01, substeps: 1, iterations: 1, gravity: [0, 0, 0], poseCompliance: 0.02, innerPoseCompliance: 0.00002 } });
   expect(messages[0]).toEqual({ type: 'ready' });
-  send({ type: 'frame', frame: { poseTargets: new Float64Array([1, 2, 3]) } });
+  send({ type: 'frame', frame: { poseTargets: new Float64Array([1, 2, 3,1,2,3]) } });
+  send({ type: 'reset' });
   vi.advanceTimersByTime(10);
   const output = messages.find(m => m.type === 'positions');
-  expect(output?.type === 'positions' && Array.from(output.positions)).toEqual([1, 2, 3]);
+  expect(output?.type === 'positions' && Array.from(output.positions)).toEqual([1, 2, 3,1,2,3]);
   const transferred = scope.postMessage.mock.calls.find(([m]) => m.type === 'positions')!;
   expect(transferred[1]).toHaveLength(2);
   expect((transferred[1]![0] as ArrayBuffer).byteLength).toBe(0);
@@ -31,13 +32,13 @@ it('transfers worker positions, bounds outstanding output and closes its timer',
   vi.advanceTimersByTime(10);
   expect(messages.filter(m => m.type === 'positions')).toHaveLength(2);
   send({ type: 'ack' });
-  send({ type: 'configure', settings: { poseCompliance: 0.01, damping: 3, gravity: [0,0,-5], distanceCompliance: 0.02 } });
-  send({ type: 'frame', frame: { poseTargets: new Float64Array([4,5,6]) } });
+  send({ type: 'configure', settings: { poseCompliance: 0.01, innerPoseCompliance: 0.00001, damping: 3, gravity: [0,0,-5], distanceCompliance: 0.02 } });
+  send({ type: 'frame', frame: { poseTargets: new Float64Array([4,5,6,4,5,6]) } });
   send({ type: 'reset' });
   const reset = messages.at(-1)!;
   expect(reset.type).toBe('positions');
   if (reset.type === 'positions') {
-    expect(Array.from(reset.positions)).toEqual([4,5,6]);
+    expect(Array.from(reset.positions)).toEqual([4,5,6,4,5,6]);
     expect(reset.result.reset).toBe(true);
   }
   send({ type: 'stop' });

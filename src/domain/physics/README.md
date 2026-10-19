@@ -1,48 +1,54 @@
 # XPBD solver core
 
-`XpbdSolver` has no runtime imports. Supply packed XYZ positions, packed edge
-pairs, and STP1 labels (0 skin, 1 skull, 2 jaw). Inputs are copied. Skin inverse
-masses default to 1; attached inverse masses are always zero. Public particle
-arrays expose current positions, velocities and inverse masses. Inverse masses
-are configuration: changing them after construction triggers recovery.
+Supply packed XYZ positions, positive finite SI masses in kilograms, explicit
+packed [outer, inner] pairing records and packed edge pairs. Every node is dynamic
+with inverse mass `1 / storedMass`. Zero/nonfinite masses, zero inverse mass and
+incomplete or duplicate pairing are rejected. Labels belong to visualization;
+they define neither mass nor mechanical role. Inputs are copied. Mutating public
+inverse masses triggers recovery to the configured values.
 
-Each `step` advances exactly `timestep` seconds (default 1/60), split into
-`substeps` (default 4), with `iterations` (default 5) per substep. The caller owns
-any wall-clock accumulator. Gravity is an acceleration vector in mesh units per
-second squared, so its magnitude and direction are configurable. Damping is an
-exponential velocity decay rate per second. Default gravity is [0, -9.81, 0];
-callers must supply gravity in the proxy coordinate system (FaceCap local Z is up).
+Every node has a soft pose target. `poseCompliance` controls outer skin nodes;
+`innerPoseCompliance` controls the paired inner nodes. Both must be strictly
+positive; neither is a hard pin. Defaults for SI masses are edge compliance
+0.0001, skin pose compliance 0.02, inner pose compliance 0.00002 (1000 times
+stiffer than skin), and exponential velocity damping 12 per second. These are
+initial retuned values, not a measured material calibration or a validated visual
+tuning result. Live controls expose separate skin/inner settings and keep the
+inner range stiffer than the skin range.
 
-Pass packed per-frame `poseTargets` for all nodes plus optional column-major
-skull/jaw affine matrices. Matrices transform the original rest positions, never
-the previous frame's attached positions. Missing transforms mean identity.
-Attachments are hard, applied before projections and after every iteration;
-their stored velocity is zero. Pose constraints apply only to skin nodes.
-Zero-inverse-mass skin nodes remain fixed.
+`submitFrame({ poseTargets })` copies the complete target array and updates every
+edge's rest length from those targets, once before integration. This includes
+outer–outer, inner–inner and through-layer edges. Subsequent timer ticks call
+`step()` without submitting the same frame again. Direct `step(frame)` is also
+supported and treats that call as a new submission. There are no rigid attachment
+transforms in a frame or worker message.
 
-Distance and per-axis pose constraints use XPBD's
-`deltaLambda = (-C - alpha * lambda) / (sum(w * gradient²) + alpha)`, where
-`alpha = compliance / substepDuration²`. Multipliers reset each substep and
-accumulate across iterations. Zero compliance is hard. Pose compliance defaults
-to 0.001; distance compliance defaults to zero. All constraints run in a fixed
-order: edges, skin targets, then supplied extensions. Solve order can affect
-competing constraints; hard attachments have final precedence.
+Each step advances exactly `timestep` seconds (default 1/60), split into 4
+substeps with 5 projection iterations by default. Distance and per-axis pose
+constraints use `deltaLambda = (-C - alpha * lambda) / (sum(w * gradient²) + alpha)`,
+where `alpha = compliance / substepDuration²`. Multipliers reset per substep.
+Constraint order is all edges, all node pose targets, then caller extensions.
+Only edge compliance may be zero. Custom constraints must preserve the desired
+pose equilibrium themselves.
 
-Additional constraints implement `XpbdConstraint.reset()` and `project(context)`
-and are supplied in `constraints`. No changes to integration are needed to add
-volume/contact constraints later. Extensions must honor inverse masses and only
-modify particle state, not pose targets. Own one constraint instance per solver,
-since multipliers are mutable. Programming errors thrown by extensions propagate;
-numerical non-finite results trigger recovery.
+With gravity off, positions equal to the current pose targets and zero velocity
+are an exact equilibrium: every edge error and every pose error is zero. No
+neutral-pose edge length competes with an expression target. Reset restores every
+node to its current target and clears velocity and multipliers. Non-finite input
+target coordinates retain their last finite value, and numerical faults reset to
+the current finite pose. Invalid dimensions/configuration throw.
 
-`step` returns `{ reset: false }` or `{ reset: true, reason }`. Recovery resets
-positions to the current targets, clears velocities and multipliers, restores
-configured masses, and reapplies valid attachments. Non-finite target coordinates
-retain their last finite target value (initially rest position), and report a
-reset. Invalid transforms or overflowing attachment calculations fall back to
-finite pose targets. Malformed array dimensions and invalid constructor inputs
-throw. Determinism assumes identical inputs and extension behavior on the same
-JavaScript numeric implementation; the solver uses float64 and no randomness.
+The bare solver defaults to zero acceleration; the asset-aware host initializes
+SI gravity. It calls `gravityFromMetadata` once per asset: -9.81 m/s² times the
+recorded vertical vector, converted with the shared length/acceleration helper.
+The vector is in face-local proxy units/s², including the recorded sign and tilt.
+Live `gravityStrength` is dimensionless and scales that cached vector, so it
+never converts units again. Worker/fallback messages carry only the resulting
+proxy acceleration. Tests may supply an explicit proxy acceleration directly.
+
+Additional constraints implement `XpbdConstraint.reset()` and `project(context)`.
+The solver uses float64 with fixed ordering and no randomness. Programming errors
+from extensions propagate; non-finite numerical output triggers recovery.
 
 ## Worker host
 
@@ -63,8 +69,8 @@ Only one output waits for acknowledgement. Per-frame inputs are coalesced while
 an earlier frame is in flight. Arrays sent by callers are copied before transfer,
 so caller-owned targets and cached simulation data are never detached.
 
-Call `sendFrame({ poseTargets, jawTransform, skullTransform })` each render frame
-with **proxy node targets** and transforms in the same space as the asset. Receive
+Call `sendFrame({ poseTargets })` each render frame with **proxy node targets**
+in the same space as the asset. Receive
 node positions and reset reports via `onPositions`; render embedding/deformation
 remains a separate consumer. The host itself does not derive proxy pose targets; the XPBD provider now
 connects it to the viewport and the pose-target mapper. Worker construction errors, runtime errors, message
@@ -83,7 +89,7 @@ runs for each new loaded face.
 
 ## Blendshape pose targets
 
-`createPoseTargetMapper(surface, proxy, jawSettings)` captures neutral render
+`createPoseTargetMapper(surface, proxy)` captures neutral render
 accessor positions and relative morph deltas (or absolute morph targets), plus
 the validated proxy embedding. `map(evaluatedBlendshapeWeights)` accepts the same
 per-frame weights applied by the kinematic runtime. It reuses the kinematic
@@ -104,19 +110,15 @@ coefficients, then normalizes each node by its total coefficient. This is a
 weighted transpose transfer, not an exact inverse or a new tetrahedral solve.
 It preserves constant displacements and returns exact proxy rest positions for
 Neutral, including when the stored embedding projects onto a nearest tetrahedron.
-Uncovered skin nodes (such as duplicate crease nodes) receive their nearest
-neutral render vertex's displacement; that association is computed once and is
-deterministic. Skull targets remain at rest. Jaw targets and the attachment
-transform use the same rigid rotation, so numerical recovery also respects the
-current jaw pose.
+Coincident skin nodes pool their embedding contributions. If an entire group is
+uncovered, a shared nearest-render fallback averages tied render accessors.
 
-Jaw opening defaults to a 25-degree rotation about local X at full jaw-open
-weight, around proxy-space pivot [0, 0.05, 0.02]. The positive angle moves a point
-on FaceCap's forward/lower (-Y/-Z) jaw downward in Z. Pivot, axis and maximum
-angle are explicit tuning parameters, not inferred anatomical measurements.
-The transform is computed about the fixed pivot each frame; it never accumulates.
-Smile/Neutral with no jaw-open weight keep the jaw at identity. AA uses the
-existing library's 0.9 jaw-open activation, yielding 22.5 degrees.
+For each explicit pair, the inner target is `innerRest + outerTarget - outerRest`.
+The pairing table, rather than index order or labels, identifies the two roles.
+This moves the whole layer with each expression and keeps Neutral at rest.
+Jaw opening comes solely from the `jawOpen` blendshape, transferred through the
+outer surface and its paired inner nodes, using the same alias/clamping rules as
+all other morphs. There is no pivot, angular cap or extra anatomical jaw motion.
 
 `createMeshPoseTargetDriver(faceMesh, proxy, frame => host.sendFrame(frame))`
 bridges a loaded morph face to the worker host without importing Three. Its
@@ -130,7 +132,7 @@ The driver supplies solver inputs; rendering solver output is a separate step.
 It does not modify geometry, controls, pose definitions or scene transforms.
 
 Unit coverage includes Neutral, Smile and AA; every actual library/keyboard pose;
-slider and transition weights; malformed embeddings; rigid pivot invariants;
+slider and transition weights; malformed embeddings and pairing; all-node equilibrium;
 and comparison to Three's CPU morph evaluator for relative and absolute targets.
 
 ## Provider integration
@@ -177,3 +179,13 @@ samples; optional overlay geometry reads the latest sample on the render loop.
 The overlay reverses proxy normalization and uses the original face mesh's world
 matrix. Debug visibility never changes simulation state, and owned geometries are
 disposed when hidden or unmounted.
+
+
+## Current asset limitation
+
+The required 12 mm FaceCap layer still fails generation as recorded in
+`docs/soft-tissue-generation-failure.json`. The committed legacy version 1 binary
+is rejected by the version 2 loader. This issue does not change that binary or
+weaken its validation. The solver and mapper regression cases use explicit valid
+SI/pairing fixtures, including all preset and slider-mix equilibrium cases.
+Tests/builds and visual retuning were not run in this implementation step.

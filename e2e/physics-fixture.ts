@@ -31,10 +31,16 @@ export function physicsFixture() {
   glb.writeUInt32LE(0x46546c67,0);glb.writeUInt32LE(2,4);glb.writeUInt32LE(glb.length,8);
   glb.writeUInt32LE(text.length,12);glb.writeUInt32LE(0x4e4f534a,16);text.copy(glb,20);
   const binaryStart=20+text.length;glb.writeUInt32LE(bin.length,binaryStart);glb.writeUInt32LE(0x004e4942,binaryStart+4);bin.copy(glb,binaryStart+8);
-  const arrays={nodes:new Float32Array([...positions,0,0,0.1,0,-0.2,0.1]),tetrahedra:new Uint32Array([0,1,2,3]),edges:new Uint32Array([0,1,0,2,0,3,1,2,1,3,2,3,0,4,1,4,0,5,1,5]),labels:new Uint8Array([0,0,0,0,1,2]),embedding:new Float32Array([0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1])};
+  const inner=positions.map(v=>v*0.8);
+  const pairs=new Uint32Array([0,4,1,5,2,6,3,7]);
+  const edges:number[]=[];
+  for(let a=0;a<8;a++) for(let b=a+1;b<8;b++) edges.push(a,b);
+  const arrays={nodes:new Float32Array([...positions,...inner]),tetrahedra:new Uint32Array([0,1,2,3,4,5,6,7]),
+    edges:new Uint32Array(edges),labels:new Uint8Array([0,0,0,0,1,1,2,2]),pairs,masses:new Float64Array(8).fill(0.002),
+    embedding:new Float32Array([0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1])};
   const sections:{name:string;offset:number;bytes:number}[]=[];const payload:Buffer[]=[];offset=0;
   for(const [name,array] of Object.entries(arrays)) {const bytes=Buffer.from(array.buffer);sections.push({name,offset,bytes:bytes.length});payload.push(bytes);offset+=bytes.length;}
-  const metadata={version:1,sourceHash:createHash('sha256').update(glb).digest('hex'),counts:{nodes:6,tetrahedra:1,edges:10,renderVertices:4},normalization:{center:[0,0,0],scale:1},sections};
+  const metadata={version:2,sourceHash:createHash('sha256').update(glb).digest('hex'),counts:{nodes:8,tetrahedra:2,edges:28,pairs:4,renderVertices:4},normalization:{center:[0,0,0],scale:1},units:{metresPerSourceUnit:0.2,verticalAxis:[0,1,0]},sections};
   function proxy(mismatch=false) {
     const header=Buffer.from(JSON.stringify({...metadata,sourceHash:mismatch?'0'.repeat(64):metadata.sourceHash}));
     const prefix=Buffer.alloc(8);prefix.write('STP1');prefix.writeUInt32LE(header.length,4);

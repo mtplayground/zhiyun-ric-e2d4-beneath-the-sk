@@ -3,7 +3,8 @@ import { usePhysicsState } from '@/state/physics-state';
 
 const controls: { key: keyof PhysicsSettings; label: string; description: string }[] = [
   { key: 'tissueCompliance', label: 'Tissue compliance', description: 'Higher values make the tissue softer.' },
-  { key: 'poseCompliance', label: 'Pose-following compliance', description: 'Higher values let the tissue move farther from the pose.' },
+  { key: 'poseCompliance', label: 'Skin pose compliance', description: 'Higher values let the tissue move farther from the pose.' },
+  { key: 'innerPoseCompliance', label: 'Inner pose compliance', description: 'Controls how closely the inner tissue follows the expression. Lower values make it stiffer.' },
   { key: 'damping', label: 'Damping', description: 'Higher values reduce motion more quickly.' },
   { key: 'gravityStrength', label: 'Gravity strength', description: 'Pulls downward on the upright face. Increase for a more visible effect.' },
 ];
