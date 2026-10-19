@@ -9,6 +9,28 @@ static dashboard. It is anchored in two ways:
 The tag message is `V1.0 stable backup`. The backup branch is a secondary anchor
 for repository hosts and tools that surface branches more prominently than tags.
 
+## Dated main restore point — 2026-10-19
+
+The restore point for the state after the texture/hair/tongue removal and the
+pose fixes is `backup/main-2026-10-19`, targeting `07e909f` (the merge of pull
+request #94). This is a read-only snapshot: do not add commits to it. Keep the
+existing `v1.0` tag and `backup/v1.0` branch unchanged.
+
+Publication is pending the repository publisher. Before publishing, confirm
+that `origin/main` still points to `07e909f`. If an existing origin branch
+other than `main` already points to that tip, use and record that branch as the
+restore point instead of creating a duplicate. Otherwise publish
+`backup/main-2026-10-19` at that exact commit. After publication, confirm the
+remote restore branch resolves to the same full commit SHA as `main` did when
+the snapshot was created; do not move the snapshot to include this doc update.
+
+Restore using the recommended pull-request method below: fetch the backup,
+create a working branch from it (for example,
+`git checkout -b restore/main-2026-10-19 origin/backup/main-2026-10-19`), and open
+a pull request into `main`. If publication reused an existing restore branch,
+substitute that branch name. Put any recovery commits on the working branch,
+never on the backup.
+
 ## Verify the release anchors
 
 Fetch tags and the backup branch before starting recovery work:
