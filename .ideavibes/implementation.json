@@ -1,5 +1,5 @@
 {
-  "batch_id": "6b50e285-c99e-4054-80eb-4a4044094b97",
+  "batch_id": "d02fbd6c-9931-4437-8b56-119a7ee82ad3",
   "verification": "pending",
   "issues": [
     {
@@ -46,6 +46,11 @@
       "number": 104,
       "title": "Test and benchmark the physics milestone",
       "body": "## Files\n\nUnit tests under `src/domain/physics/`, `e2e/`, new benchmark script under `scripts/`\n\n## Dependencies\n\nDepends on: Physics control panel, physics debug overlay and telemetry\n\n---\nUUID: 81af9e96-37e7-4fe0-8bf7-14be67c60eff"
+    },
+    {
+      "number": 113,
+      "title": "Establish physical units and the vertical axis for the face mesh",
+      "body": "## Scope\n\nFix a single metres-per-source-unit scale for the face mesh. glTF assumes metres, so measure the loaded FaceCap face (width and height across the face) and check it against a plausible adult range. Record the scale explicitly. If the measurement is implausible, generation fails unless a scale is given explicitly.\nGet the world vertical axis from the glTF scene's actual node transforms instead of assuming one. Store the scale, the axis and the existing normalization factor in the soft-tissue asset. Provide shared helpers that convert metres to proxy units and m/s² to proxy units per second squared, so every later conversion happens once, in one place.\n\n## Files\n\nSoft-tissue asset generation script under `scripts/`, `src/domain/physics/` unit-conversion helpers and asset loader\n\n---\nUUID: 9b9d830f-2812-45f1-bdab-bfe988805e81"
     }
   ]
 }

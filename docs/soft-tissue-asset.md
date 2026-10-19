@@ -6,7 +6,7 @@ The default input is the same FaceCap GLB configured by the application. No orig
 attachments were supplied (the original-files manifest is empty).
 
 Options: `--source URL_OR_GLB_PATH`, `--output PATH`, `--target 3000`,
-`--thickness 0.001`, `--mouth-line -0.12`, `--up-axis 2`.
+`--thickness 0.001`, `--mouth-line -0.12`, `--metres-per-source-unit NUMBER`.
 The target is an approximate tetrahedron budget; boundary topology means the actual
 count differs. The committed proxy has 2,310 tetrahedra and 2,694 render embeddings.
 Invalid/inverted layer cells fail generation rather than being silently omitted.
@@ -16,10 +16,38 @@ The source must be a GLB v2 containing exactly one morph-bearing face primitive.
 The neutral POSITION accessor defines render vertex order. Rigid eyes and teeth
 are excluded. Coordinates are face-local, centered on the bounds and divided by
 the maximum bound extent; the header stores the inverse transform. Thickness and
-mouth line use those units. FaceCap's face-local vertical axis is Z (axis 2), before
-scene transforms. Jaw nodes lie below the mouth line; all other inner nodes attach
-to the skull. Outer nodes are skin. For other meshes choose their vertical axis
-and mouth line explicitly. No anatomical boundary is inferred from filenames.
+mouth line use those units. The generator composes matrix or TRS transforms along
+all ancestors of the face instance in the active scene. glTF world up is +Y;
+inverting the composed transform expresses that direction in face-local proxy
+coordinates. Jaw nodes have a signed projection below the mouth line; all other
+inner nodes attach to the skull. Outer nodes are skin. Ambiguous instances,
+nonuniform scales, shear and singular transforms fail generation.
+
+The `units` header stores `metresPerSourceUnit`, a unit `verticalAxis` vector in
+proxy coordinates, measured world-horizontal width and world-vertical height in
+metres, and `scaleSource` (`gltf` or `explicit`). Normalization remains separately
+recorded as source-coordinate center and maximum extent. Width 0.10–0.25 m and
+height 0.14–0.35 m are deliberately broad adult face plausibility bounds, not an
+anatomical calibration. Without an explicit scale, either measurement outside
+these bounds fails generation. Explicit positive finite overrides are recorded
+even when outside the range; no automatic fitting is performed.
+
+The upstream FaceCap scene implies roughly 1.90 m width and 2.31 m height. Its
+physical calibration is ambiguous. The committed asset explicitly chooses
+0.0000194938469 metres per source unit (one tenth of the scene-derived scale),
+yielding width 0.1902732077 m and height 0.2312973010 m. This is a plausible
+calibration assumption, not a measured subject dimension. Reproduce it with:
+
+```sh
+npm run generate:soft-tissue -- --metres-per-source-unit 0.0000194938469
+```
+
+Its derived up vector is approximately [-0.032701, 0.022088, -0.999221]; do not
+replace it with an unsigned dominant axis. `metresToProxyUnits` and
+`metresPerSecondSquaredToProxyUnits` in `src/domain/physics/physical-units.ts`
+divide by `metresPerSourceUnit * normalization.scale`. Time stays in seconds.
+These shared helpers are the entry point for future physical conversions.
+Existing solver tuning is unchanged in this issue.
 
 Edge collapse simplifies the surface. Normals are split at 30-degree creases before
 inward extrusion, avoiding offsets across hard folds; smooth adjacent triangles
@@ -32,7 +60,7 @@ project vertices onto the proxy surface; they do not promise exact rest reconstr
 
 STP1 format: four ASCII magic bytes, uint32 little-endian JSON header byte length,
 UTF-8 JSON header, then packed sections. Header contains version, exact source GLB
-SHA-256 (no normalization of bytes), normalization, generation options, counts and
+SHA-256 (no normalization of bytes), normalization, physical units, generation options, counts and
 section offsets relative to the payload. Sections are float32 XYZ nodes, uint32
 four-index tetrahedra, uint32 two-index unique edges, uint8 node labels
 (0 skin, 1 skull, 2 jaw), and float32 embedding records (tetrahedron index followed
@@ -41,7 +69,7 @@ little-endian. The low-thousands tetrahedron budget keeps indices exactly
 representable in embedding float32 records.
 
 `loadSoftTissueAsset` checks the original GLB bytes and face vertex count before
-returning the arrays. Call it with the fetched source mesh bytes before using an
+returning the arrays. Missing or invalid physical-unit metadata is rejected; legacy assets must be regenerated. Call it with the fetched source mesh bytes before using an
 asset with a render mesh. The XPBD provider loads the simulation proxy on demand when physics is enabled;
 the kinematic provider does not start a solver.
 

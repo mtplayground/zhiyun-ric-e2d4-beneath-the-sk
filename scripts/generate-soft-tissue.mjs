@@ -1,7 +1,7 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
-import { BufferGeometry, Float32BufferAttribute, Vector3, Triangle } from 'three';
+import { BufferGeometry, Float32BufferAttribute, Vector3, Triangle, Matrix4, Quaternion } from 'three';
 import { toCreasedNormals, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
@@ -15,7 +15,40 @@ export const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
 // Neutral POSITION accessor of the morph-bearing face primitive. Eyes/teeth are rigid
 // separate meshes and are deliberately excluded from this face-skin embedding.
-export async function readFace(bytes) {
+// glTF world is Y-up. Pull world up/right into the face's source coordinates.
+export function faceFrame(json, meshIndex) {
+  const matches=[];
+  function visit(index, parent, ancestors=new Set()) {
+    if(ancestors.has(index)) throw Error('Cyclic glTF nodes');
+    const node=json.nodes[index], local=new Matrix4();
+    if(node.matrix) local.fromArray(node.matrix);
+    else local.compose(new Vector3(...(node.translation??[0,0,0])),new Quaternion(...(node.rotation??[0,0,0,1])),new Vector3(...(node.scale??[1,1,1])));
+    const world=parent.clone().multiply(local);
+    if(node.mesh===meshIndex) matches.push(world);
+    for(const child of node.children??[]) visit(child,world,new Set([...ancestors,index]));
+  }
+  const scene=json.scenes?.[json.scene??0];
+  if(!scene) throw Error('Missing active glTF scene');
+  for(const root of scene.nodes??[]) visit(root,new Matrix4());
+  if(matches.length!==1) throw Error('Expected one face instance in active scene');
+  const world=matches[0], columns=[0,1,2].map(i=>new Vector3().setFromMatrixColumn(world,i));
+  const scales=columns.map(v=>v.length()), scale=scales[0];
+  if(!Number.isFinite(scale)||!(scale>0)||scales.some(s=>Math.abs(s/scale-1)>1e-5)||columns.some((a,i)=>columns.some((b,j)=>i!==j&&Math.abs(a.dot(b)/(scale*scale))>1e-5))) throw Error('Face transform must have uniform nonzero scale without shear');
+  const inverse=world.clone().invert();
+  return {metresPerSourceUnit:scale, verticalAxis:new Vector3(0,1,0).transformDirection(inverse).toArray(), rightAxis:new Vector3(1,0,0).transformDirection(inverse).toArray()};
+}
+
+export function physicalUnits(positions, frame, explicitScale) {
+  const scale=explicitScale??frame.metresPerSourceUnit;
+  if(!Number.isFinite(scale)||scale<=0) throw Error('Invalid metres-per-source-unit');
+  const extent=axis=>{const values=positions.map(p=>dot(p,axis));return (Math.max(...values)-Math.min(...values))*scale;};
+  const measurements={widthMetres:extent(frame.rightAxis),heightMetres:extent(frame.verticalAxis)};
+  const plausible=measurements.widthMetres>=0.10&&measurements.widthMetres<=0.25&&measurements.heightMetres>=0.14&&measurements.heightMetres<=0.35;
+  if(!plausible&&explicitScale===undefined) throw Error(`Implausible adult face dimensions ${JSON.stringify(measurements)}; provide --metres-per-source-unit explicitly`);
+  return {metresPerSourceUnit:scale,verticalAxis:frame.verticalAxis,measurements,scaleSource:explicitScale===undefined?'gltf':'explicit'};
+}
+
+export async function readFace(bytes, {metresPerSourceUnit}={}) {
   const data = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   if (data.getUint32(0,true)!==0x46546c67 || data.getUint32(4,true)!==2) throw Error('Expected GLB v2');
   const length=data.getUint32(12,true);
@@ -45,18 +78,21 @@ export async function readFace(bytes) {
     return Array.from({length:a.count},(_,i)=>Array.from({length:width},(_,j)=>view[method]((a.byteOffset??0)+i*(v.byteStride??size*width)+j*size,true)));
   }
   const p=primitives[0];
+  const meshIndex=json.meshes.findIndex(m=>m.primitives.includes(p));
+  const frame=faceFrame(json,meshIndex);
   // Work in face-local coordinates normalized to maximum extent 1. This preserves
   // render accessor ordering and avoids camera/scene normalization dependencies.
   const positions=accessor(p.attributes.POSITION);
+  const units=physicalUnits(positions,frame,metresPerSourceUnit);
   const min=[0,1,2].map(i=>Math.min(...positions.map(p=>p[i])));
   const max=[0,1,2].map(i=>Math.max(...positions.map(p=>p[i])));
   const scale=Math.max(...max.map((v,i)=>v-min[i]));
   if(!(scale>0)) throw Error('Empty face bounds');
-  return {positions:positions.map(p=>p.map((v,i)=>(v-(min[i]+max[i])/2)/scale)), indices:p.indices===undefined?positions.map((_,i)=>i):accessor(p.indices).flat(), normalization:{center:min.map((v,i)=>(v+max[i])/2),scale}};
+  return {units,positions:positions.map(p=>p.map((v,i)=>(v-(min[i]+max[i])/2)/scale)), indices:p.indices===undefined?positions.map((_,i)=>i):accessor(p.indices).flat(), normalization:{center:min.map((v,i)=>(v+max[i])/2),scale}};
 }
 
-export function generate(face,{target=3000,thickness=0.001,mouthLine=-0.12,upAxis=2}={}) {
-  if(!Number.isInteger(target)||target<12||!Number.isFinite(thickness)||thickness<=0||!Number.isFinite(mouthLine)||![0,1,2].includes(upAxis)) throw Error('Invalid proxy options');
+export function generate(face,{target=3000,thickness=0.001,mouthLine=-0.12,upAxis}={}) {
+  if(!Number.isInteger(target)||target<12||!Number.isFinite(thickness)||thickness<=0||!Number.isFinite(mouthLine)||(upAxis!==undefined&&![0,1,2].includes(upAxis))) throw Error('Invalid proxy options');
   const geometry=new BufferGeometry();
   geometry.setAttribute('position',new Float32BufferAttribute(face.positions.flat(),3)); geometry.setIndex(face.indices);
   // Collapse edges rather than dropping triangles, retaining a connected surface.
@@ -69,7 +105,8 @@ export function generate(face,{target=3000,thickness=0.001,mouthLine=-0.12,upAxi
   const n=nodes.length;
   for(let i=0;i<n;i++) nodes.push(nodes[i].map((v,j)=>Math.fround(v-thickness*normal.array[i*3+j])));
   if(nodes.some(p=>p.some(v=>!Number.isFinite(v)))) throw Error('Non-finite proxy node');
-  const labels=nodes.map((p,i)=>i<n?0:p[upAxis]<mouthLine?2:1);
+  const vertical=upAxis===undefined?(face.units?.verticalAxis??[0,0,1]):[0,1,2].map(i=>i===upAxis?1:0);
+  const labels=nodes.map((p,i)=>i<n?0:dot(p,vertical)<mouthLine?2:1);
   const tetrahedra=[];
   const indices=Array.from(proxy.index.array);
   for(let i=0;i<indices.length;i+=3) {
@@ -113,17 +150,17 @@ export function encode(asset,metadata) {
 }
 
 export async function main(args=process.argv.slice(2)) {
-  const options={source:DEFAULT_SOURCE,output:'public/data/facecap-soft-tissue.bin',target:3000,thickness:0.001,mouthLine:-0.12,upAxis:2};
+  const options={source:DEFAULT_SOURCE,output:'public/data/facecap-soft-tissue.bin',target:3000,thickness:0.001,mouthLine:-0.12};
   for(let i=0;i<args.length;i+=2) {
-    const key={'--source':'source','--output':'output','--target':'target','--thickness':'thickness','--mouth-line':'mouthLine','--up-axis':'upAxis'}[args[i]];
+    const key={'--metres-per-source-unit':'metresPerSourceUnit','--source':'source','--output':'output','--target':'target','--thickness':'thickness','--mouth-line':'mouthLine'}[args[i]];
     if(!key||args[i+1]===undefined) throw Error(`Unknown or incomplete option ${args[i]}`);
     options[key]=['source','output'].includes(key)?args[i+1]:Number(args[i+1]);
   }
   let bytes;
   if(/^https?:/.test(options.source)) {const response=await fetch(options.source);if(!response.ok) throw Error(`Source HTTP ${response.status}`);bytes=Buffer.from(await response.arrayBuffer());}
   else bytes=await readFile(options.source);
-  const face=await readFace(bytes), asset=generate(face,options);
-  const output=encode(asset,{sourceHash:hash(bytes),source:options.source,normalization:face.normalization,options:{target:options.target,thickness:options.thickness,mouthLine:options.mouthLine,upAxis:options.upAxis},labels:{skin:0,skull:1,jaw:2}});
+  const face=await readFace(bytes,options), asset=generate(face,options);
+  const output=encode(asset,{sourceHash:hash(bytes),source:options.source,normalization:face.normalization,units:face.units,options:{target:options.target,thickness:options.thickness,mouthLine:options.mouthLine,upAxis:options.upAxis,metresPerSourceUnit:options.metresPerSourceUnit},labels:{skin:0,skull:1,jaw:2}});
   await mkdir(new URL('../public/data/',import.meta.url),{recursive:true});
   await writeFile(options.output,output);
   console.log(`Wrote ${options.output}: ${asset.nodes.length} nodes, ${asset.tetrahedra.length} tetrahedra, ${asset.embedding.length} embeddings`);
