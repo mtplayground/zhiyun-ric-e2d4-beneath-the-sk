@@ -281,6 +281,7 @@ export default function KinematicProviderRuntime({
 
   useEffect(() => {
     physicsDiagnosticRef.current = null;
+    asset?.applyVertexDeltas();
     usePhysicsTelemetry.getState().clear();
     if (!asset) {
       initializedRef.current = false;
@@ -363,9 +364,9 @@ export default function KinematicProviderRuntime({
     }
 
     return () => {
+      asset.applyVertexDeltas();
       provider.dispose?.();
       usePhysicsTelemetry.getState().clear();
-      asset.applyVertexDeltas();
       physicsDiagnosticRef.current = null;
       initializedRef.current = false;
       transitionRef.current = null;
@@ -379,9 +380,11 @@ export default function KinematicProviderRuntime({
   useEffect(() => {
     if (lastResetRequestRef.current === resetRequest) return;
     lastResetRequestRef.current = resetRequest;
+    // Restore original material/culling and remove only the owned offset attribute
+    // immediately; the provider can later publish a fresh post-reset sample.
+    asset?.applyVertexDeltas();
     provider.updateVertexDeltas?.(currentWeightsRef.current);
     provider.resetSimulation?.();
-    asset?.applyVertexDeltas();
   }, [resetRequest, provider, asset]);
 
   useFrame(() => {
