@@ -14,6 +14,7 @@ export function usePhysicsHost(enabled: boolean, options: PhysicsHostOptions) {
     if (!enabled) return;
     const instance = createPhysicsHost({
       sourceMesh, renderVertexCount, assetUrl, solver, fallbackSubsteps, workerFactory,
+      onAssetReady: asset => callbacks.current.onAssetReady?.(asset),
       onPositions: (...args) => callbacks.current.onPositions(...args),
       onDiagnostic: diagnostic => callbacks.current.onDiagnostic?.(diagnostic),
     });

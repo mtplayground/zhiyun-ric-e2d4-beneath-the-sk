@@ -1,6 +1,7 @@
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 
+import type { PhysicsDiagnostic } from '@/domain/physics/physics-protocol';
 import { appConfig } from '@/config/env';
 import {
   cachedTransitionFrameCount,
@@ -16,7 +17,6 @@ import {
 import {
   getProviderRegistryEntry,
   type BlendshapeWeights,
-  type DeformationProvider,
 } from '@/domain/providers';
 import {
   controlActions,
@@ -30,6 +30,7 @@ import type { LoadedHeadAsset } from './gltf-head-loader';
 type KinematicProviderRuntimeProps = {
   asset: LoadedHeadAsset | null;
   assetUrl: string;
+  physicsEnabled: boolean;
   onDiagnosticChange: (diagnostic: ProviderRuntimeDiagnostic | null) => void;
 };
 
@@ -76,12 +77,6 @@ function weightsNearlyEqual(
 
 function poseIdFromLabel(label: string) {
   return label.trim().toLowerCase().replace(/\s+/g, '-') || 'neutral';
-}
-
-function createSelectedProvider(): DeformationProvider {
-  return getProviderRegistryEntry(
-    appConfig.deformationProvider,
-  ).createProvider();
 }
 
 function createCompatibilityDiagnostic({
@@ -193,12 +188,14 @@ function createCompatibilityDiagnostic({
 export default function KinematicProviderRuntime({
   asset,
   assetUrl,
+  physicsEnabled,
   onDiagnosticChange,
 }: KinematicProviderRuntimeProps) {
   const activePoseLabel = useActivePoseLabel();
   const activeControlMode = useActiveControlMode();
   const activationValues = useActivationValues();
-  const provider = useMemo(createSelectedProvider, []);
+  const providerId = physicsEnabled ? 'xpbd-soft-tissue' : 'kinematic-blendshape';
+  const provider = useMemo(() => getProviderRegistryEntry(providerId).createProvider(), [providerId]);
   const initializedRef = useRef(false);
   const frameIndexRef = useRef(0);
   const currentWeightsRef = useRef<BlendshapeWeights>({});
@@ -209,10 +206,19 @@ export default function KinematicProviderRuntime({
   const latestActivationValuesRef = useRef(activationValues);
   const latestDiagnosticPoseLabelRef = useRef(activePoseLabel);
   const onDiagnosticChangeRef = useRef(onDiagnosticChange);
+  const physicsDiagnosticRef = useRef<PhysicsDiagnostic | null>(null);
   const transitionRef = useRef<BlendshapeTransition | null>(null);
 
   useEffect(() => {
-    onDiagnosticChangeRef.current = onDiagnosticChange;
+    onDiagnosticChangeRef.current = diagnostic => {
+      const physics = physicsDiagnosticRef.current;
+      onDiagnosticChange(diagnostic && physics ? {
+        ...diagnostic,
+        label: physics.code === 'worker' ? 'Physics Active' : physics.code === 'fallback' ? 'Physics Fallback' : 'Physics Diagnostic',
+        message: physics.message,
+        tone: physics.code === 'asset-error' || physics.code === 'solver-error' ? 'destructive' : physics.code === 'worker' ? 'green' : 'amber',
+      } : diagnostic);
+    };
   }, [onDiagnosticChange]);
 
   useEffect(() => {
@@ -266,6 +272,7 @@ export default function KinematicProviderRuntime({
   }, [activeControlMode]);
 
   useEffect(() => {
+    physicsDiagnosticRef.current = null;
     if (!asset) {
       initializedRef.current = false;
       currentWeightsRef.current = {};
@@ -281,6 +288,19 @@ export default function KinematicProviderRuntime({
         assetUrl,
         availableBlendshapes: asset.morphTargetNames,
         initialBlendshapeWeights,
+        physics: physicsEnabled && asset.physics ? {
+          ...asset.physics,
+          simProxyUrl: appConfig.assets.simProxyUrl,
+          onDiagnostic: diagnostic => {
+            physicsDiagnosticRef.current = diagnostic;
+            const base = createCompatibilityDiagnostic({ asset, poseLabel: latestPoseLabelRef.current, targetWeights: latestActivationValuesRef.current });
+            onDiagnosticChangeRef.current({ ...base,
+              label: diagnostic.code === 'worker' ? 'Physics Active' : diagnostic.code === 'fallback' ? 'Physics Fallback' : 'Physics Diagnostic',
+              message: diagnostic.message,
+              tone: diagnostic.code === 'asset-error' || diagnostic.code === 'solver-error' ? 'destructive' : diagnostic.code === 'worker' ? 'green' : 'amber',
+            });
+          },
+        } : undefined,
       });
       currentWeightsRef.current = initialBlendshapeWeights;
       providerLastWeightsRef.current = initialBlendshapeWeights;
@@ -294,6 +314,11 @@ export default function KinematicProviderRuntime({
           targetWeights: latestActivationValuesRef.current,
         }),
       );
+      if (physicsEnabled && !asset.physics) {
+        physicsDiagnosticRef.current = { code: 'asset-error', message: 'Physics requires exactly one morph-bearing face primitive.' };
+        const base = createCompatibilityDiagnostic({ asset, poseLabel: latestPoseLabelRef.current, targetWeights: latestActivationValuesRef.current });
+        onDiagnosticChangeRef.current({ ...base, label: 'Physics Unavailable', tone: 'destructive', message: 'Physics requires exactly one morph-bearing face primitive.' });
+      }
       transitionRef.current = weightsNearlyEqual(
         latestActivationValuesRef.current,
         initialBlendshapeWeights,
@@ -328,16 +353,21 @@ export default function KinematicProviderRuntime({
 
     return () => {
       provider.dispose?.();
+      asset.applyVertexDeltas();
+      physicsDiagnosticRef.current = null;
       initializedRef.current = false;
       transitionRef.current = null;
     };
-  }, [asset, assetUrl, provider]);
+  }, [asset, assetUrl, provider, physicsEnabled]);
 
   useFrame(() => {
     frameIndexRef.current += 1;
     const frameIndex = frameIndexRef.current;
     const transition = transitionRef.current;
 
+    if (asset && initializedRef.current && !transition) {
+      asset.applyVertexDeltas(provider.updateVertexDeltas?.(currentWeightsRef.current));
+    }
     if (!asset || !initializedRef.current || !transition) {
       controlActions.setCurrentFrameIndex(frameIndex);
       return;
@@ -349,7 +379,7 @@ export default function KinematicProviderRuntime({
       Math.max(0, elapsedFrames / cachedTransitionFrameCount),
     );
     const cachedFrame = getCachedTransitionFrame({
-      providerId: appConfig.deformationProvider,
+      providerId,
       fromPoseLabel: transition.fromPoseLabel,
       toPoseLabel: transition.poseLabel,
       fromWeights: transition.fromWeights,
@@ -373,6 +403,9 @@ export default function KinematicProviderRuntime({
         });
 
     asset.applyBlendshapeWeights(evaluatedFrame.blendshapeWeights);
+    asset.applyVertexDeltas(cachedFrame
+      ? provider.updateVertexDeltas?.(evaluatedFrame.blendshapeWeights)
+      : evaluatedFrame.vertexDeltas);
     currentWeightsRef.current = evaluatedFrame.blendshapeWeights;
     providerLastWeightsRef.current = evaluatedFrame.blendshapeWeights;
     controlActions.setActivationValues(evaluatedFrame.blendshapeWeights, {

@@ -23,7 +23,7 @@ it('transfers worker positions, bounds outstanding output and closes its timer',
   const output = messages.find(m => m.type === 'positions');
   expect(output?.type === 'positions' && Array.from(output.positions)).toEqual([1, 2, 3]);
   const transferred = scope.postMessage.mock.calls.find(([m]) => m.type === 'positions')!;
-  expect(transferred[1]).toHaveLength(1);
+  expect(transferred[1]).toHaveLength(2);
   expect((transferred[1]![0] as ArrayBuffer).byteLength).toBe(0);
   vi.advanceTimersByTime(50);
   expect(messages.filter(m => m.type === 'positions')).toHaveLength(1);

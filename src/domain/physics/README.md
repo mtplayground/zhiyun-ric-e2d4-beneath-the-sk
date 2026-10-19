@@ -66,8 +66,8 @@ so caller-owned targets and cached simulation data are never detached.
 Call `sendFrame({ poseTargets, jawTransform, skullTransform })` each render frame
 with **proxy node targets** and transforms in the same space as the asset. Receive
 node positions and reset reports via `onPositions`; render embedding/deformation
-remains a separate consumer. This module does not change the blendshape viewport
-or derive proxy pose targets. Worker construction errors, runtime errors, message
+remains a separate consumer. The host itself does not derive proxy pose targets; the XPBD provider now
+connects it to the viewport and the pose-target mapper. Worker construction errors, runtime errors, message
 errors and a five-second startup timeout switch to main-thread physics, normally
 two substeps instead of four (one is the minimum). Diagnostics report that switch.
 
@@ -132,3 +132,15 @@ It does not modify geometry, controls, pose definitions or scene transforms.
 Unit coverage includes Neutral, Smile and AA; every actual library/keyboard pose;
 slider and transition weights; malformed embeddings; rigid pivot invariants;
 and comparison to Three's CPU morph evaluator for relative and absolute targets.
+
+## Provider integration
+
+The `xpbd-soft-tissue` provider now connects the mapper, worker host and render
+embedding. The GLB loader retains the exact parsed source bytes and exposes the
+single morph-bearing face's accessor-space surface. The provider initializes the
+mapper from the validated cached asset, sends targets each frame and returns
+vertex offsets. Worker outputs also carry the matching target array as a second
+transferable buffer. Rendering adds the embedded residual after morph evaluation
+through a dedicated shader attribute. Skin base positions and morph targets stay
+unchanged; switching off restores the original geometry/material immediately.
+The viewport's physics toggle owns backend cleanup without reloading the GLB.

@@ -29,7 +29,8 @@ export interface PhysicsHostOptions {
   assetUrl?: string;
   solver?: Omit<WorkerSolverOptions, 'positions' | 'labels' | 'edges'>;
   fallbackSubsteps?: number;
-  onPositions(positions: Float64Array, result: StepResult): void;
+  onPositions(positions: Float64Array, result: StepResult, poseTargets: Float64Array): void;
+  onAssetReady?(asset: Awaited<ReturnType<typeof loadSoftTissueAsset>>): void;
   onDiagnostic?(diagnostic: PhysicsDiagnostic): void;
   workerFactory?: () => PhysicsWorker;
 }
@@ -63,10 +64,10 @@ export function createPhysicsHost(options: PhysicsHostOptions): PhysicsHost {
     try { previous.postMessage({ type: 'stop' }); } catch { /* terminate also stops timers */ }
     previous.terminate();
   }
-  function output(positions: Float64Array, result: StepResult) {
+  function output(positions: Float64Array, result: StepResult, poseTargets: Float64Array) {
     if (disposed) return;
     if (result.reset) diagnostic('reset', result.reason);
-    options.onPositions(positions, result);
+    options.onPositions(positions, result, poseTargets);
   }
   function flush() {
     if (!worker || !workerReady || frameInFlight || !latest || sentVersion === frameVersion) return;
@@ -91,6 +92,7 @@ export function createPhysicsHost(options: PhysicsHostOptions): PhysicsHost {
       if (disposed) return;
       const asset = await loadSoftTissueAsset(bytes, options.sourceMesh, options.renderVertexCount);
       if (disposed) return;
+      options.onAssetReady?.(asset);
       solverOptions = { ...options.solver, positions: asset.nodes, labels: asset.labels, edges: asset.edges };
       try {
         worker = options.workerFactory ? options.workerFactory() : new Worker(new URL('./physics.worker.ts', import.meta.url), { type: 'module' });
@@ -106,7 +108,7 @@ export function createPhysicsHost(options: PhysicsHostOptions): PhysicsHost {
               frameInFlight = false;
               flush();
             } else if (data.type === 'positions') {
-              output(data.positions, data.result);
+              output(data.positions, data.result, data.poseTargets);
               worker?.postMessage({ type: 'ack' });
             } else startFallback(data.message);
           } catch (error) { startFallback(String(error)); }

@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_FACE_MESH_URL?: string;
+  readonly VITE_SIM_PROXY_URL?: string;
   readonly VITE_POSE_DATA_URL?: string;
   readonly VITE_DEFORMATION_PROVIDER?: string;
   readonly VITE_STATIC_BASE_PATH?: string;

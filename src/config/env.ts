@@ -14,6 +14,7 @@ export type AppConfig = {
   assets: {
     faceMeshUrl: string;
     poseDataUrl: string;
+    simProxyUrl: string;
   };
   deformationProvider: DeformationProviderId;
   features: FeatureFlags;
@@ -23,6 +24,7 @@ type RawEnv = Pick<
   ImportMetaEnv,
   | 'VITE_FACE_MESH_URL'
   | 'VITE_POSE_DATA_URL'
+  | 'VITE_SIM_PROXY_URL'
   | 'VITE_DEFORMATION_PROVIDER'
   | 'VITE_ENABLE_READOUT_PANEL'
   | 'VITE_ENABLE_DEFORMATION_CURVE_PANEL'
@@ -32,6 +34,7 @@ type RawEnv = Pick<
 const defaultConfig = {
   faceMeshUrl: 'https://threejs.org/examples/models/gltf/facecap.glb',
   poseDataUrl: './data/poses.json',
+  simProxyUrl: `${import.meta.env.BASE_URL}data/facecap-soft-tissue.bin`,
   deformationProvider: 'kinematic-blendshape',
   readoutPanel: true,
   deformationCurvePanel: true,
@@ -84,6 +87,7 @@ function parseBooleanFlag(
 export function loadAppConfig(env: RawEnv = import.meta.env): AppConfig {
   return {
     assets: {
+      simProxyUrl: normalizePath(env.VITE_SIM_PROXY_URL, defaultConfig.simProxyUrl),
       faceMeshUrl: normalizePath(
         env.VITE_FACE_MESH_URL,
         defaultConfig.faceMeshUrl,

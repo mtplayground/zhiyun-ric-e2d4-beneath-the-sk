@@ -37,6 +37,22 @@ export function createMeshPoseTargetDriver(
   sendFrame: (frame: SolverFrame) => void,
   jaw?: JawSettings,
 ) {
+  const surface = readMorphFaceSurface(mesh);
+  const mapper = createPoseTargetMapper({
+    ...surface,
+  }, proxy, jaw);
+  return {
+    mapper,
+    update() {
+      const weights = Object.fromEntries(Object.entries(mesh.morphTargetDictionary ?? {}).map(([name, index]) => [name, mesh.morphTargetInfluences?.[index] ?? 0]));
+      const frame = mapper.map(weights);
+      sendFrame(frame);
+      return frame;
+    },
+  };
+}
+
+export function readMorphFaceSurface(mesh: MorphFaceMesh) {
   const position = mesh.geometry.getAttribute('position');
   if (!position) throw new Error('Face mesh has no position attribute');
   const dictionary = { ...mesh.morphTargetDictionary };
@@ -46,17 +62,6 @@ export function createMeshPoseTargetDriver(
     if (!Number.isInteger(index) || index < 0 || !attributes[index]) throw new Error(`Missing face morph attribute ${name}`);
     morphTargets[name] = packed(attributes[index]);
   }
-  const mapper = createPoseTargetMapper({
-    positions: packed(position), morphTargets,
-    morphTargetsRelative: mesh.geometry.morphTargetsRelative,
-  }, proxy, jaw);
-  return {
-    mapper,
-    update() {
-      const weights = Object.fromEntries(Object.entries(dictionary).map(([name, index]) => [name, mesh.morphTargetInfluences?.[index] ?? 0]));
-      const frame = mapper.map(weights);
-      sendFrame(frame);
-      return frame;
-    },
-  };
+  return { positions: packed(position), morphTargets,
+    morphTargetsRelative: mesh.geometry.morphTargetsRelative };
 }

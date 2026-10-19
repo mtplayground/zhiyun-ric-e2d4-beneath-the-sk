@@ -10,6 +10,7 @@ describe('loadAppConfig', () => {
       assets: {
         faceMeshUrl: 'https://threejs.org/examples/models/gltf/facecap.glb',
         poseDataUrl: './data/poses.json',
+        simProxyUrl: `${import.meta.env.BASE_URL}data/facecap-soft-tissue.bin`,
       },
       deformationProvider: 'kinematic-blendshape',
       features: {
@@ -33,6 +34,7 @@ describe('loadAppConfig', () => {
     expect(config.assets).toEqual({
       faceMeshUrl: '/models/face.glb',
       poseDataUrl: '/data/custom-poses.json',
+      simProxyUrl: `${import.meta.env.BASE_URL}data/facecap-soft-tissue.bin`,
     });
     expect(config.deformationProvider).toBe('kinematic-blendshape');
     expect(config.features).toEqual({
@@ -48,10 +50,17 @@ describe('loadAppConfig', () => {
     expect(config.assets).toEqual({
       faceMeshUrl: '/models/face.glb',
       poseDataUrl: './data/poses.json',
+      simProxyUrl: `${import.meta.env.BASE_URL}data/facecap-soft-tissue.bin`,
     });
     expect(config.features).not.toHaveProperty('projectionAlignmentPanel');
     expect(config.assets).not.toHaveProperty('textures');
     expect(config.assets).not.toHaveProperty('hairMeshUrl');
+  });
+
+  it('selects physics and accepts a custom simulation asset', () => {
+    const config = loadAppConfig({ VITE_DEFORMATION_PROVIDER: 'xpbd-soft-tissue', VITE_SIM_PROXY_URL: '/custom/proxy.bin' });
+    expect(config.deformationProvider).toBe('xpbd-soft-tissue');
+    expect(config.assets.simProxyUrl).toBe('/custom/proxy.bin');
   });
 
   it('rejects unsupported deformation providers', () => {

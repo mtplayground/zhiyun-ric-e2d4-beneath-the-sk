@@ -7,6 +7,7 @@ import {
 } from 'three';
 import { OrbitControls as OrbitControlsImpl } from 'three/examples/jsm/controls/OrbitControls.js';
 
+import { appConfig } from '@/config/env';
 import { cn } from '@/lib/utils';
 import { useGltfHeadAsset, type HeadAssetState } from './gltf-head-loader';
 import KinematicProviderRuntime, {
@@ -146,9 +147,11 @@ function ViewportScene({
   asset,
   onAssetStateChange,
   onDiagnosticChange,
+  physicsEnabled,
 }: {
   assetUrl: string;
   asset: HeadAssetState['asset'];
+  physicsEnabled: boolean;
   onAssetStateChange: (state: HeadAssetState) => void;
   onDiagnosticChange: (diagnostic: ProviderRuntimeDiagnostic | null) => void;
 }) {
@@ -170,6 +173,7 @@ function ViewportScene({
         onAssetStateChange={onAssetStateChange}
       />
       <KinematicProviderRuntime
+        physicsEnabled={physicsEnabled}
         asset={asset}
         assetUrl={assetUrl}
         onDiagnosticChange={onDiagnosticChange}
@@ -199,6 +203,7 @@ export default function FaceViewport({
   activePoseLabel,
   assetUrl,
 }: FaceViewportProps) {
+  const [physicsEnabled, setPhysicsEnabled] = useState(appConfig.deformationProvider === 'xpbd-soft-tissue');
   const [headAsset, setHeadAsset] = useState<HeadAssetState>({
     status: 'idle',
     progress: 0,
@@ -242,12 +247,26 @@ export default function FaceViewport({
         }}
       >
         <ViewportScene
+          physicsEnabled={physicsEnabled}
           assetUrl={assetUrl}
           asset={headAsset.asset}
           onAssetStateChange={handleAssetStateChange}
           onDiagnosticChange={handleProviderDiagnosticChange}
         />
       </Canvas>
+      <button
+        type="button"
+        aria-pressed={physicsEnabled}
+        data-testid="physics-toggle"
+        className="absolute right-3 top-3 rounded-md border border-border bg-background/90 px-3 py-2 font-mono text-xs text-foreground"
+        onClick={() => {
+          // Restore the original geometry/material immediately on disable.
+          if (physicsEnabled) headAsset.asset?.applyVertexDeltas();
+          setPhysicsEnabled(enabled => !enabled);
+        }}
+      >
+        Physics {physicsEnabled ? 'On' : 'Off'}
+      </button>
       <div className="pointer-events-none absolute left-3 top-3 grid gap-1 rounded-md border border-border bg-background/75 px-3 py-2 font-mono text-xs backdrop-blur">
         <span
           className={
