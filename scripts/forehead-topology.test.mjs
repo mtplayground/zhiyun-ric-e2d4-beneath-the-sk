@@ -1,6 +1,7 @@
+import { embedSimulationOffsets } from '../src/domain/physics/render-embedding';
 import { describe, expect, it } from 'vitest';
 import { BufferGeometry, Float32BufferAttribute } from 'three';
-import { disconnectedCoincidences, weldPhysicalSurface, prepareSurface } from './generate-soft-tissue.mjs';
+import { disconnectedCoincidences, weldPhysicalSurface, prepareSurface, generate } from './generate-soft-tissue.mjs';
 import { positionGroups } from '../src/domain/physics/position-groups.mjs';
 
 const geometry=(positions,indices)=>{
@@ -35,4 +36,21 @@ describe('continuous mechanical face surface',()=>{
     expect(positionGroups([[0.00000099,0,0],[0.00000101,0,0],[0.001,0,0]])).toEqual([[0,1],[2]]);
     expect(()=>weldPhysicalSurface(geometry([[0,0,0],[0.0000001,0,0],[0,1,0]],[0,1,2]))).toThrow('collapses proxy triangle 0');
   });
+});
+
+it('keeps the checked smooth forehead continuous through generation and bounded render embedding',()=>{
+  const g=geometry([[0.5,1,0],[0,0.5,0],[0.5,0,0],[0.5,1,0],[0.5,0,0],[1,0.5,0]],[0,1,2,3,4,5]);
+  const face={...faceFor(g),regions:Array(6).fill('skin')};
+  expect(disconnectedCoincidences(face,g).foreheadGroups).toBeGreaterThan(0);
+  const asset=generate(face,{target:3000,thicknessMetres:0.012});
+  expect(asset.topologyReport.afterCreaseWeld.foreheadGroups).toBe(0);
+  for(const [outer,inner] of asset.pairs) expect(Math.hypot(...asset.nodes[outer].map((v,i)=>v-asset.nodes[inner][i]))*0.2).toBeCloseTo(0.012,8);
+  const proxy={...asset,nodes:asset.nodes.flat(),pairs:asset.pairs.flat(),tetrahedra:asset.tetrahedra.flat(),embedding:asset.embedding.flat(),
+    metadata:{normalization:face.normalization,embeddingPolicy:asset.embeddingPolicy,counts:{renderVertices:6}}};
+  const targets=Float64Array.from(proxy.nodes),simulated=targets.map((value,i)=>value+Math.sin(i)*0.001);
+  const offsets=embedSimulationOffsets(proxy,simulated,targets);
+  expect(asset.embedding[0]).toEqual(asset.embedding[3]);
+  expect(Array.from(offsets.slice(0,3))).toEqual(Array.from(offsets.slice(9,12)));
+  expect(Array.from(offsets.slice(6,9))).toEqual(Array.from(offsets.slice(12,15)));
+  for(let vertex=0;vertex<6;vertex++) expect(Math.hypot(...offsets.slice(vertex*3,vertex*3+3))).toBeLessThanOrEqual(asset.embeddingMaxOffsets[vertex]*face.normalization.scale);
 });

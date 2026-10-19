@@ -3,7 +3,7 @@ import { BufferGeometry, Float32BufferAttribute, Mesh, Vector3 } from 'three';
 import { createPoseTargetMapper, type PoseProxy, type PoseSurface } from './pose-target-mapper';
 import { createMeshPoseTargetDriver } from './mesh-pose-target-driver';
 import { createKinematicBlendshapeProvider } from '../providers/kinematic-blendshape-provider';
-import { allPoseMappings, getKeyboardPoseEntries, getPoseWeights } from '../poses/pose-library';
+import { allPoseMappings, getKeyboardPoseEntries, getPoseWeights, findPoseMappingById } from '../poses/pose-library';
 import { XpbdSolver } from './xpbd-solver';
 
 const proxy: PoseProxy = {
@@ -53,6 +53,16 @@ describe('pose target mapper',()=>{
     close(noJaw.poseTargets,proxy.nodes);
   });
 
+  it.each([0,0.2,0.9,1])('uses jawOpen=%s only as a linear morph weight, with no hidden transform',weight=>{
+    const targets=createPoseTargetMapper(surface,proxy).map({jawOpen:weight});
+    for(let node=0;node<6;node++) {
+      expect(targets.poseTargets[node*3]).toBeCloseTo(proxy.nodes[node*3],12);
+      expect(targets.poseTargets[node*3+1]).toBeCloseTo(proxy.nodes[node*3+1]-weight/2,12);
+      expect(targets.poseTargets[node*3+2]).toBeCloseTo(proxy.nodes[node*3+2]-weight/2,12);
+    }
+    expect(Object.keys(targets).sort()).toEqual(['poseTargets','surfacePositions']);
+  });
+
   it('pools covered/uncovered coincident skin nodes and carries the result to their inner partners',()=>{
     const p:PoseProxy={...proxy,nodes:[...array(proxy.nodes),0,0,0,0,0,-0.05],labels:[...array(proxy.labels),0,1],pairs:[...array(proxy.pairs),6,7]};
     const targets=createPoseTargetMapper(surface,p).map({mouthSmileLeft:1}).poseTargets;
@@ -73,6 +83,26 @@ describe('pose target mapper',()=>{
     const mapper=createPoseTargetMapper(surface,proxy);
     const input={frameIndex:3,progress:0.3,previousBlendshapeWeights:{jawOpen:0.1},targetPose:{id:'test',label:'test',blendshapeWeights:{jawOpen:0.9,mouthSmileLeft:0.5}}};
     close(mapper.evaluateFrame(input).poseTargets,mapper.map(provider.evaluateFrame(input).blendshapeWeights).poseTargets);
+  });
+
+  it.each([
+    ['Neutral',getPoseWeights(findPoseMappingById('phoneme-neutral')!,'kinematic-blendshape')],
+    ['Smile',getPoseWeights(findPoseMappingById('expression-smile')!,'kinematic-blendshape')],
+    ['AA',getPoseWeights(findPoseMappingById('phoneme-aa')!,'kinematic-blendshape')],
+    ['Slider mix',{jawOpen:0.37,mouthSmileLeft:0.28,mouthSmileRight:0.63}],
+  ] as const)('starts at exact full-target equilibrium without corrections or velocities: %s',(_name,weights)=>{
+    const frame=createPoseTargetMapper(surface,proxy).map(weights);
+    for(let i=0;i<proxy.pairs.length;i+=2) for(let axis=0;axis<3;axis++) {
+      const outer=proxy.pairs[i]*3+axis,inner=proxy.pairs[i+1]*3+axis;
+      expect(frame.poseTargets[inner]).toBe(proxy.nodes[inner]+(frame.poseTargets[outer]-proxy.nodes[outer]));
+    }
+    const simulation=new XpbdSolver({positions:frame.poseTargets,pairs:proxy.pairs,masses:[0.002,0.003,0.004,0.005,0.006,0.007],
+      edges:[0,1,2,3,0,2,1,3,0,3,1,2,1,4,3,5,4,5],gravity:[0,0,0],substeps:4,iterations:5});
+    expect(simulation.inverseMasses.every(w=>w>0&&Number.isFinite(w))).toBe(true);
+    for(let i=0;i<10;i++) expect(simulation.step(frame)).toEqual({reset:false});
+    expect(simulation.positions).toEqual(frame.poseTargets);
+    expect(simulation.velocities.every(v=>v===0)).toBe(true);
+    expect(Object.keys(frame).sort()).toEqual(['poseTargets','surfacePositions']);
   });
 
   it('is exact zero-gravity equilibrium for every preset, keyboard entry and slider mix',()=>{

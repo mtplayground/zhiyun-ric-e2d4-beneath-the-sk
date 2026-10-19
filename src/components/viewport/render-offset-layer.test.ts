@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import {
-  BufferGeometry, DynamicDrawUsage, Float32BufferAttribute, InterleavedBuffer,
+  Box3, Sphere, BufferGeometry, DynamicDrawUsage, Float32BufferAttribute, InterleavedBuffer,
   InterleavedBufferAttribute, Vector3, Mesh, MeshStandardMaterial, ShaderLib,
 } from 'three';
 import { createRenderOffsetLayer } from './render-offset-layer';
@@ -127,4 +127,26 @@ it.each([true,false])('preserves shared quantized/interleaved morph bytes and ki
   }
   accessorClones.forEach(spy=>expect(spy).not.toHaveBeenCalled());
   layer.dispose();expect(digest(bytes)).toBe(beforeHash);
+});
+
+it('leaves normals, morph normals, indices and loaded bounds intact through zero-offset reset',()=>{
+  const {geometry,mesh,layer}=fixture();
+  const normal=new Float32BufferAttribute([0,0,1,0,0,1],3);
+  const morphNormal=new Float32BufferAttribute([0,0.1,0,0,0.2,0],3);
+  geometry.setAttribute('normal',normal);geometry.morphAttributes.normal=[morphNormal];geometry.setIndex([0,1,0]);
+  geometry.boundingBox=new Box3(new Vector3(-1,-1,-1),new Vector3(2,2,2));
+  geometry.boundingSphere=new Sphere(new Vector3(0.5,0.5,0.5),3);
+  const index=geometry.index,box=geometry.boundingBox,sphere=geometry.boundingSphere,morphNormals=geometry.morphAttributes.normal;
+  const attributes=geometry.attributes,bytes=[normal.array.slice(),morphNormal.array.slice(),index!.array.slice()];
+  mesh.morphTargetInfluences=[0.6];
+  const kinematic=[0,1].map(i=>mesh.getVertexPosition(i,new Vector3()).toArray());
+  layer.apply(new Float32Array(6));
+  expect(mesh.geometry).toBe(geometry);expect(geometry.attributes).toBe(attributes);
+  expect(geometry.getAttribute('normal')).toBe(normal);expect(geometry.morphAttributes.normal).toBe(morphNormals);
+  expect(geometry.morphAttributes.normal[0]).toBe(morphNormal);
+  expect(geometry.index).toBe(index);expect(geometry.boundingBox).toBe(box);expect(geometry.boundingSphere).toBe(sphere);
+  for(const i of [0,1]) expect(mesh.getVertexPosition(i,new Vector3()).toArray()).toEqual(kinematic[i]);
+  layer.apply();
+  expect(normal.array).toEqual(bytes[0]);expect(morphNormal.array).toEqual(bytes[1]);expect(index!.array).toEqual(bytes[2]);
+  expect(geometry.getAttribute('simulationOffset')).toBeUndefined();layer.dispose();
 });
