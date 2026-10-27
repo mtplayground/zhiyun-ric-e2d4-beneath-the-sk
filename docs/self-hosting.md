@@ -110,21 +110,27 @@ proxy. Physics shading currently retains the blendshape normal field.
 
 ### Optional physics controls
 
-Set `VITE_ENABLE_PHYSICS_PANEL=true` to show the **Soft-tissue physics** section
-in the Control Panel. It is hidden by default, independently of provider
-selection. The panel and viewport on/off switches share the same enabled state.
+The **Soft-tissue physics** section is visible by default. Set
+`VITE_ENABLE_PHYSICS_PANEL=false` to hide it independently of provider selection.
+Both switches use runtime diagnostics to show actual readiness and the active
+backend, or the inactive reason; requesting physics alone never displays On.
 
-Tissue compliance controls edge softness; pose-following compliance controls how
-strongly skin follows the current blendshape pose. Higher compliance means softer
-constraints. Damping controls how quickly velocity decays. Gravity strength ranges
-from 0× to 20×: 1× is 0.5 normalized face extents/s² and 20× is 10 extents/s²,
-downward along FaceCap's upright local Z axis. For a visible sag, increase gravity
-and pose-following compliance; zero gravity disables that force.
+Skin and inner-layer pose stiffness are separate soft targets in N/m. Edge
+stiffness controls resistance to changes from the posed edge lengths. Damping
+uses inverse seconds. Gravity defaults to 9.81 m/s² along the recorded scene
+vertical vector and is converted once using the proxy's calibrated physical
+scale. Zero gravity disables that force. All nodes use stored SI masses.
+
+The Physical preset retains the SI defaults. Visible demonstration uses
+98.1 m/s² gravity, skin stiffness 20, edge stiffness 200 and damping 8; the UI
+labels this exaggerated mode as not physically accurate. Editing a setting
+selects Custom. Magnified offsets (1×/10×/50×/100×) change only the display;
+the optional heatmap measures actual residuals in millimetres.
 
 Changes apply live to the active worker or main-thread fallback without replacing
 particle state, reloading the face, or restarting the worker. They are retained
 while physics is off and used when it is enabled again. **Reset simulation**
-restores the current pose and jaw attachments and clears velocities and constraint
+restores the current full-layer pose and clears velocities and constraint
 multipliers. It leaves control activations, the selected preset, and physics
 settings unchanged. Settings are session state and are not persisted across page
 reloads.
@@ -132,17 +138,19 @@ reloads.
 ### Physics diagnostics
 
 While physics is enabled, the viewport's **Proxy Hidden/Visible** button toggles
-an optional wireframe and particle overlay. Cyan identifies skin nodes, amber
-skull-attached nodes, and pink jaw-attached nodes. Edges include the tetrahedral
+an optional wireframe and particle overlay. Cyan identifies skin labels; amber
+and pink identify inner-node labels, used for coloring only. Every node is
+dynamic; there are no rigid skull or jaw attachments. Edges include the tetrahedral
 interior. The overlay follows the face's complete scene transform and draws
-through the surface so attached inner nodes remain visible. It is hidden by
+through the surface so inner nodes remain visible. It is hidden by
 default and disappears when physics is disabled.
 
 The Live Readout reports average solver milliseconds per fixed step in the most
 recent timer batch, effective completed fixed steps per wall-clock second since
 backend startup, maximum node displacement relative to the matching pose target,
-and mean skin-node distance from that target. Distances are in normalized face
-extent units. Numerical resets are counted in the solver loop, including samples
+and mean distance across all nodes from that target. Each node's target distance
+can also be inspected. Distances are in metres. Numerical resets are counted in
+the solver loop, including samples
 dropped by output backpressure; manual Reset simulation actions do not increment
 this counter. The counter is retained across worker-to-main-thread fallback and
 cleared when a new physics session starts. Fallback starts a new rate/timing window.

@@ -75,6 +75,7 @@ test('falls back when workers are unavailable and continues reporting finite tel
   await load(page);await page.getByRole('switch',{name:'Enable soft-tissue physics'}).click();
   await expect(page.getByText('Physics Fallback',{exact:true})).toBeVisible();
   await expect(page.getByTestId('physics-status')).toHaveText('Active · main-thread fallback');
+  await expect(page.getByTestId('physics-panel-status')).toHaveText('Active · main-thread fallback');
   await expect(page.getByTestId('physics-toggle')).toHaveAttribute('aria-pressed','true');
   await expect(page.getByTestId('physics-telemetry')).toBeVisible();
   await expect.poll(async()=>parseFloat(await metric(page,'Effective simulation rate'))).toBeGreaterThan(0);
@@ -85,6 +86,8 @@ test('reports a mismatched proxy and keeps the kinematic controls usable',async(
   await page.getByRole('switch',{name:'Enable soft-tissue physics'}).click();
   await expect(page.getByText('Simulation asset does not match the render face mesh',{exact:true})).toBeVisible();
   await expect(page.getByTestId('physics-status')).toHaveText('Inactive · Invalid or mismatched proxy asset');
+  await expect(page.getByTestId('physics-panel-status')).toHaveText('Inactive · Invalid or mismatched proxy asset');
+  await expect(page.getByRole('switch',{name:'Enable soft-tissue physics'})).toHaveAttribute('aria-checked','false');
   await expect(page.getByTestId('provider-physics-status')).toContainText('Inactive · Invalid or mismatched proxy asset');
   await expect(page.getByTestId('physics-toggle')).toHaveAttribute('aria-pressed','false');
   await expect(page.getByTestId('physics-toggle')).toHaveText('Physics Inactive');

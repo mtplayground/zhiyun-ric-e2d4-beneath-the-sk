@@ -28,6 +28,12 @@ actual pinned-commit build/test/audit output, not by this coverage document.
 | #119 | Convex nearest-point weights, outside fade, per-vertex cap and identical positional-copy embedding. Source-derived mechanical mask excludes detached oral pieces and inward folds; separate eye/teeth primitives never get offsets. Excluded accessors cannot drive fallback targets. |
 | #120 | Updated equilibrium, pairing, SI, diagnostics, seam and bounds tests; real FaceCap cycles every expression plus Smile/AA with finite values, pixel tolerance and off/on mesh identity. Benchmark asserts all 984 nodes dynamic. |
 
+| #129 | Real committed version 3 proxy passes the shared runtime/build validator; malformed source/count/version/payload/final-mass cases fail the build gate. |
+| #130 | Viewport and control-panel switches both derive active/inactive/backend status from runtime diagnostics. Unit and browser regressions cover invalid assets and fallback. |
+| #131 | Physics panel defaults on; Physical/demo/Custom store and browser tests verify exact values, disclosure, retained preset on reset and zero-gravity equilibrium. |
+| #132 | Shader-only magnification and actual-offset SI heatmap tests verify display factors, raw buffer preservation, legend and disable cleanup. |
+| #133 | Real-source browser tests verify exact GLB/proxy hashes, worker readiness, 60-frame resting telemetry, measured demonstration displacement/pixel thresholds, exact restoration and corrupt-proxy reasons. |
+
 ## Repair and limitations
 
 The earlier generator treated all disconnected components of the morph-bearing
@@ -113,7 +119,7 @@ route navigation; research resource buttons are explicitly disabled.
 
 The complete batch is reviewed against historical main `07e909f`, with the later
 SI and paired-layer requirements taking precedence over the earlier rigid-jaw
-model. The production build and static runtime-validator gate, all 143 unit tests,
+model. The production build and static runtime-validator gate, all 144 unit tests,
 exact binary regeneration, independent SI mass checks and both benchmark modes
 were executed again for this deployment. Browser acceptance includes the actual
 upstream FaceCap and corrupted-asset diagnostics. Deployment uses a Git archive
@@ -124,3 +130,37 @@ The preset sweep now waits for the actual 52-blendshape mesh before submitting
 poses. Metadata alone can appear before asynchronous GLB initialization. Its
 whole-sweep budget accommodates the real mesh on software WebGL; individual
 activation assertions retain their original limits.
+
+## 2026-10-27 release revalidation
+
+Reviewed all 22 issue requirements and the complete batch diff from `07e909f`.
+The control-panel switch previously showed the requested state after a startup
+failure. It now shows the actual runtime status, matching the viewport; unit and
+browser assertions cover both fallback readiness and invalid-proxy inactivity.
+Self-hosting instructions now describe the default-visible panel, SI stiffness,
+all-node telemetry, and removed rigid attachments accurately.
+
+Executed successfully before publication:
+
+- `npm ci` and `npm run build:static` (production TypeScript/Vite build and shared
+  runtime asset validation).
+- `npm test`: 27 files, 144 tests, including exact binary regeneration and final
+  source/node/embedding records.
+- `npm run lint`: no errors; two existing Fast Refresh export warnings.
+- `npm run verify:physics`: all 984 nodes, 492 pairs, 2,940 tetrahedra and 2,694
+  render vertices verified against exact source bytes and independent SI masses.
+- `npm run test:e2e`: 4 passing browser tests.
+- `npm run test:e2e:physics`: 8 passing browser tests, including every real FaceCap
+  expression, pixel comparisons, actual worker execution and corrupt-proxy cases.
+- Both documented benchmark modes: all 984 nodes dynamic, no numerical resets,
+  finite output and bounded render offsets. Observed solver p95 was 34.22 ms at
+  four substeps and 20.34 ms at two substeps on this executor.
+- `node --test scripts/capture-deploy-url.check.mjs`: passed.
+
+Initial setup lacked local dependencies and Chromium; both were installed.
+Vitest script tests belong to `npm test`, not Node's native test runner. The
+additional panel regression initially used the immutable SSR store snapshot;
+its test harness now renders current runtime snapshots. All affected checks
+were rerun successfully. Release publication additionally requires a clean
+pinned Git archive, a fresh Sprite build/restart, deployed-artifact byte matching,
+public browser verification, and the platform self-check.

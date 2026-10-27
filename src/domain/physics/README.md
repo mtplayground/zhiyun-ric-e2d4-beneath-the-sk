@@ -151,7 +151,7 @@ The viewport's physics toggle owns backend cleanup without reloading the GLB.
 
 ## Live controls
 
-The opt-in physics panel uses `usePhysicsState`, shared with the viewport toggle.
+The default-visible physics panel uses `usePhysicsState`, shared with the viewport toggle.
 The runtime translates its settings through `toSolverSettings` and calls the
 provider's `configurePhysics` method. The host forwards `configure` to the worker
 or fallback loop; `XpbdSolver.configure` updates built-in constraint compliance,

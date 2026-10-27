@@ -1,5 +1,6 @@
 import { PHYSICS_SETTING_RANGES, type PhysicsPreset, type PhysicsSettings } from '@/domain/physics/physics-settings';
 import { usePhysicsState } from '@/state/physics-state';
+import { physicsStatusLabel, usePhysicsTelemetry } from '@/state/physics-telemetry-state';
 
 const controls: { key: keyof PhysicsSettings; label: string; description: string; unit: string }[] = [
   { key: 'gravityAcceleration', label: 'Gravity', unit: 'm/s²', description: 'Acceleration downward along the face scene’s recorded vertical axis. Set to zero to turn gravity off.' },
@@ -10,6 +11,9 @@ const controls: { key: keyof PhysicsSettings; label: string; description: string
 ];
 export default function PhysicsControlPanel() {
   const enabled = usePhysicsState(state => state.enabled);
+  const runtimeStatus = usePhysicsTelemetry(state => state.status);
+  const status = enabled ? runtimeStatus : { active: false as const, reason: 'Physics disabled' };
+  const active = enabled && status.active;
   const preset = usePhysicsState(state => state.preset);
   const setPreset = usePhysicsState(state => state.setPreset);
   const settings = usePhysicsState(state => state.settings);
@@ -20,10 +24,11 @@ export default function PhysicsControlPanel() {
     <section aria-labelledby="physics-panel-title" data-testid="physics-control-panel" className="grid gap-4 rounded-md border border-border bg-secondary/50 p-3">
       <div className="flex items-center justify-between gap-3">
         <h3 id="physics-panel-title" className="text-sm font-medium">Soft-tissue physics</h3>
-        <button type="button" role="switch" aria-checked={enabled} aria-label="Enable soft-tissue physics"
+        <button type="button" role="switch" aria-checked={active} aria-label="Enable soft-tissue physics" aria-describedby="physics-panel-status"
           className="rounded-md border border-border bg-background px-3 py-2 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-telemetry-cyan/50"
-          onClick={() => setEnabled(!enabled)}>{enabled ? 'On' : 'Off'}</button>
+          onClick={() => setEnabled(!enabled)}>{active ? 'On' : enabled ? 'Inactive' : 'Off'}</button>
       </div>
+      <p id="physics-panel-status" data-testid="physics-panel-status" role="status" className="font-mono text-xs text-muted-foreground">{physicsStatusLabel(status)}</p>
       <div className="grid gap-1.5">
         <label htmlFor="physics-preset" className="text-xs">Physics preset</label>
         <select id="physics-preset" value={preset} aria-describedby="physics-preset-help"
