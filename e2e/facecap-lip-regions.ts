@@ -1,0 +1,87 @@
+/** Neutral FaceCap triangle ordinals, bound to the SHA-256 in the probe.
+ * Source accessor coordinates: X runs left/right, +Y runs outward, -Z runs up.
+ * Upper: four topology rings from the inner vermilion edge, through the outer
+ * roll (central Z 10996..11515). Lower: three rings (Z 11524..11988).
+ * Lateral strip X 4900..6286 excludes the shared commissures at either end.
+ * Includes outer/front triangles, not just the opposing inner edges. Regions
+ * are selected ONCE in neutral; posing must never reclassify their membership.
+ * Values are triangle ordinals in the indexed morph-bearing primitive.
+ */
+export const lipRegions = {
+  "upper": [
+    2581,
+    2582,
+    2583,
+    2584,
+    2585,
+    2586,
+    2587,
+    2588,
+    2595,
+    2596,
+    2597,
+    2598,
+    2599,
+    2600,
+    2601,
+    2602,
+    2603,
+    2604,
+    2617,
+    2618,
+    2619,
+    2620,
+    2621,
+    2622,
+    2623,
+    2624,
+    2625,
+    2626,
+    2627,
+    2628,
+    2742,
+    2743,
+    2744,
+    2745,
+    2746,
+    2747,
+    2748,
+    2808,
+    2809,
+    2810
+  ],
+  "lower": [
+    1659,
+    1660,
+    1661,
+    1662,
+    1663,
+    1664,
+    1665,
+    1666,
+    1667,
+    1668,
+    1923,
+    1924,
+    1925,
+    1926,
+    1927,
+    1928,
+    1929,
+    1930,
+    1931,
+    1932,
+    1933,
+    1934,
+    1935,
+    1936,
+    1937,
+    1938,
+    1939,
+    1940,
+    2533,
+    2534,
+    2535,
+    2536
+  ]
+} as const;

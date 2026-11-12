@@ -1,31 +1,31 @@
 /** Loaded only by Playwright through Vite, never by the application. */
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
-import { Mesh, Vector3 } from 'three';
+import { Box3, Mesh, Triangle, Vector3 } from 'three';
+import { lipRegions } from './facecap-lip-regions';
+import { inspectLipSurfaces } from './lip-surface-geometry';
 import { readMorphFaceSurface } from '../src/domain/physics/mesh-pose-target-driver';
 import { computePosedSurfacePositions } from '../src/domain/physics/pose-target-mapper';
 import { allPoseMappings, actionUnitPoseMappings, getPoseWeights } from '../src/domain/poses/pose-library';
 
 const source = 'https://threejs.org/examples/models/gltf/facecap.glb';
 const sourceHash = '6bfce6d0fcbb5839f5102b79733007859fef7c5df6d9eb49e2264542810b5f64';
-// Neutral inner vermilion edges, paired by lateral position. Accessor IDs are
-// bound to the exact source hash, not selected again after deformation.
-const pairs = [
-  { label: 'left outer-middle', upper: 1448, lower: 1414 },
-  { label: 'left middle', upper: 1449, lower: 1413 },
-  { label: 'left near-center', upper: 1451, lower: 1094 },
-  { label: 'center', upper: 1453, lower: 1095 },
-  { label: 'right near-center', upper: 1462, lower: 1096 },
-  { label: 'right middle', upper: 1464, lower: 1098 },
-  { label: 'right outer-middle', upper: 1466, lower: 1100 },
-];
+// Open-mouth intent is explicit: neutral/brow/lid/cheek-only poses and
+// labiodental V need no positive clearance. Sliders with AU 25 do.
+const openPresets = new Set([
+  'au-22-lip-funneler', 'au-25-lips-part', 'expression-smile',
+  'expression-frown', 'expression-mouth', 'expression-pucker',
+  'phoneme-n', 'phoneme-aa', 'phoneme-iy', 'phoneme-t',
+  'phoneme-eh', 'phoneme-uw', 'phoneme-y',
+]);
+const minimumOpenGapMetres = 0.0001; // 0.1 mm; strictly positive, no crossing tolerance.
 export async function measureLipGaps() {
   const response = await fetch(source);
   if (!response.ok) throw new Error(`FaceCap fetch failed: ${response.status}`);
   const bytes = await response.arrayBuffer();
   const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)))
     .map(v => v.toString(16).padStart(2, '0')).join('');
-  if (hash !== sourceHash) throw new Error(`FaceCap bytes changed: ${hash}; reselect lip landmarks explicitly`);
+  if (hash !== sourceHash) throw new Error(`FaceCap bytes changed: ${hash}; reselect lip triangle regions explicitly`);
   const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
   // Geometry needs no textures: avoid requiring a GPU/transcoder for this CPU check.
   const view = new DataView(bytes), jsonLength = view.getUint32(12, true);
@@ -42,18 +42,18 @@ export async function measureLipGaps() {
   if (faces.length !== 1) throw new Error(`Expected one FaceCap face, found ${faces.length}`);
   gltf.scene.updateMatrixWorld(true);
   const face = faces[0], surface = readMorphFaceSurface(face);
-  // glTF world Y is vertical; original world units are metres. Do not use the
-  // viewport's display normalization or assume local Y is face-up.
-  const vertical = new Vector3(0, 1, 0).transformDirection(face.matrixWorld.clone().invert());
-  const metresPerUnit = new Vector3().setFromMatrixScale(face.matrixWorld).x;
-  const gap = (positions: ArrayLike<number>, upper: number, lower: number) =>
-    new Vector3().fromArray(Array.from(positions).slice(upper * 3, upper * 3 + 3))
-      .sub(new Vector3().fromArray(Array.from(positions).slice(lower * 3, lower * 3 + 3)))
-      .dot(vertical) * metresPerUnit;
-  const neutralGaps = pairs.map(pair => gap(surface.positions, pair.upper, pair.lower));
-  if (neutralGaps.some(value => !Number.isFinite(value) || value < 0 || value > 0.003)) {
-    throw new Error(`Invalid neutral lip landmarks: ${JSON.stringify(neutralGaps)}`);
-  }
+  const index = face.geometry.getIndex();
+  if (!index) throw new Error('Expected indexed FaceCap triangles');
+  const triangles = (positions: ArrayLike<number>, ordinals: readonly number[], preset: string) => ordinals.map(ordinal => {
+    const vertices = [0, 1, 2].map(corner => {
+      const vertex = index.getX(ordinal * 3 + corner);
+      return new Vector3(positions[vertex * 3], positions[vertex * 3 + 1], positions[vertex * 3 + 2])
+        .applyMatrix4(face.matrixWorld);
+    });
+    const triangle = new Triangle(vertices[0], vertices[1], vertices[2]);
+    if (triangle.getArea() <= 1e-16) throw new Error(`${preset}: degenerate lip triangle ${ordinal}`);
+    return { ordinal, triangle, bounds: new Box3().setFromPoints(vertices) };
+  });
   const cases = allPoseMappings.map(pose => ({ id: pose.id, label: pose.label, weights: getPoseWeights(pose, 'kinematic-blendshape') }));
   const controls = actionUnitPoseMappings.filter(pose =>
     Object.keys(getPoseWeights(pose, 'kinematic-blendshape')).some(name => /^(jaw|mouth)/.test(name)));
@@ -72,10 +72,16 @@ export async function measureLipGaps() {
     cases.push({ id: `slider-${mask}`, label: `Sliders ${labels.join(' + ') || 'neutral'}`, weights });
   }
   return {
-    source, sourceHash, toleranceMetres: 0.0001, pairs, neutralGaps,
+    source, sourceHash, minimumOpenGapMetres, regions: lipRegions,
     results: cases.map(pose => {
       const posed = computePosedSurfacePositions(surface, pose.weights);
-      return { id: pose.id, label: pose.label, gaps: pairs.map(pair => ({ position: pair.label, metres: gap(posed, pair.upper, pair.lower) })) };
+      const needsClearance = openPresets.has(pose.id) ||
+        (pose.id.startsWith('slider-') && (pose.weights.jawOpen ?? 0) >= 0.58);
+      return {
+        id: pose.id, label: pose.label,
+        requiredGapMetres: needsClearance ? minimumOpenGapMetres : 0,
+        ...inspectLipSurfaces(triangles(posed, lipRegions.upper, pose.label), triangles(posed, lipRegions.lower, pose.label)),
+      };
     }),
   };
 }
