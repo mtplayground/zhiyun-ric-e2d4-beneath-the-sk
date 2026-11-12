@@ -1,0 +1,244 @@
+{
+  "source": "https://threejs.org/examples/models/gltf/facecap.glb",
+  "sourceHash": "6bfce6d0fcbb5839f5102b79733007859fef7c5df6d9eb49e2264542810b5f64",
+  "regions": {
+    "upper": [
+      2581,
+      2582,
+      2583,
+      2584,
+      2585,
+      2586,
+      2587,
+      2588,
+      2595,
+      2596,
+      2597,
+      2598,
+      2599,
+      2600,
+      2601,
+      2602,
+      2603,
+      2604,
+      2617,
+      2618,
+      2619,
+      2620,
+      2621,
+      2622,
+      2623,
+      2624,
+      2625,
+      2626,
+      2627,
+      2628,
+      2742,
+      2743,
+      2744,
+      2745,
+      2746,
+      2747,
+      2748,
+      2808,
+      2809,
+      2810
+    ],
+    "lower": [
+      1659,
+      1660,
+      1661,
+      1662,
+      1663,
+      1664,
+      1665,
+      1666,
+      1667,
+      1668,
+      1923,
+      1924,
+      1925,
+      1926,
+      1927,
+      1928,
+      1929,
+      1930,
+      1931,
+      1932,
+      1933,
+      1934,
+      1935,
+      1936,
+      1937,
+      1938,
+      1939,
+      1940,
+      2533,
+      2534,
+      2535,
+      2536
+    ]
+  },
+  "slabs": [
+    {
+      "name": "front",
+      "ranges": [
+        [
+          -0.052425428330971524,
+          0.036156893188777905
+        ]
+      ]
+    },
+    {
+      "name": "middle",
+      "ranges": [
+        [
+          -0.09671658909084624,
+          -0.052425428330971524
+        ],
+        [
+          0.036156893188777905,
+          0.08044805394865262
+        ]
+      ]
+    },
+    {
+      "name": "corner",
+      "ranges": [
+        [
+          -0.14100774985072095,
+          -0.09671658909084624
+        ],
+        [
+          0.08044805394865262,
+          0.12473921470852734
+        ]
+      ]
+    }
+  ],
+  "axes": "world metres: X lateral, Y up, Z forward",
+  "results": [
+    {
+      "id": "neutral",
+      "weights": {},
+      "regions": [
+        {
+          "name": "front",
+          "sides": [
+            {
+              "minimumGapMetres": 0.0013943040101882002,
+              "intersection": null,
+              "upperForwardExtentMinusLowerMetres": 0.026575514331788952,
+              "sideProjectionOverlaps": true
+            }
+          ],
+          "minimumGapMetres": 0.0013943040101882002
+        },
+        {
+          "name": "middle",
+          "sides": [
+            {
+              "minimumGapMetres": 0.0011259218715184954,
+              "intersection": null,
+              "upperForwardExtentMinusLowerMetres": 0.02727834321153444,
+              "sideProjectionOverlaps": true
+            },
+            {
+              "minimumGapMetres": 0.00112592187114401,
+              "intersection": null,
+              "upperForwardExtentMinusLowerMetres": 0.02843629286883309,
+              "sideProjectionOverlaps": false
+            }
+          ],
+          "minimumGapMetres": 0.00112592187114401
+        },
+        {
+          "name": "corner",
+          "sides": [
+            {
+              "minimumGapMetres": 0.001246287283545426,
+              "intersection": null,
+              "upperForwardExtentMinusLowerMetres": 0.023994941669012393,
+              "sideProjectionOverlaps": false
+            },
+            {
+              "minimumGapMetres": 0.001279880637238231,
+              "intersection": null,
+              "upperForwardExtentMinusLowerMetres": 0.026778454865334034,
+              "sideProjectionOverlaps": false
+            }
+          ],
+          "minimumGapMetres": 0.001246287283545426
+        }
+      ],
+      "minimumGapMetres": 0.0011259218711440015,
+      "intersection": null,
+      "upperForwardExtentMinusLowerMetres": 0.026575514331788952,
+      "sideProjectionOverlaps": true
+    },
+    {
+      "id": "phoneme-t",
+      "weights": {
+        "jawOpen": 0.28,
+        "mouthUpperUpLeft": 0.1,
+        "mouthUpperUpRight": 0.1,
+        "mouthLowerDownLeft": 0.06,
+        "mouthLowerDownRight": 0.06
+      },
+      "regions": [
+        {
+          "name": "front",
+          "sides": [
+            {
+              "minimumGapMetres": 0.14320596748872755,
+              "intersection": null,
+              "upperForwardExtentMinusLowerMetres": 0.07864897084305156,
+              "sideProjectionOverlaps": false
+            }
+          ],
+          "minimumGapMetres": 0.14320596748872755
+        },
+        {
+          "name": "middle",
+          "sides": [
+            {
+              "minimumGapMetres": 0.13421830934802886,
+              "intersection": null,
+              "upperForwardExtentMinusLowerMetres": 0.07724228034434577,
+              "sideProjectionOverlaps": false
+            },
+            {
+              "minimumGapMetres": 0.13254264952921485,
+              "intersection": null,
+              "upperForwardExtentMinusLowerMetres": 0.07974245407099423,
+              "sideProjectionOverlaps": false
+            }
+          ],
+          "minimumGapMetres": 0.13254264952921485
+        },
+        {
+          "name": "corner",
+          "sides": [
+            {
+              "minimumGapMetres": 0.12702606850495654,
+              "intersection": null,
+              "upperForwardExtentMinusLowerMetres": 0.0726461328458744,
+              "sideProjectionOverlaps": false
+            },
+            {
+              "minimumGapMetres": 0.12702606851659956,
+              "intersection": null,
+              "upperForwardExtentMinusLowerMetres": 0.07891610116847392,
+              "sideProjectionOverlaps": false
+            }
+          ],
+          "minimumGapMetres": 0.12702606850495654
+        }
+      ],
+      "minimumGapMetres": 0.12702606850495654,
+      "intersection": null,
+      "upperForwardExtentMinusLowerMetres": 0.07864897084305156,
+      "sideProjectionOverlaps": false
+    }
+  ]
+}
