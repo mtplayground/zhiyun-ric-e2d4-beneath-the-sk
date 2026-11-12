@@ -29,6 +29,7 @@ export type PoseAuditResult = {
   category: PoseCategory | 'custom';
   code?: string;
   status: PoseAuditStatus;
+  lipSafetyViolations: readonly ('closure-exceeds-jaw' | 'opposing-lip-shapes')[];
   entries: readonly PoseBlendshapeAuditEntry[];
   activeBlendshapeNames: readonly string[];
   missingBlendshapeNames: readonly string[];
@@ -52,6 +53,7 @@ export type PoseLibraryAuditSummary = {
   missingBlendshapeNames: readonly string[];
   unsupportedBlendshapeNames: readonly string[];
   unsupportedPoseLabels: readonly string[];
+  unsafePoseLabels: readonly string[];
   poseAudits: readonly PoseAuditResult[];
 };
 
@@ -153,6 +155,21 @@ export function auditBlendshapeWeights({
     .filter((entry) => entry.status === 'active')
     .map((entry) => entry.weight);
 
+  // Check authored weights independently of mesh target availability.
+  const lipSafetyViolations: PoseAuditResult['lipSafetyViolations'][number][] = [];
+  if ((weights.mouthClose ?? 0) > (weights.jawOpen ?? 0)) {
+    lipSafetyViolations.push('closure-exceeds-jaw');
+  }
+  const closesLips = ['mouthClose', 'mouthPressLeft', 'mouthPressRight']
+    .some((name) => (weights[name] ?? 0) > 0);
+  const partsLips = [
+    'mouthUpperUpLeft', 'mouthUpperUpRight',
+    'mouthLowerDownLeft', 'mouthLowerDownRight',
+  ].some((name) => (weights[name] ?? 0) > 0);
+  if (closesLips && partsLips) {
+    lipSafetyViolations.push('opposing-lip-shapes');
+  }
+
   return {
     poseId,
     label,
@@ -160,6 +177,7 @@ export function auditBlendshapeWeights({
     code,
     status: summarizePoseStatus(entries),
     entries,
+    lipSafetyViolations,
     activeBlendshapeNames,
     missingBlendshapeNames,
     unsupportedBlendshapeNames,
@@ -228,6 +246,9 @@ export function auditPoseLibrary({
     ),
     unsupportedPoseLabels: poseAudits
       .filter((audit) => audit.status === 'unsupported')
+      .map((audit) => audit.label),
+    unsafePoseLabels: poseAudits
+      .filter((audit) => audit.lipSafetyViolations.length > 0)
       .map((audit) => audit.label),
     poseAudits,
   };
