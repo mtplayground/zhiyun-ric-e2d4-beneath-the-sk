@@ -8,6 +8,7 @@ import {
   auditPoseMapping,
   expressionPoseMappings,
   getMorphTargetAliasCandidates,
+  getPoseWeights,
   phonemePoseMappings,
   resolveMorphTargetName,
 } from '@/domain/poses';
@@ -35,6 +36,13 @@ describe('pose morph-target audit', () => {
       allPoseMappings.map((pose) => pose.id),
     );
     expect(summary.neutralPoseCount).toBe(2);
+    expect(summary.unsafePoseLabels).toEqual([]);
+    for (const audit of summary.poseAudits) {
+      expect(audit.lipSafetyViolations, audit.label).toEqual([]);
+      if (audit.status !== 'neutral') {
+        expect(audit.maxActiveWeight, audit.label).toBeGreaterThanOrEqual(0.12);
+      }
+    }
   });
 
   it('classifies referenced blendshapes as active, missing, or unsupported', () => {
@@ -52,10 +60,10 @@ describe('pose morph-target audit', () => {
 
     expect(audit.status).toBe('partial');
     expect(audit.activeBlendshapeNames).toEqual(['jawOpen']);
-    expect(audit.activeWeightTotal).toBeCloseTo(0.16);
-    expect(audit.maxActiveWeight).toBeCloseTo(0.16);
+    const jawOpen = getPoseWeights(phonemeT!, 'kinematic-blendshape').jawOpen;
+    expect(audit.activeWeightTotal).toBeCloseTo(jawOpen);
+    expect(audit.maxActiveWeight).toBeCloseTo(jawOpen);
     expect(audit.missingBlendshapeNames).toEqual([
-      'mouthClose',
       'mouthFunnel',
       'mouthLowerDownLeft',
       'mouthLowerDownRight',
@@ -63,6 +71,38 @@ describe('pose morph-target audit', () => {
       'mouthUpperUpRight',
     ]);
     expect(audit.unsupportedBlendshapeNames).toEqual([]);
+  });
+
+  it.each([
+    [{ mouthClose: 0.2 }, ['closure-exceeds-jaw']],
+    [{ jawOpen: 0.1, mouthClose: 0.2 }, ['closure-exceeds-jaw']],
+    [{ jawOpen: 0.2, mouthClose: 0.2 }, []],
+    [{ jawOpen: 0.2, mouthClose: 0.2, mouthPressLeft: 0.4, mouthPressRight: 0.4 }, []],
+    [{ jawOpen: 0.2, mouthClose: 0.1, mouthUpperUpLeft: 0.1 }, ['opposing-lip-shapes']],
+    [{ mouthPressRight: 0.3, mouthLowerDownRight: 0.1 }, ['opposing-lip-shapes']],
+  ])('flags unsafe lip weights %j even without mesh targets', (weights, violations) => {
+    const summary = auditPoseLibrary({
+      providerId: 'kinematic-blendshape',
+      availableBlendshapes: [],
+      poses: [{
+        id: 'lip-test', label: 'Lip test', category: 'phoneme', description: '',
+        weightsByProvider: { default: weights },
+      }],
+    });
+    expect(summary.poseAudits[0].lipSafetyViolations).toEqual(violations);
+    expect(summary.unsafePoseLabels).toEqual(violations.length ? ['Lip test'] : []);
+  });
+
+  it.each(['phoneme-t', 'phoneme-n'])('keeps %s slightly parted without pressing', (id) => {
+    const pose = phonemePoseMappings.find((pose) => pose.id === id)!;
+    const weights = getPoseWeights(pose, 'kinematic-blendshape');
+    expect(weights.jawOpen).toBeGreaterThanOrEqual(0.1);
+    expect(weights.jawOpen).toBeLessThanOrEqual(0.2);
+    expect(weights.mouthClose ?? 0).toBe(0);
+    expect(weights.mouthPressLeft ?? 0).toBe(0);
+    expect(weights.mouthPressRight ?? 0).toBe(0);
+    expect(weights.mouthUpperUpLeft).toBeGreaterThan(0);
+    expect(weights.mouthLowerDownLeft).toBeGreaterThan(0);
   });
 
   it('marks zero-weight entries as unsupported rather than active', () => {

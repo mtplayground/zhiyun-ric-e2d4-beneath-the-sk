@@ -1,5 +1,5 @@
 {
-  "batch_id": "2aa19ebf-be99-420e-a58c-e807ef81e684",
+  "batch_id": "c6cebe8e-0a75-4ef9-9d1c-102791085e34",
   "verification": "pending",
   "issues": [
     {
@@ -111,6 +111,11 @@
       "number": 133,
       "title": "Test that physics actually runs on the real FaceCap mesh",
       "body": "## Scope\n\nExtend the physics browser tests to use the real default FaceCap mesh and the committed proxy, not only the test proxy. Assert:\n- the proxy passes validation and the status shows **active**;\n- with the Physical preset, gravity off and Smile selected, displacement telemetry stays at the resting state within tolerance;\n- with the Visible demonstration preset, the maximum displacement and the canvas difference from the kinematic render are both above a set threshold;\n- turning physics off returns a canvas identical to the kinematic render;\n- a deliberately corrupted proxy shows the **inactive** status with its reason.\n\n## Files\n\n`e2e/physics.spec.ts`, physics browser test config\n\n## Dependencies\n\nDepends on: Valid FaceCap proxy, magnified view and heatmap\n\n---\nUUID: 9ef0b959-e536-4a19-947d-f53ad3c8973b"
+    },
+    {
+      "number": 139,
+      "title": "Fix lip crossing in phoneme and expression presets on an experiment branch",
+      "body": "## Scope\n\nDo this work on a new branch named `experiment/lip-crossing`, created from the current tip of `main`. Open a pull request into `main` but do not merge it; the user reviews and merges it.\nRetune the presets in the pose library so the lips never pass through each other on the default FaceCap mesh. Apply these rules to every preset:\n- **Closure rule:** `mouthClose` must never be larger than `jawOpen`. To show lips closed or touching, use `jawOpen` and `mouthClose` at roughly equal values. For firm contact, add the lip-press shapes (`mouthPressLeft` and `mouthPressRight`) rather than raising `mouthClose`.\n- **No opposing lip shapes:** don't combine `mouthClose` or the lip-press shapes with `mouthUpperUp` or `mouthLowerDown`, which pull the lips apart.\n- **T and N:** these are tongue-tip sounds where the lips are slightly apart, so they should show the teeth just visible, not the lips pressed shut. Use a small jaw opening, a little lip parting, and `mouthClose` within the closure rule.\n- **Sweep:** check every phoneme, expression and FACS action unit against the same rules, including M-, P- and B-type closures, Pucker and Mouth. Keep each pose clearly visible, as the earlier visibility work required.\nAdd the closure rule to the pose audit so the library audit flags any preset that breaks it. Update the pose audit unit test, which currently hard-codes T's `jawOpen` as 0.16.\n\n## Files\n\n`src/domain/poses/pose-library.ts`, `src/domain/poses/pose-audit.ts`, `src/domain/poses/pose-audit.test.ts`\n\n---\nUUID: 6b1fce4a-8950-4369-b6f5-8241c869945a"
     }
   ]
 }

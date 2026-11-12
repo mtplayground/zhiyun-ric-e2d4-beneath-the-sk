@@ -40,6 +40,8 @@ export type KeyboardPoseEntry = {
 const kinematicProviderId =
   'kinematic-blendshape' satisfies DeformationProviderId;
 
+// FaceCap: closure must not exceed jaw opening. Use press shapes for firm
+// contact, and never combine closure/press with upper-up or lower-down shapes.
 function weights(blendshapeWeights: BlendshapeWeights): ProviderPoseWeights {
   return {
     default: blendshapeWeights,
@@ -273,14 +275,13 @@ export const phonemePoseMappings = [
     label: 'N',
     category: 'phoneme',
     description:
-      'Visible nasal closure with lip compression and rounded mouth shaping.',
+      'Tongue-tip nasal with slightly parted lips and teeth just visible.',
     weightsByProvider: weights({
-      mouthPressLeft: 0.58,
-      mouthPressRight: 0.58,
-      mouthPucker: 0.36,
-      mouthFunnel: 0.3,
-      jawOpen: 0.18,
-      mouthClose: 0.24,
+      jawOpen: 0.12,
+      mouthUpperUpLeft: 0.08,
+      mouthUpperUpRight: 0.08,
+      mouthLowerDownLeft: 0.06,
+      mouthLowerDownRight: 0.06,
     }),
   },
   {
@@ -318,15 +319,14 @@ export const phonemePoseMappings = [
     label: 'T',
     category: 'phoneme',
     description:
-      'Dental stop pose using firm lip closure and subtle jaw/lip shaping.',
+      'Tongue-tip stop with slightly parted lips and teeth just visible.',
     weightsByProvider: weights({
-      mouthClose: 0.72,
-      jawOpen: 0.16,
+      jawOpen: 0.14,
       mouthFunnel: 0.08,
-      mouthUpperUpLeft: 0.22,
-      mouthUpperUpRight: 0.22,
-      mouthLowerDownLeft: 0.12,
-      mouthLowerDownRight: 0.12,
+      mouthUpperUpLeft: 0.1,
+      mouthUpperUpRight: 0.1,
+      mouthLowerDownLeft: 0.06,
+      mouthLowerDownRight: 0.06,
     }),
   },
   {
@@ -363,9 +363,8 @@ export const phonemePoseMappings = [
     category: 'phoneme',
     description: 'Labiodental contact pose.',
     weightsByProvider: weights({
-      mouthClose: 0.5,
-      mouthLowerDownLeft: 0.38,
-      mouthLowerDownRight: 0.38,
+      mouthClose: 0.18,
+      mouthRollLower: 0.55,
       jawOpen: 0.18,
       mouthFunnel: 0.12,
     }),
