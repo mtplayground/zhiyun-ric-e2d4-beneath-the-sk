@@ -126,6 +126,11 @@
       "number": 143,
       "title": "Retune the T phoneme so the lips are clearly parted",
       "body": "## Scope\n\nChange only the T phoneme in the pose library. Remove `mouthFunnel`, and raise `jawOpen` enough that the lips are visibly apart from the front and from the side. Keep a small lip parting so the upper teeth are just visible, which suits a tongue-tip sound. Keep `mouthClose` and the lip-press shapes out of T.\nCheck the result from the side (profile) as well as from the front. Update the T assertions in the pose audit unit test, which currently allow `jawOpen` anywhere from 0.1 to 0.2, to match the new weights.\n\n## Files\n\n`src/domain/poses/pose-library.ts`, `src/domain/poses/pose-audit.test.ts`\n\n---\nUUID: debe1549-d1dc-4897-806c-7a0bc76180e0"
+    },
+    {
+      "number": 144,
+      "title": "Replace the lip-gap check with a surface intersection test",
+      "body": "## Scope\n\nReplace the seven-point vertical check with a test that catches lips passing through each other in any direction.\n- **Lip regions:** on the real FaceCap mesh in the neutral pose, identify the triangles of the upper lip and of the lower lip. Use the full lip surfaces, including the front (outer) surface, and exclude the mouth corners.\n- **Intersection check:** for every preset, compute the posed vertex positions on the CPU from the morph targets. Fail if any upper-lip triangle intersects any lower-lip triangle. A coarse bounding-box pass first keeps the check fast.\n- **Clearance for open-mouth poses:** for poses meant to show the lips apart, including T, require a minimum positive gap between the two lip surfaces instead of tolerating a small crossing. Poses meant to close the lips only need no intersection.\n- **Failure message:** name the preset and give the approximate position of the first intersecting pair.\n- **Side-view capture:** add a side-view screenshot of T to the existing visual checks, so the user's view is covered too.\nRemove the old seven-point check once the new one passes on every preset.\n\n## Files\n\n`e2e/lip-gap-browser-probe.ts`, `e2e/lip-gap.spec.ts`, visual check specs under `e2e/`\n\n## Dependencies\n\nDepends on: Retune the T phoneme\n\n---\nUUID: b9df8e9a-76a9-49be-989f-eb8f39be0c32"
     }
   ]
 }
