@@ -11,6 +11,24 @@ export interface PoseSurface {
   morphTargets: Readonly<Record<string, ArrayLike<number>>>;
   morphTargetsRelative: boolean;
 }
+/** CPU equivalent of Three morph accumulation, including provider aliases and clamping. */
+export function computePosedSurfacePositions(surface: PoseSurface, weights: Record<string, number>) {
+  const evaluated = interpolateBlendshapeWeights({
+    fromWeights: {}, targetWeights: weights, progress: 1,
+    availableBlendshapes: new Set(Object.keys(surface.morphTargets)),
+  });
+  const posed = Float64Array.from(surface.positions);
+  for (const [name, weight] of Object.entries(evaluated)) {
+    const morph = surface.morphTargets[name];
+    if (morph.length !== posed.length) throw new Error(`Invalid morph target ${name}`);
+    for (let i = 0; i < posed.length; i++) {
+      posed[i] += weight * (surface.morphTargetsRelative ? morph[i] : morph[i] - surface.positions[i]);
+    }
+  }
+  if (!Array.from(posed).every(Number.isFinite)) throw new Error('Non-finite posed surface');
+  return posed;
+}
+
 export interface PoseProxy {
   nodes: ArrayLike<number>;
   labels: ArrayLike<number>; // visualization only
@@ -80,12 +98,9 @@ export function createPoseTargetMapper(surface: PoseSurface, proxy: PoseProxy) {
   const map = (weights: Record<string, number>): SolverFrame & { surfacePositions: Float64Array } => {
     // Reuse provider alias resolution, clamping, duplicate-alias max and epsilon.
     // Already evaluated transition weights must not be smoothed a second time.
-    const evaluated = interpolateBlendshapeWeights({ fromWeights: {}, targetWeights: weights, progress: 1, availableBlendshapes: available });
-    const posed = rest.slice();
-    for (const [name, weight] of Object.entries(evaluated)) {
-      const morph = morphs[name];
-      for (let i = 0; i < posed.length; i++) posed[i] += weight * (relative ? morph[i] : morph[i]-rest[i]);
-    }
+    const posed = computePosedSurfacePositions({
+      positions: rest, morphTargets: morphs, morphTargetsRelative: relative,
+    }, weights);
     const delta = Float64Array.from(posed, (v,i)=>(v-rest[i])/scale);
     if (!finite(posed) || !finite(delta)) throw new Error('Non-finite posed surface');
     const targets = nodes.slice();
