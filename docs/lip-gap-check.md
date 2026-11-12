@@ -14,10 +14,12 @@ combination of mouth/jaw AU sliders is included. Slider weights accumulate
 additively and clamp at one, matching the control panel. CPU positions use the
 shared `computePosedSurfacePositions` calculation.
 
-The existing regression requires no intersection and 0.1 mm positive clearance
+The existing regression requires no intersection and 2 mm positive clearance
 for explicitly designated open-mouth cases. Neutral needs no positive minimum.
-Those assertions are separate from issue #147's descriptive baseline measurement;
-no thresholds or poses were changed by #147.
+Every case also requires forward overhang no larger than measured neutral.
+These assertions were strengthened by #149; the descriptive #147 baseline is
+preserved separately. See [lip-suite regression](lip-suite-regression.md) for
+references, preset repairs, measured coverage and deferred suite commands.
 
 See [neutral versus T profile measurements](lip-profile.md) for both profile
 images, regional gaps, forward extents, projected overlap, source hash, selection

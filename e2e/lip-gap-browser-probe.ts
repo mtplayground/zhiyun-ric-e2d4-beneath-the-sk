@@ -3,7 +3,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { Box3, Mesh, Triangle, Vector3 } from 'three';
 import { lipRegions } from './facecap-lip-regions';
-import { inspectLipSurfaces } from './lip-surface-geometry';
+import { inspectLipSurfaces, lipForwardOverhang } from './lip-surface-geometry';
 import { readMorphFaceSurface } from '../src/domain/physics/mesh-pose-target-driver';
 import { computePosedSurfacePositions } from '../src/domain/physics/pose-target-mapper';
 import { allPoseMappings, actionUnitPoseMappings, getPoseWeights } from '../src/domain/poses/pose-library';
@@ -11,14 +11,14 @@ import { allPoseMappings, actionUnitPoseMappings, getPoseWeights } from '../src/
 const source = 'https://threejs.org/examples/models/gltf/facecap.glb';
 const sourceHash = '6bfce6d0fcbb5839f5102b79733007859fef7c5df6d9eb49e2264542810b5f64';
 // Open-mouth intent is explicit: neutral/brow/lid/cheek-only poses and
-// labiodental V need no positive clearance. Sliders with AU 25 do.
+// labiodental V need no positive clearance. Sliders including AU 22 or AU 25 retain that intent after retuning.
 const openPresets = new Set([
   'au-22-lip-funneler', 'au-25-lips-part', 'expression-smile',
   'expression-frown', 'expression-mouth', 'expression-pucker',
   'phoneme-n', 'phoneme-aa', 'phoneme-iy', 'phoneme-t',
   'phoneme-eh', 'phoneme-uw', 'phoneme-y',
 ]);
-const minimumOpenGapMetres = 0.0001; // 0.1 mm; strictly positive, no crossing tolerance.
+const minimumOpenGapMetres = 0.002; // 2 mm, matching the real-mesh search.
 export async function loadLipMeasurementMesh() {
   const response = await fetch(source);
   if (!response.ok) throw new Error(`FaceCap fetch failed: ${response.status}`);
@@ -59,7 +59,10 @@ export async function loadLipMeasurementMesh() {
 
 export async function measureLipGaps() {
   const { source, sourceHash, surface, triangles } = await loadLipMeasurementMesh();
-  const cases = allPoseMappings.map(pose => ({ id: pose.id, label: pose.label, weights: getPoseWeights(pose, 'kinematic-blendshape') }));
+  const neutralUpper = triangles(surface.positions, lipRegions.upper, 'neutral');
+  const neutralLower = triangles(surface.positions, lipRegions.lower, 'neutral');
+  const neutralOverhangMetres = lipForwardOverhang(neutralUpper, neutralLower);
+  const cases = allPoseMappings.map(pose => ({ id: pose.id, label: pose.label, weights: getPoseWeights(pose, 'kinematic-blendshape'), parted: openPresets.has(pose.id) }));
   const controls = actionUnitPoseMappings.filter(pose =>
     Object.keys(getPoseWeights(pose, 'kinematic-blendshape')).some(name => /^(jaw|mouth)/.test(name)));
   // Every 0/1 endpoint of mouth/jaw AU sliders, using the UI's additive,
@@ -67,25 +70,30 @@ export async function measureLipGaps() {
   for (let mask = 0; mask < 2 ** controls.length; mask++) {
     const weights: Record<string, number> = {};
     const labels: string[] = [];
+    let parted = false;
     controls.forEach((pose, bit) => {
       if (!(mask & (1 << bit))) return;
       labels.push(pose.code);
+      parted ||= openPresets.has(pose.id);
       for (const [name, value] of Object.entries(getPoseWeights(pose, 'kinematic-blendshape'))) {
         weights[name] = Math.min(1, (weights[name] ?? 0) + value);
       }
     });
-    cases.push({ id: `slider-${mask}`, label: `Sliders ${labels.join(' + ') || 'neutral'}`, weights });
+    cases.push({ id: `slider-${mask}`, label: `Sliders ${labels.join(' + ') || 'neutral'}`, weights, parted });
   }
   return {
-    source, sourceHash, minimumOpenGapMetres, regions: lipRegions,
+    source, sourceHash, minimumOpenGapMetres, neutralOverhangMetres, regions: lipRegions,
+    presetIds: allPoseMappings.map(pose => pose.id), sliderControlIds: controls.map(pose => pose.id),
     results: cases.map(pose => {
       const posed = computePosedSurfacePositions(surface, pose.weights);
-      const needsClearance = openPresets.has(pose.id) ||
-        (pose.id.startsWith('slider-') && (pose.weights.jawOpen ?? 0) >= 0.58);
+      const needsClearance = pose.parted;
+      const upper = triangles(posed, lipRegions.upper, pose.label);
+      const lower = triangles(posed, lipRegions.lower, pose.label);
       return {
-        id: pose.id, label: pose.label,
+        id: pose.id, label: pose.label, weights: pose.weights,
+        upperForwardExtentMinusLowerMetres: lipForwardOverhang(upper, lower),
         requiredGapMetres: needsClearance ? minimumOpenGapMetres : 0,
-        ...inspectLipSurfaces(triangles(posed, lipRegions.upper, pose.label), triangles(posed, lipRegions.lower, pose.label)),
+        ...inspectLipSurfaces(upper, lower),
       };
     }),
   };

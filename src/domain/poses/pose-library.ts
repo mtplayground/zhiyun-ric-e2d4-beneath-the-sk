@@ -122,6 +122,7 @@ export const actionUnitPoseMappings = [
     label: 'AU 12 Smile',
     category: 'action-unit',
     description: 'Pulls mouth corners upward and outward with cheek support.',
+    // Real FaceCap search repair; see docs/lip-suite-regression.md.
     weightsByProvider: weights({
       mouthSmileLeft: 0.9,
       mouthSmileRight: 0.9,
@@ -129,6 +130,9 @@ export const actionUnitPoseMappings = [
       mouthDimpleRight: 0.28,
       cheekSquintLeft: 0.22,
       cheekSquintRight: 0.22,
+      mouthLowerDownLeft: 0.32,
+      mouthLowerDownRight: 0.32,
+      mouthRollUpper: 0.2,
     }),
   },
   {
@@ -137,10 +141,12 @@ export const actionUnitPoseMappings = [
     label: 'AU 22 Lip Funneler',
     category: 'action-unit',
     description: 'Funnels the lips forward.',
+    // Real FaceCap search repair; see docs/lip-suite-regression.md.
     weightsByProvider: weights({
       mouthFunnel: 0.94,
       mouthPucker: 0.4,
       jawOpen: 0.08,
+      mouthRollUpper: 0.05,
     }),
   },
   {
@@ -149,9 +155,13 @@ export const actionUnitPoseMappings = [
     label: 'AU 25 Lips Part',
     category: 'action-unit',
     description: 'Parts the lips through a relaxed jaw opening.',
+    // Real FaceCap search repair; see docs/lip-suite-regression.md.
     weightsByProvider: weights({
-      jawOpen: 0.58,
+      jawOpen: 0.29,
       mouthFunnel: 0.08,
+      mouthUpperUpLeft: 1,
+      mouthUpperUpRight: 1,
+      mouthRollUpper: 0.7,
     }),
   },
 ] as const satisfies readonly PoseMapping[];
@@ -164,6 +174,7 @@ export const expressionPoseMappings = [
     keyboardKey: 'S',
     description:
       'Unmistakable smile with raised lip corners, dimples, and cheek support.',
+    // Real FaceCap search repair; see docs/lip-suite-regression.md.
     weightsByProvider: weights({
       mouthSmileLeft: 1,
       mouthSmileRight: 1,
@@ -173,6 +184,8 @@ export const expressionPoseMappings = [
       cheekSquintRight: 0.74,
       eyeSquintLeft: 0.36,
       eyeSquintRight: 0.36,
+      mouthLowerDownLeft: 0.16,
+      mouthLowerDownRight: 0.16,
     }),
   },
   {
@@ -181,12 +194,14 @@ export const expressionPoseMappings = [
     category: 'expression',
     keyboardKey: 'F',
     description: 'Downturned mouth corners with lowered brows.',
+    // Real FaceCap search repair; see docs/lip-suite-regression.md.
     weightsByProvider: weights({
       mouthFrownLeft: 0.9,
       mouthFrownRight: 0.9,
       browDownLeft: 0.52,
       browDownRight: 0.52,
       jawOpen: 0.08,
+      mouthRollUpper: 0.2,
     }),
   },
   {
@@ -207,13 +222,15 @@ export const expressionPoseMappings = [
     category: 'expression',
     keyboardKey: 'M',
     description: 'Open mouth pose for coarse jaw and lip activation.',
+    // Real FaceCap search repair; see docs/lip-suite-regression.md.
     weightsByProvider: weights({
-      jawOpen: 0.76,
+      jawOpen: 0.19,
       mouthUpperUpLeft: 0.34,
       mouthUpperUpRight: 0.34,
       mouthLowerDownLeft: 0.38,
       mouthLowerDownRight: 0.38,
       mouthFunnel: 0.12,
+      mouthRollUpper: 1,
     }),
   },
   {
@@ -237,6 +254,7 @@ export const expressionPoseMappings = [
     category: 'expression',
     keyboardKey: 'C',
     description: 'Cheek lift with slight eye narrowing.',
+    // Real FaceCap search repair; see docs/lip-suite-regression.md.
     weightsByProvider: weights({
       cheekSquintLeft: 0.94,
       cheekSquintRight: 0.94,
@@ -244,6 +262,8 @@ export const expressionPoseMappings = [
       eyeSquintRight: 0.34,
       mouthSmileLeft: 0.14,
       mouthSmileRight: 0.14,
+      mouthLowerDownLeft: 0.005,
+      mouthLowerDownRight: 0.005,
     }),
   },
   {
@@ -252,10 +272,12 @@ export const expressionPoseMappings = [
     category: 'expression',
     keyboardKey: 'P',
     description: 'Forward rounded lips.',
+    // Real FaceCap search repair; see docs/lip-suite-regression.md.
     weightsByProvider: weights({
       mouthPucker: 0.98,
       mouthFunnel: 0.76,
       jawOpen: 0.12,
+      mouthRollUpper: 0.05,
     }),
   },
 ] as const satisfies readonly PoseMapping[];
@@ -276,12 +298,14 @@ export const phonemePoseMappings = [
     category: 'phoneme',
     description:
       'Tongue-tip nasal with slightly parted lips and teeth just visible.',
+    // Real FaceCap search repair; see docs/lip-suite-regression.md.
     weightsByProvider: weights({
       jawOpen: 0.12,
       mouthUpperUpLeft: 0.08,
       mouthUpperUpRight: 0.08,
       mouthLowerDownLeft: 0.06,
       mouthLowerDownRight: 0.06,
+      mouthRollUpper: 0.7,
     }),
   },
   {
@@ -290,11 +314,13 @@ export const phonemePoseMappings = [
     label: 'AA',
     category: 'phoneme',
     description: 'Open vowel with lowered jaw.',
+    // Real FaceCap search repair; see docs/lip-suite-regression.md.
     weightsByProvider: weights({
-      jawOpen: 0.9,
+      jawOpen: 0.225,
       mouthFunnel: 0.18,
-      mouthLowerDownLeft: 0.18,
-      mouthLowerDownRight: 0.18,
+      mouthLowerDownLeft: 0.005,
+      mouthLowerDownRight: 0.005,
+      mouthRollUpper: 1,
     }),
   },
   {
@@ -303,14 +329,18 @@ export const phonemePoseMappings = [
     label: 'IY',
     category: 'phoneme',
     description: 'Wide close-front vowel.',
+    // Real FaceCap search repair; see docs/lip-suite-regression.md.
     weightsByProvider: weights({
-      jawOpen: 0.26,
+      jawOpen: 0.13,
       mouthSmileLeft: 0.42,
       mouthSmileRight: 0.42,
       mouthStretchLeft: 0.58,
       mouthStretchRight: 0.58,
       cheekSquintLeft: 0.12,
       cheekSquintRight: 0.12,
+      mouthUpperUpLeft: 0.64,
+      mouthUpperUpRight: 0.64,
+      mouthRollUpper: 1,
     }),
   },
   {
@@ -336,12 +366,16 @@ export const phonemePoseMappings = [
     label: 'EH',
     category: 'phoneme',
     description: 'Mid-front vowel with modest jaw opening and stretch.',
+    // Real FaceCap search repair; see docs/lip-suite-regression.md.
     weightsByProvider: weights({
-      jawOpen: 0.56,
+      jawOpen: 0.14,
       mouthStretchLeft: 0.42,
       mouthStretchRight: 0.42,
       mouthSmileLeft: 0.14,
       mouthSmileRight: 0.14,
+      mouthUpperUpLeft: 0.64,
+      mouthUpperUpRight: 0.64,
+      mouthRollUpper: 1,
     }),
   },
   {
@@ -350,11 +384,13 @@ export const phonemePoseMappings = [
     label: 'UW',
     category: 'phoneme',
     description: 'Rounded close-back vowel.',
+    // Real FaceCap search repair; see docs/lip-suite-regression.md.
     weightsByProvider: weights({
       mouthPucker: 0.92,
       mouthFunnel: 0.72,
       jawOpen: 0.24,
       mouthClose: 0.12,
+      mouthRollUpper: 0.1,
     }),
   },
   {
@@ -363,11 +399,13 @@ export const phonemePoseMappings = [
     label: 'V',
     category: 'phoneme',
     description: 'Labiodental contact pose.',
+    // Real FaceCap search repair; see docs/lip-suite-regression.md.
     weightsByProvider: weights({
-      mouthClose: 0.18,
+      mouthClose: 0.045,
       mouthRollLower: 0.55,
-      jawOpen: 0.18,
+      jawOpen: 0.12,
       mouthFunnel: 0.12,
+      mouthRollUpper: 0.4,
     }),
   },
   {
@@ -376,14 +414,18 @@ export const phonemePoseMappings = [
     label: 'Y',
     category: 'phoneme',
     description: 'Palatal glide with a narrow smile-like spread.',
+    // Real FaceCap search repair; see docs/lip-suite-regression.md.
     weightsByProvider: weights({
-      jawOpen: 0.24,
+      jawOpen: 0.18,
       mouthSmileLeft: 0.34,
       mouthSmileRight: 0.34,
       mouthStretchLeft: 0.38,
       mouthStretchRight: 0.38,
       cheekSquintLeft: 0.12,
       cheekSquintRight: 0.12,
+      mouthUpperUpLeft: 1,
+      mouthUpperUpRight: 1,
+      mouthRollUpper: 0.7,
     }),
   },
 ] as const satisfies readonly PoseMapping[];

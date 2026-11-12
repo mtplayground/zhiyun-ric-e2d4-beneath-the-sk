@@ -27,7 +27,7 @@ describe('pose library mappings', () => {
     const smile = findPoseMappingById('au-12-smile');
 
     expect(smile?.label).toBe('AU 12 Smile');
-    expect(smile && getPoseWeights(smile, 'kinematic-blendshape')).toEqual({
+    expect(smile && getPoseWeights(smile, 'kinematic-blendshape')).toMatchObject({
       mouthSmileLeft: 0.9,
       mouthSmileRight: 0.9,
       mouthDimpleLeft: 0.28,

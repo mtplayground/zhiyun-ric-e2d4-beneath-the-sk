@@ -73,3 +73,11 @@ export function inspectLipSurfaces(upper: SurfaceTriangle[], lower: SurfaceTrian
   }
   return { minimumGapMetres, intersection: null };
 }
+
+/** World +Z is forward on the hash-pinned default FaceCap mesh. */
+export function lipForwardOverhang(upper: SurfaceTriangle[], lower: SurfaceTriangle[]) {
+  if (!upper.length || !lower.length) throw new Error('Empty lip triangle region');
+  const extent = (rows: SurfaceTriangle[]) => Math.max(...rows.flatMap(({ triangle }) =>
+    [triangle.a.z, triangle.b.z, triangle.c.z]));
+  return extent(upper) - extent(lower);
+}

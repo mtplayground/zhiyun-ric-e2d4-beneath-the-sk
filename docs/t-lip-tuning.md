@@ -1,5 +1,11 @@
 # T weight search on FaceCap
 
+This records the #148 search and its then-current AA comparison (jawOpen 0.9).
+Issue #149 subsequently repaired other presets, including AA; see
+[the stricter suite and repairs](lip-suite-regression.md). T remains candidate
+1130. Archived search data and AA comparison images below retain their original
+weights and hashes.
+
 `phoneme-t` now uses real-mesh search candidate **1130**:
 
 | Weight | Value |

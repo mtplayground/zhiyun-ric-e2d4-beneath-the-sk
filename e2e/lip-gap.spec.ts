@@ -1,8 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { readFile, writeFile } from 'node:fs/promises';
 import { Box3, Triangle, Vector3 } from 'three';
+import { allPoseMappings } from '../src/domain/poses/pose-library';
 import type { measureLipGaps } from './lip-gap-browser-probe';
-import { inspectLipSurfaces, triangleDistance, trianglesIntersect } from './lip-surface-geometry';
+import { inspectLipSurfaces, lipForwardOverhang, triangleDistance, trianglesIntersect } from './lip-surface-geometry';
 
 type Report = Awaited<ReturnType<typeof measureLipGaps>>;
 const triangle = (points: number[][]) => new Triangle(...points.map(p => new Vector3(...p)) as [Vector3, Vector3, Vector3]);
@@ -56,21 +57,40 @@ test('real FaceCap lip surfaces never intersect for any preset or extreme mouth/
   if (baseline) {
     expect(baseline.sourceHash, 'Comparison requires identical FaceCap bytes').toBe(report.sourceHash);
     expect(baseline.regions, 'Comparison requires identical neutral lip triangles').toEqual(report.regions);
+    expect(baseline.neutralOverhangMetres).toBe(report.neutralOverhangMetres);
     expect(baseline.minimumOpenGapMetres).toBe(report.minimumOpenGapMetres);
     expect(baseline.results.map(row => row.id)).toEqual(report.results.map(row => row.id));
   }
   expect(report.regions.upper.length).toBeGreaterThan(20);
   expect(report.regions.lower.length).toBeGreaterThan(20);
   expect(report.regions.upper.filter(id => (report.regions.lower as readonly number[]).includes(id))).toEqual([]);
-  expect(report.results.find(row => row.id === 'phoneme-t')?.requiredGapMetres).toBeGreaterThan(0);
-  expect(report.results.length).toBeGreaterThan(0);
+  expect(report.minimumOpenGapMetres).toBe(0.002);
+  expect(report.results.find(row => row.id === 'phoneme-t')?.requiredGapMetres).toBe(0.002);
+  expect(Number.isFinite(report.neutralOverhangMetres)).toBe(true);
+  expect(report.presetIds).toEqual(allPoseMappings.map(pose => pose.id));
+  expect(report.results.filter(row => !row.id.startsWith('slider-')).map(row => row.id)).toEqual(report.presetIds);
+  const sliderCount = 2 ** report.sliderControlIds.length;
+  expect(report.results.filter(row => row.id.startsWith('slider-')).map(row => row.id)).toEqual(Array.from({ length: sliderCount }, (_, i) => `slider-${i}`));
+  expect(report.results.length).toBe(report.presetIds.length + sliderCount);
   for (const row of report.results) {
     const hit = row.intersection;
     const message = `${row.label} (${row.id}): ${hit
       ? `upper triangle ${hit.upper} intersects lower triangle ${hit.lower} near world metres (${hit.positionMetres.map(v => v.toFixed(6)).join(', ')})`
       : `minimum surface gap ${(row.minimumGapMetres * 1000).toFixed(4)} mm; required ${row.requiredGapMetres * 1000} mm`}`;
+    const overhangMessage = `${row.label} (${row.id}): overhang ${row.upperForwardExtentMinusLowerMetres * 1000} mm; neutral ${report.neutralOverhangMetres * 1000} mm`;
+    expect.soft(Number.isFinite(row.upperForwardExtentMinusLowerMetres), overhangMessage).toBe(true);
+    expect.soft(row.upperForwardExtentMinusLowerMetres, overhangMessage).toBeLessThanOrEqual(report.neutralOverhangMetres);
     expect.soft(hit, message).toBeNull();
     expect.soft(Number.isFinite(row.minimumGapMetres), message).toBe(true);
     expect.soft(row.minimumGapMetres, message).toBeGreaterThanOrEqual(row.requiredGapMetres);
   }
+});
+
+
+test('forward overhang catches a visible regression even with ample 3D clearance', () => {
+  const upper = surface(triangle([[0, 0, 0.03], [0.01, 0, 0.03], [0, 0.01, 0.03]]), 1);
+  const lower = surface(triangle([[0, -0.02, 0], [0.01, -0.02, 0], [0, -0.01, 0]]), 2);
+  expect(inspectLipSurfaces([upper], [lower]).minimumGapMetres).toBeGreaterThan(0.002);
+  expect(lipForwardOverhang([upper], [lower])).toBeCloseTo(0.03);
+  expect(lipForwardOverhang([upper], [lower])).toBeGreaterThan(0.026575514331788952);
 });
