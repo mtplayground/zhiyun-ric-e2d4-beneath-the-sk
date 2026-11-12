@@ -1,5 +1,5 @@
 {
-  "batch_id": "c73cad74-685b-40d8-ad3e-a149648fe11c",
+  "batch_id": "d9a85068-ca04-4a80-9312-0c194e163cbb",
   "verification": "pending",
   "issues": [
     {
@@ -131,6 +131,11 @@
       "number": 144,
       "title": "Replace the lip-gap check with a surface intersection test",
       "body": "## Scope\n\nReplace the seven-point vertical check with a test that catches lips passing through each other in any direction.\n- **Lip regions:** on the real FaceCap mesh in the neutral pose, identify the triangles of the upper lip and of the lower lip. Use the full lip surfaces, including the front (outer) surface, and exclude the mouth corners.\n- **Intersection check:** for every preset, compute the posed vertex positions on the CPU from the morph targets. Fail if any upper-lip triangle intersects any lower-lip triangle. A coarse bounding-box pass first keeps the check fast.\n- **Clearance for open-mouth poses:** for poses meant to show the lips apart, including T, require a minimum positive gap between the two lip surfaces instead of tolerating a small crossing. Poses meant to close the lips only need no intersection.\n- **Failure message:** name the preset and give the approximate position of the first intersecting pair.\n- **Side-view capture:** add a side-view screenshot of T to the existing visual checks, so the user's view is covered too.\nRemove the old seven-point check once the new one passes on every preset.\n\n## Files\n\n`e2e/lip-gap-browser-probe.ts`, `e2e/lip-gap.spec.ts`, visual check specs under `e2e/`\n\n## Dependencies\n\nDepends on: Retune the T phoneme\n\n---\nUUID: b9df8e9a-76a9-49be-989f-eb8f39be0c32"
+    },
+    {
+      "number": 147,
+      "title": "Measure the T lip overlap against the neutral face in profile",
+      "body": "## Scope\n\nOn the real default FaceCap mesh, capture the side (profile) view and measure the lip geometry for neutral and for the current T. Measure:\n- the smallest gap between the upper-lip and lower-lip surfaces, broken down by front, middle and corner of the mouth;\n- how far the upper lip sticks out past the lower lip;\n- whether the two surfaces actually intersect, or the upper lip only hides the lower lip from the side.\nRecord the results and both profile images in the physics/pose docs. State plainly whether neutral already has this overhang. If it does, later issues judge T by how much it improves on neutral, not by full separation.\n\n## Files\n\nNew measurement helper under `e2e/` (the posed-position calculation is already used by the lip-gap check), pose docs under `docs/`\n\n---\nUUID: fd15132a-8265-494e-ad52-2e54bcbef130"
     }
   ]
 }

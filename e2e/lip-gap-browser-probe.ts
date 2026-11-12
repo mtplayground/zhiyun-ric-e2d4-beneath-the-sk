@@ -19,7 +19,7 @@ const openPresets = new Set([
   'phoneme-eh', 'phoneme-uw', 'phoneme-y',
 ]);
 const minimumOpenGapMetres = 0.0001; // 0.1 mm; strictly positive, no crossing tolerance.
-export async function measureLipGaps() {
+export async function loadLipMeasurementMesh() {
   const response = await fetch(source);
   if (!response.ok) throw new Error(`FaceCap fetch failed: ${response.status}`);
   const bytes = await response.arrayBuffer();
@@ -54,6 +54,11 @@ export async function measureLipGaps() {
     if (triangle.getArea() <= 1e-16) throw new Error(`${preset}: degenerate lip triangle ${ordinal}`);
     return { ordinal, triangle, bounds: new Box3().setFromPoints(vertices) };
   });
+  return { source, sourceHash, surface, triangles, face };
+}
+
+export async function measureLipGaps() {
+  const { source, sourceHash, surface, triangles } = await loadLipMeasurementMesh();
   const cases = allPoseMappings.map(pose => ({ id: pose.id, label: pose.label, weights: getPoseWeights(pose, 'kinematic-blendshape') }));
   const controls = actionUnitPoseMappings.filter(pose =>
     Object.keys(getPoseWeights(pose, 'kinematic-blendshape')).some(name => /^(jaw|mouth)/.test(name)));
