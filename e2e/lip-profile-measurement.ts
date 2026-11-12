@@ -45,10 +45,8 @@ export function profileMetrics(upper: SurfaceTriangle[], lower: SurfaceTriangle[
   };
 }
 
-export async function captureLipProfiles() {
-  const { source, sourceHash, surface, triangles, face } = await loadLipMeasurementMesh();
-  const neutralUpper = triangles(surface.positions, lipRegions.upper, 'neutral');
-  const neutralLower = triangles(surface.positions, lipRegions.lower, 'neutral');
+/** Shared neutral-defined regions for capture and weight search. */
+export function lipProfileBands(neutralUpper: SurfaceTriangle[], neutralLower: SurfaceTriangle[]) {
   const bounds = new Box3();
   [...neutralUpper, ...neutralLower].forEach(t => bounds.union(t.bounds));
   const centerX = (bounds.min.x + bounds.max.x) / 2;
@@ -58,9 +56,18 @@ export async function captureLipProfiles() {
     { name: 'middle', ranges: [[centerX - 2 * radius / 3, centerX - radius / 3], [centerX + radius / 3, centerX + 2 * radius / 3]] },
     { name: 'corner', ranges: [[bounds.min.x, centerX - 2 * radius / 3], [centerX + 2 * radius / 3, bounds.max.x]] },
   ];
+  return { bounds, slabs };
+}
+
+/** Optional explicit weights reproduce an archived capture after the library changes. */
+export async function captureLipProfiles(tWeights?: Record<string, number>) {
+  const { source, sourceHash, surface, triangles, face } = await loadLipMeasurementMesh();
+  const neutralUpper = triangles(surface.positions, lipRegions.upper, 'neutral');
+  const neutralLower = triangles(surface.positions, lipRegions.lower, 'neutral');
+  const { bounds, slabs } = lipProfileBands(neutralUpper, neutralLower);
   const pose = allPoseMappings.find(p => p.id === 'phoneme-t');
   if (!pose) throw new Error('Missing current T');
-  const cases = [{ id: 'neutral', weights: {} }, { id: pose.id, weights: getPoseWeights(pose, 'kinematic-blendshape') }];
+  const cases = [{ id: 'neutral', weights: {} }, { id: pose.id, weights: tWeights ?? getPoseWeights(pose, 'kinematic-blendshape') }];
   const results = cases.map(({ id, weights }) => {
     const posed = computePosedSurfacePositions(surface, weights);
     const upper = triangles(posed, lipRegions.upper, id), lower = triangles(posed, lipRegions.lower, id);

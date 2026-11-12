@@ -1,15 +1,18 @@
 // Data capture, not a test runner. Start npm run dev first.
 import { chromium } from '@playwright/test';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+const archivedWeights = process.argv.includes('--archived')
+  ? JSON.parse(await readFile('docs/lip-profile/measurements.json', 'utf8')).results.find(row => row.id === 'phoneme-t').weights
+  : undefined;
 const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
 try {
   const page = await browser.newPage();
   await page.goto(process.env.LIP_PROFILE_URL || 'http://127.0.0.1:8080');
-  const capture = await page.evaluate(async () => {
+  const capture = await page.evaluate(async weights => {
     const path = '/e2e/lip-profile-measurement.ts';
-    return (await import(path)).captureLipProfiles();
-  });
+    return (await import(path)).captureLipProfiles(weights);
+  }, archivedWeights);
   await mkdir('docs/lip-profile', { recursive: true });
   const hashes = {};
   for (const { id, svg } of capture.images) {

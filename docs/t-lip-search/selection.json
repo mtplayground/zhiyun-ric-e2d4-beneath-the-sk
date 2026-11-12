@@ -1,0 +1,37 @@
+{
+  "sourceHash": "6bfce6d0fcbb5839f5102b79733007859fef7c5df6d9eb49e2264542810b5f64",
+  "selectedId": 1130,
+  "weights": {
+    "jawOpen": 0.0025,
+    "mouthUpperUpLeft": 0.16,
+    "mouthUpperUpRight": 0.16,
+    "mouthLowerDownLeft": 0.005,
+    "mouthLowerDownRight": 0.005,
+    "mouthRollUpper": 0.2
+  },
+  "reviewMethod": "Implementation visual assessment of real-material front/profile captures against neutral and AA; publisher acceptance remains pending",
+  "appearance": {
+    "slightlyParted": true,
+    "upperTeethJustVisible": true,
+    "clearlyDifferentFromAA": true
+  },
+  "reason": "Narrow strip of upper incisors visible, slight mouth opening and negligible jaw activation; lower-opening geometry leaders did not clearly show the upper teeth. Strong-roll candidate 3317 hid the teeth. Candidate 1130 reduces forward overhang by 14.163 mm from neutral while preserving more than 2 mm clearance throughout the selected central bands.",
+  "reviewedComparisons": [
+    77,
+    140,
+    855,
+    3317,
+    1130,
+    1230,
+    3174,
+    3103,
+    2145
+  ],
+  "geometryRank": 486,
+  "evidence": [
+    "captures/candidate-1130-front.png",
+    "captures/candidate-1130-profile.png",
+    "captures/neutral-front.png",
+    "captures/aa-front.png"
+  ]
+}
