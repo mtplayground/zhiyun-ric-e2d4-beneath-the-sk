@@ -64,7 +64,6 @@ describe('pose morph-target audit', () => {
     expect(audit.activeWeightTotal).toBeCloseTo(jawOpen);
     expect(audit.maxActiveWeight).toBeCloseTo(jawOpen);
     expect(audit.missingBlendshapeNames).toEqual([
-      'mouthFunnel',
       'mouthLowerDownLeft',
       'mouthLowerDownRight',
       'mouthUpperUpLeft',
@@ -93,8 +92,29 @@ describe('pose morph-target audit', () => {
     expect(summary.unsafePoseLabels).toEqual(violations.length ? ['Lip test'] : []);
   });
 
-  it.each(['phoneme-t', 'phoneme-n'])('keeps %s slightly parted without pressing', (id) => {
-    const pose = phonemePoseMappings.find((pose) => pose.id === id)!;
+  it('keeps T visibly parted without funneling, closure, or pressing', () => {
+    const pose = phonemePoseMappings.find((pose) => pose.id === 'phoneme-t')!;
+    const expectedWeights = {
+      jawOpen: 0.28,
+      mouthUpperUpLeft: 0.1,
+      mouthUpperUpRight: 0.1,
+      mouthLowerDownLeft: 0.06,
+      mouthLowerDownRight: 0.06,
+    };
+
+    // Preserve a small tooth-revealing opening without forward lip rounding.
+    for (const providerWeights of Object.values(pose.weightsByProvider)) {
+      expect(providerWeights).toEqual(expectedWeights);
+      expect(providerWeights).not.toHaveProperty('mouthFunnel');
+      expect(providerWeights).not.toHaveProperty('mouthClose');
+      expect(providerWeights).not.toHaveProperty('mouthPressLeft');
+      expect(providerWeights).not.toHaveProperty('mouthPressRight');
+    }
+    expect(getPoseWeights(pose, 'kinematic-blendshape')).toEqual(expectedWeights);
+  });
+
+  it('keeps N slightly parted without pressing', () => {
+    const pose = phonemePoseMappings.find((pose) => pose.id === 'phoneme-n')!;
     const weights = getPoseWeights(pose, 'kinematic-blendshape');
     expect(weights.jawOpen).toBeGreaterThanOrEqual(0.1);
     expect(weights.jawOpen).toBeLessThanOrEqual(0.2);

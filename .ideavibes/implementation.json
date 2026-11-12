@@ -1,5 +1,5 @@
 {
-  "batch_id": "c6cebe8e-0a75-4ef9-9d1c-102791085e34",
+  "batch_id": "c73cad74-685b-40d8-ad3e-a149648fe11c",
   "verification": "pending",
   "issues": [
     {
@@ -121,6 +121,11 @@
       "number": 140,
       "title": "Add a geometric lip-crossing test on the real FaceCap mesh, on the same experiment branch",
       "body": "## Scope\n\nCommit this to the same `experiment/lip-crossing` branch and include it in the same unmerged pull request, so the PR shows the fix passing its own check.\nThe current tests check activation values, not geometry, so crossing lips pass unnoticed. Add a browser test that loads the real default FaceCap mesh and computes posed vertex positions on the CPU from its morph targets:\n- Pick several pairs of facing vertices along the inner edges of the upper and lower lips in the neutral pose, across the middle of the mouth and excluding the corners.\n- For every preset, measure the vertical gap between each pair along the face's vertical axis. Fail if the upper lip ends up below the lower lip beyond a small tolerance.\n- Name the failing preset and lip position in the failure message.\n- Also check the extreme slider combinations that involve jaw and mouth action units.\nIn the PR description, list the result for each preset and compare it with the same check run against current `main`, so the improvement can be judged before merging.\n\n## Files\n\nNew lip-gap check under `e2e/`, helper that computes posed positions (the same calculation the physics pose-target mapper uses)\n\n## Dependencies\n\nDepends on: Fix lip crossing in phoneme and expression presets on an experiment branch\n\n---\nUUID: e77cc98e-3e7b-469f-988f-4adbca638e1c"
+    },
+    {
+      "number": 143,
+      "title": "Retune the T phoneme so the lips are clearly parted",
+      "body": "## Scope\n\nChange only the T phoneme in the pose library. Remove `mouthFunnel`, and raise `jawOpen` enough that the lips are visibly apart from the front and from the side. Keep a small lip parting so the upper teeth are just visible, which suits a tongue-tip sound. Keep `mouthClose` and the lip-press shapes out of T.\nCheck the result from the side (profile) as well as from the front. Update the T assertions in the pose audit unit test, which currently allow `jawOpen` anywhere from 0.1 to 0.2, to match the new weights.\n\n## Files\n\n`src/domain/poses/pose-library.ts`, `src/domain/poses/pose-audit.test.ts`\n\n---\nUUID: debe1549-d1dc-4897-806c-7a0bc76180e0"
     }
   ]
 }
