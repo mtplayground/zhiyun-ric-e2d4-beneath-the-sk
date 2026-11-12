@@ -1,0 +1,1051 @@
+{
+  "sourceHash": "6bfce6d0fcbb5839f5102b79733007859fef7c5df6d9eb49e2264542810b5f64",
+  "captures": [
+    {
+      "id": "neutral",
+      "view": "front",
+      "file": "captures/neutral-front.png",
+      "evaluatedWeights": {},
+      "bounds": {
+        "min": [
+          -0.102644088850943,
+          -0.5069091771172538,
+          0.652336236338134
+        ],
+        "max": [
+          0.08504743084779964,
+          -0.36367571314871494,
+          0.7269882944909378
+        ]
+      }
+    },
+    {
+      "id": "neutral",
+      "view": "profile",
+      "file": "captures/neutral-profile.png",
+      "evaluatedWeights": {},
+      "bounds": {
+        "min": [
+          -0.102644088850943,
+          -0.5069091771172538,
+          0.652336236338134
+        ],
+        "max": [
+          0.08504743084779964,
+          -0.36367571314871494,
+          0.7269882944909378
+        ]
+      }
+    },
+    {
+      "id": "aa",
+      "view": "front",
+      "file": "captures/aa-front.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.9,
+        "mouthFunnel": 0.18,
+        "mouthLowerDown_L": 0.18,
+        "mouthLowerDown_R": 0.18
+      },
+      "bounds": {
+        "min": [
+          -0.10438359189209745,
+          -0.7892381515753277,
+          0.5757155769302706
+        ],
+        "max": [
+          0.07771833093405744,
+          -0.3572384449060344,
+          0.7355806656584203
+        ]
+      }
+    },
+    {
+      "id": "aa",
+      "view": "profile",
+      "file": "captures/aa-profile.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.9,
+        "mouthFunnel": 0.18,
+        "mouthLowerDown_L": 0.18,
+        "mouthLowerDown_R": 0.18
+      },
+      "bounds": {
+        "min": [
+          -0.10438359189209745,
+          -0.7892381515753277,
+          0.5757155769302706
+        ],
+        "max": [
+          0.07771833093405744,
+          -0.3572384449060344,
+          0.7355806656584203
+        ]
+      }
+    },
+    {
+      "id": "candidate-77",
+      "view": "front",
+      "file": "captures/candidate-77-front.png",
+      "evaluatedWeights": {
+        "mouthUpperUp_L": 0.005,
+        "mouthUpperUp_R": 0.005,
+        "mouthLowerDown_L": 0.005,
+        "mouthLowerDown_R": 0.005
+      },
+      "bounds": {
+        "min": [
+          -0.1027444527998822,
+          -0.5072009175593404,
+          0.652143789568014
+        ],
+        "max": [
+          0.0851631047917688,
+          -0.36338374550161157,
+          0.7269004113386537
+        ]
+      }
+    },
+    {
+      "id": "candidate-77",
+      "view": "profile",
+      "file": "captures/candidate-77-profile.png",
+      "evaluatedWeights": {
+        "mouthUpperUp_L": 0.005,
+        "mouthUpperUp_R": 0.005,
+        "mouthLowerDown_L": 0.005,
+        "mouthLowerDown_R": 0.005
+      },
+      "bounds": {
+        "min": [
+          -0.1027444527998822,
+          -0.5072009175593404,
+          0.652143789568014
+        ],
+        "max": [
+          0.0851631047917688,
+          -0.36338374550161157,
+          0.7269004113386537
+        ]
+      }
+    },
+    {
+      "id": "candidate-140",
+      "view": "front",
+      "file": "captures/candidate-140-front.png",
+      "evaluatedWeights": {
+        "mouthUpperUp_L": 0.01,
+        "mouthUpperUp_R": 0.01
+      },
+      "bounds": {
+        "min": [
+          -0.10284481674882118,
+          -0.5069091771172538,
+          0.651951342797894
+        ],
+        "max": [
+          0.08527877873573819,
+          -0.36309177785450797,
+          0.7268125281863693
+        ]
+      }
+    },
+    {
+      "id": "candidate-140",
+      "view": "profile",
+      "file": "captures/candidate-140-profile.png",
+      "evaluatedWeights": {
+        "mouthUpperUp_L": 0.01,
+        "mouthUpperUp_R": 0.01
+      },
+      "bounds": {
+        "min": [
+          -0.10284481674882118,
+          -0.5069091771172538,
+          0.651951342797894
+        ],
+        "max": [
+          0.08527877873573819,
+          -0.36309177785450797,
+          0.7268125281863693
+        ]
+      }
+    },
+    {
+      "id": "candidate-855",
+      "view": "front",
+      "file": "captures/candidate-855-front.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.0025,
+        "mouthRollUpper": 0.05,
+        "mouthUpperUp_L": 0.01,
+        "mouthUpperUp_R": 0.01,
+        "mouthLowerDown_L": 0.01,
+        "mouthLowerDown_R": 0.01
+      },
+      "bounds": {
+        "min": [
+          -0.10281887352338881,
+          -0.5081757459756826,
+          0.6494704414302617
+        ],
+        "max": [
+          0.08504877897976326,
+          -0.3664015066921369,
+          0.7249769536359039
+        ]
+      }
+    },
+    {
+      "id": "candidate-855",
+      "view": "profile",
+      "file": "captures/candidate-855-profile.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.0025,
+        "mouthRollUpper": 0.05,
+        "mouthUpperUp_L": 0.01,
+        "mouthUpperUp_R": 0.01,
+        "mouthLowerDown_L": 0.01,
+        "mouthLowerDown_R": 0.01
+      },
+      "bounds": {
+        "min": [
+          -0.10281887352338881,
+          -0.5081757459756826,
+          0.6494704414302617
+        ],
+        "max": [
+          0.08504877897976326,
+          -0.3664015066921369,
+          0.7249769536359039
+        ]
+      }
+    },
+    {
+      "id": "candidate-1541",
+      "view": "front",
+      "file": "captures/candidate-1541-front.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.005,
+        "mouthRollUpper": 0.05,
+        "mouthUpperUp_L": 0.01,
+        "mouthUpperUp_R": 0.01
+      },
+      "bounds": {
+        "min": [
+          -0.10280934812309328,
+          -0.5083179937170268,
+          0.6494493385139755
+        ],
+        "max": [
+          0.08503628777950767,
+          -0.36639617913695943,
+          0.724979422015744
+        ]
+      }
+    },
+    {
+      "id": "candidate-1541",
+      "view": "profile",
+      "file": "captures/candidate-1541-profile.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.005,
+        "mouthRollUpper": 0.05,
+        "mouthUpperUp_L": 0.01,
+        "mouthUpperUp_R": 0.01
+      },
+      "bounds": {
+        "min": [
+          -0.10280934812309328,
+          -0.5083179937170268,
+          0.6494493385139755
+        ],
+        "max": [
+          0.08503628777950767,
+          -0.36639617913695943,
+          0.724979422015744
+        ]
+      }
+    },
+    {
+      "id": "candidate-3317",
+      "view": "front",
+      "file": "captures/candidate-3317-front.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.02,
+        "mouthRollUpper": 1,
+        "mouthUpperUp_L": 0.32,
+        "mouthUpperUp_R": 0.32,
+        "mouthLowerDown_L": 0.02,
+        "mouthLowerDown_R": 0.02
+      },
+      "bounds": {
+        "min": [
+          -0.10866282187794529,
+          -0.5130291548645018,
+          0.5906548506932423
+        ],
+        "max": [
+          0.08800046254540006,
+          -0.40990937039687947,
+          0.7064549652212226
+        ]
+      }
+    },
+    {
+      "id": "candidate-3317",
+      "view": "profile",
+      "file": "captures/candidate-3317-profile.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.02,
+        "mouthRollUpper": 1,
+        "mouthUpperUp_L": 0.32,
+        "mouthUpperUp_R": 0.32,
+        "mouthLowerDown_L": 0.02,
+        "mouthLowerDown_R": 0.02
+      },
+      "bounds": {
+        "min": [
+          -0.10866282187794529,
+          -0.5130291548645018,
+          0.5906548506932423
+        ],
+        "max": [
+          0.08800046254540006,
+          -0.40990937039687947,
+          0.7064549652212226
+        ]
+      }
+    },
+    {
+      "id": "candidate-225",
+      "view": "front",
+      "file": "captures/candidate-225-front.png",
+      "evaluatedWeights": {
+        "mouthRollUpper": 0.05,
+        "mouthUpperUp_L": 0.02,
+        "mouthUpperUp_R": 0.02,
+        "mouthLowerDown_L": 0.01,
+        "mouthLowerDown_R": 0.01
+      },
+      "bounds": {
+        "min": [
+          -0.10302912682156262,
+          -0.507450017350165,
+          0.6491066508063079
+        ],
+        "max": [
+          0.0852926180679573,
+          -0.36582289895310716,
+          0.7247987189514948
+        ]
+      }
+    },
+    {
+      "id": "candidate-225",
+      "view": "profile",
+      "file": "captures/candidate-225-profile.png",
+      "evaluatedWeights": {
+        "mouthRollUpper": 0.05,
+        "mouthUpperUp_L": 0.02,
+        "mouthUpperUp_R": 0.02,
+        "mouthLowerDown_L": 0.01,
+        "mouthLowerDown_R": 0.01
+      },
+      "bounds": {
+        "min": [
+          -0.10302912682156262,
+          -0.507450017350165,
+          0.6491066508063079
+        ],
+        "max": [
+          0.0852926180679573,
+          -0.36582289895310716,
+          0.7247987189514948
+        ]
+      }
+    },
+    {
+      "id": "candidate-911",
+      "view": "front",
+      "file": "captures/candidate-911-front.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.0025,
+        "mouthRollUpper": 0.05,
+        "mouthUpperUp_L": 0.02,
+        "mouthUpperUp_R": 0.02
+      },
+      "bounds": {
+        "min": [
+          -0.10301960142126698,
+          -0.5075922650915092,
+          0.6490855478900217
+        ],
+        "max": [
+          0.08528012686770181,
+          -0.3658175713979297,
+          0.7248011873313351
+        ]
+      }
+    },
+    {
+      "id": "candidate-911",
+      "view": "profile",
+      "file": "captures/candidate-911-profile.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.0025,
+        "mouthRollUpper": 0.05,
+        "mouthUpperUp_L": 0.02,
+        "mouthUpperUp_R": 0.02
+      },
+      "bounds": {
+        "min": [
+          -0.10301960142126698,
+          -0.5075922650915092,
+          0.6490855478900217
+        ],
+        "max": [
+          0.08528012686770181,
+          -0.3658175713979297,
+          0.7248011873313351
+        ]
+      }
+    },
+    {
+      "id": "candidate-800",
+      "view": "front",
+      "file": "captures/candidate-800-front.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.0025,
+        "mouthRollUpper": 0.1,
+        "mouthUpperUp_L": 0.005,
+        "mouthUpperUp_R": 0.005,
+        "mouthLowerDown_L": 0.04,
+        "mouthLowerDown_R": 0.04
+      },
+      "bounds": {
+        "min": [
+          -0.1027020917493131,
+          -0.5098835479769399,
+          0.647203089749036
+        ],
+        "max": [
+          0.08471559648007432,
+          -0.3700085307320462,
+          0.7232267938578818
+        ]
+      }
+    },
+    {
+      "id": "candidate-800",
+      "view": "profile",
+      "file": "captures/candidate-800-profile.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.0025,
+        "mouthRollUpper": 0.1,
+        "mouthUpperUp_L": 0.005,
+        "mouthUpperUp_R": 0.005,
+        "mouthLowerDown_L": 0.04,
+        "mouthLowerDown_R": 0.04
+      },
+      "bounds": {
+        "min": [
+          -0.1027020917493131,
+          -0.5098835479769399,
+          0.647203089749036
+        ],
+        "max": [
+          0.08471559648007432,
+          -0.3700085307320462,
+          0.7232267938578818
+        ]
+      }
+    },
+    {
+      "id": "candidate-29",
+      "view": "front",
+      "file": "captures/candidate-29-front.png",
+      "evaluatedWeights": {
+        "mouthRollUpper": 0.05,
+        "mouthLowerDown_L": 0.04,
+        "mouthLowerDown_R": 0.04
+      },
+      "bounds": {
+        "min": [
+          -0.10262767102580628,
+          -0.5092004600026843,
+          0.6498764378867881
+        ],
+        "max": [
+          0.08482992229208008,
+          -0.3669907695415211,
+          0.7251502515606318
+        ]
+      }
+    },
+    {
+      "id": "candidate-29",
+      "view": "profile",
+      "file": "captures/candidate-29-profile.png",
+      "evaluatedWeights": {
+        "mouthRollUpper": 0.05,
+        "mouthLowerDown_L": 0.04,
+        "mouthLowerDown_R": 0.04
+      },
+      "bounds": {
+        "min": [
+          -0.10262767102580628,
+          -0.5092004600026843,
+          0.6498764378867881
+        ],
+        "max": [
+          0.08482992229208008,
+          -0.3669907695415211,
+          0.7251502515606318
+        ]
+      }
+    },
+    {
+      "id": "candidate-2145",
+      "view": "front",
+      "file": "captures/candidate-2145-front.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.01,
+        "mouthRollUpper": 0.2,
+        "mouthLowerDown_L": 0.16,
+        "mouthLowerDown_R": 0.16
+      },
+      "bounds": {
+        "min": [
+          -0.10268936642961157,
+          -0.5189772231610463,
+          0.6424126308676052
+        ],
+        "max": [
+          0.08412743182389959,
+          -0.37691462849922974,
+          0.7196459962890751
+        ]
+      }
+    },
+    {
+      "id": "candidate-2145",
+      "view": "profile",
+      "file": "captures/candidate-2145-profile.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.01,
+        "mouthRollUpper": 0.2,
+        "mouthLowerDown_L": 0.16,
+        "mouthLowerDown_R": 0.16
+      },
+      "bounds": {
+        "min": [
+          -0.10268936642961157,
+          -0.5189772231610463,
+          0.6424126308676052
+        ],
+        "max": [
+          0.08412743182389959,
+          -0.37691462849922974,
+          0.7196459962890751
+        ]
+      }
+    },
+    {
+      "id": "candidate-3594",
+      "view": "front",
+      "file": "captures/candidate-3594-front.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.04,
+        "mouthRollUpper": 0.2,
+        "mouthUpperUp_L": 0.005,
+        "mouthUpperUp_R": 0.005,
+        "mouthLowerDown_L": 0.02,
+        "mouthLowerDown_R": 0.02
+      },
+      "bounds": {
+        "min": [
+          -0.10252637509460472,
+          -0.5195172342888323,
+          0.641966949102051
+        ],
+        "max": [
+          0.08409321136480263,
+          -0.3765587301899973,
+          0.7195877336948757
+        ]
+      }
+    },
+    {
+      "id": "candidate-3594",
+      "view": "profile",
+      "file": "captures/candidate-3594-profile.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.04,
+        "mouthRollUpper": 0.2,
+        "mouthUpperUp_L": 0.005,
+        "mouthUpperUp_R": 0.005,
+        "mouthLowerDown_L": 0.02,
+        "mouthLowerDown_R": 0.02
+      },
+      "bounds": {
+        "min": [
+          -0.10252637509460472,
+          -0.5195172342888323,
+          0.641966949102051
+        ],
+        "max": [
+          0.08409321136480263,
+          -0.3765587301899973,
+          0.7195877336948757
+        ]
+      }
+    },
+    {
+      "id": "candidate-5081",
+      "view": "front",
+      "file": "captures/candidate-5081-front.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.12,
+        "mouthRollUpper": 1,
+        "mouthUpperUp_L": 0.01,
+        "mouthUpperUp_R": 0.01,
+        "mouthLowerDown_L": 0.08,
+        "mouthLowerDown_R": 0.08
+      },
+      "bounds": {
+        "min": [
+          -0.10205924103189479,
+          -0.545559185190241,
+          0.6017424337892376
+        ],
+        "max": [
+          0.08032903000908409,
+          -0.4291371830621147,
+          0.7051399283009816
+        ]
+      }
+    },
+    {
+      "id": "candidate-5081",
+      "view": "profile",
+      "file": "captures/candidate-5081-profile.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.12,
+        "mouthRollUpper": 1,
+        "mouthUpperUp_L": 0.01,
+        "mouthUpperUp_R": 0.01,
+        "mouthLowerDown_L": 0.08,
+        "mouthLowerDown_R": 0.08
+      },
+      "bounds": {
+        "min": [
+          -0.10205924103189479,
+          -0.545559185190241,
+          0.6017424337892376
+        ],
+        "max": [
+          0.08032903000908409,
+          -0.4291371830621147,
+          0.7051399283009816
+        ]
+      }
+    },
+    {
+      "id": "candidate-3720",
+      "view": "front",
+      "file": "captures/candidate-3720-front.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.04,
+        "mouthRollUpper": 0.2,
+        "mouthUpperUp_L": 0.02,
+        "mouthUpperUp_R": 0.02,
+        "mouthLowerDown_L": 0.005,
+        "mouthLowerDown_R": 0.005
+      },
+      "bounds": {
+        "min": [
+          -0.10282746694142186,
+          -0.5186420129625726,
+          0.641389608791691
+        ],
+        "max": [
+          0.08444023319671068,
+          -0.37568282724868673,
+          0.7193240842380231
+        ]
+      }
+    },
+    {
+      "id": "candidate-3720",
+      "view": "profile",
+      "file": "captures/candidate-3720-profile.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.04,
+        "mouthRollUpper": 0.2,
+        "mouthUpperUp_L": 0.02,
+        "mouthUpperUp_R": 0.02,
+        "mouthLowerDown_L": 0.005,
+        "mouthLowerDown_R": 0.005
+      },
+      "bounds": {
+        "min": [
+          -0.10282746694142186,
+          -0.5186420129625726,
+          0.641389608791691
+        ],
+        "max": [
+          0.08444023319671068,
+          -0.37568282724868673,
+          0.7193240842380231
+        ]
+      }
+    },
+    {
+      "id": "candidate-296",
+      "view": "front",
+      "file": "captures/candidate-296-front.png",
+      "evaluatedWeights": {
+        "mouthRollUpper": 0.1,
+        "mouthUpperUp_L": 0.04,
+        "mouthUpperUp_R": 0.04,
+        "mouthLowerDown_L": 0.01,
+        "mouthLowerDown_R": 0.01
+      },
+      "bounds": {
+        "min": [
+          -0.10341416479218235,
+          -0.5074073766989031,
+          0.6458770652744816
+        ],
+        "max": [
+          0.08553780528811483,
+          -0.36797008475749915,
+          0.7226091434120516
+        ]
+      }
+    },
+    {
+      "id": "candidate-296",
+      "view": "profile",
+      "file": "captures/candidate-296-profile.png",
+      "evaluatedWeights": {
+        "mouthRollUpper": 0.1,
+        "mouthUpperUp_L": 0.04,
+        "mouthUpperUp_R": 0.04,
+        "mouthLowerDown_L": 0.01,
+        "mouthLowerDown_R": 0.01
+      },
+      "bounds": {
+        "min": [
+          -0.10341416479218235,
+          -0.5074073766989031,
+          0.6458770652744816
+        ],
+        "max": [
+          0.08553780528811483,
+          -0.36797008475749915,
+          0.7226091434120516
+        ]
+      }
+    },
+    {
+      "id": "candidate-3103",
+      "view": "front",
+      "file": "captures/candidate-3103-front.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.02,
+        "mouthRollUpper": 0.1,
+        "mouthUpperUp_L": 0.04,
+        "mouthUpperUp_R": 0.04,
+        "mouthLowerDown_L": 0.02,
+        "mouthLowerDown_R": 0.02
+      },
+      "bounds": {
+        "min": [
+          -0.103337961589817,
+          -0.5137966865872161,
+          0.6457082419441922
+        ],
+        "max": [
+          0.08543787568607075,
+          -0.36792746431608014,
+          0.7226288904507747
+        ]
+      }
+    },
+    {
+      "id": "candidate-3103",
+      "view": "profile",
+      "file": "captures/candidate-3103-profile.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.02,
+        "mouthRollUpper": 0.1,
+        "mouthUpperUp_L": 0.04,
+        "mouthUpperUp_R": 0.04,
+        "mouthLowerDown_L": 0.02,
+        "mouthLowerDown_R": 0.02
+      },
+      "bounds": {
+        "min": [
+          -0.103337961589817,
+          -0.5137966865872161,
+          0.6457082419441922
+        ],
+        "max": [
+          0.08543787568607075,
+          -0.36792746431608014,
+          0.7226288904507747
+        ]
+      }
+    },
+    {
+      "id": "candidate-367",
+      "view": "front",
+      "file": "captures/candidate-367-front.png",
+      "evaluatedWeights": {
+        "mouthRollUpper": 0.2,
+        "mouthUpperUp_L": 0.08,
+        "mouthUpperUp_R": 0.08,
+        "mouthLowerDown_L": 0.01,
+        "mouthLowerDown_R": 0.01
+      },
+      "bounds": {
+        "min": [
+          -0.1041842407334217,
+          -0.5073220953963793,
+          0.6394178942108295
+        ],
+        "max": [
+          0.08602817972843013,
+          -0.3722644563662836,
+          0.7182299923331652
+        ]
+      }
+    },
+    {
+      "id": "candidate-367",
+      "view": "profile",
+      "file": "captures/candidate-367-profile.png",
+      "evaluatedWeights": {
+        "mouthRollUpper": 0.2,
+        "mouthUpperUp_L": 0.08,
+        "mouthUpperUp_R": 0.08,
+        "mouthLowerDown_L": 0.01,
+        "mouthLowerDown_R": 0.01
+      },
+      "bounds": {
+        "min": [
+          -0.1041842407334217,
+          -0.5073220953963793,
+          0.6394178942108295
+        ],
+        "max": [
+          0.08602817972843013,
+          -0.3722644563662836,
+          0.7182299923331652
+        ]
+      }
+    },
+    {
+      "id": "candidate-3174",
+      "view": "front",
+      "file": "captures/candidate-3174-front.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.02,
+        "mouthRollUpper": 0.2,
+        "mouthUpperUp_L": 0.08,
+        "mouthUpperUp_R": 0.08,
+        "mouthLowerDown_L": 0.02,
+        "mouthLowerDown_R": 0.02
+      },
+      "bounds": {
+        "min": [
+          -0.10410803753105646,
+          -0.5137114052846923,
+          0.6392490708805401
+        ],
+        "max": [
+          0.08592825012638616,
+          -0.37222183592486435,
+          0.718249739371889
+        ]
+      }
+    },
+    {
+      "id": "candidate-3174",
+      "view": "profile",
+      "file": "captures/candidate-3174-profile.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.02,
+        "mouthRollUpper": 0.2,
+        "mouthUpperUp_L": 0.08,
+        "mouthUpperUp_R": 0.08,
+        "mouthLowerDown_L": 0.02,
+        "mouthLowerDown_R": 0.02
+      },
+      "bounds": {
+        "min": [
+          -0.10410803753105646,
+          -0.5137114052846923,
+          0.6392490708805401
+        ],
+        "max": [
+          0.08592825012638616,
+          -0.37222183592486435,
+          0.718249739371889
+        ]
+      }
+    },
+    {
+      "id": "candidate-1145",
+      "view": "front",
+      "file": "captures/candidate-1145-front.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.0025,
+        "mouthRollUpper": 0.4,
+        "mouthUpperUp_L": 0.16,
+        "mouthUpperUp_R": 0.16,
+        "mouthLowerDown_L": 0.02,
+        "mouthLowerDown_R": 0.02
+      },
+      "bounds": {
+        "min": [
+          -0.10571486721560452,
+          -0.5084607423010221,
+          0.6264784491672386
+        ],
+        "max": [
+          0.08699643740880536,
+          -0.380847872028675,
+          0.710141828520545
+        ]
+      }
+    },
+    {
+      "id": "candidate-1145",
+      "view": "profile",
+      "file": "captures/candidate-1145-profile.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.0025,
+        "mouthRollUpper": 0.4,
+        "mouthUpperUp_L": 0.16,
+        "mouthUpperUp_R": 0.16,
+        "mouthLowerDown_L": 0.02,
+        "mouthLowerDown_R": 0.02
+      },
+      "bounds": {
+        "min": [
+          -0.10571486721560452,
+          -0.5084607423010221,
+          0.6264784491672386
+        ],
+        "max": [
+          0.08699643740880536,
+          -0.380847872028675,
+          0.710141828520545
+        ]
+      }
+    },
+    {
+      "id": "candidate-1130",
+      "view": "front",
+      "file": "captures/candidate-1130-front.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.0025,
+        "mouthRollUpper": 0.2,
+        "mouthUpperUp_L": 0.16,
+        "mouthUpperUp_R": 0.16,
+        "mouthLowerDown_L": 0.005,
+        "mouthLowerDown_R": 0.005
+      },
+      "bounds": {
+        "min": [
+          -0.10578053851615166,
+          -0.5077560835798103,
+          0.6363176429726225
+        ],
+        "max": [
+          0.08786647163168315,
+          -0.3675876464574508,
+          0.7168263302764577
+        ]
+      }
+    },
+    {
+      "id": "candidate-1130",
+      "view": "profile",
+      "file": "captures/candidate-1130-profile.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.0025,
+        "mouthRollUpper": 0.2,
+        "mouthUpperUp_L": 0.16,
+        "mouthUpperUp_R": 0.16,
+        "mouthLowerDown_L": 0.005,
+        "mouthLowerDown_R": 0.005
+      },
+      "bounds": {
+        "min": [
+          -0.10578053851615166,
+          -0.5077560835798103,
+          0.6363176429726225
+        ],
+        "max": [
+          0.08786647163168315,
+          -0.3675876464574508,
+          0.7168263302764577
+        ]
+      }
+    },
+    {
+      "id": "candidate-1230",
+      "view": "front",
+      "file": "captures/candidate-1230-front.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.0025,
+        "mouthRollUpper": 0.7,
+        "mouthUpperUp_L": 0.32,
+        "mouthUpperUp_R": 0.32,
+        "mouthLowerDown_L": 0.08,
+        "mouthLowerDown_R": 0.08
+      },
+      "bounds": {
+        "min": [
+          -0.10882800663083525,
+          -0.5117057836984897,
+          0.6055613618153215
+        ],
+        "max": [
+          0.08939295228150557,
+          -0.3904511485244442,
+          0.7077763262588186
+        ]
+      }
+    },
+    {
+      "id": "candidate-1230",
+      "view": "profile",
+      "file": "captures/candidate-1230-profile.png",
+      "evaluatedWeights": {
+        "jawOpen": 0.0025,
+        "mouthRollUpper": 0.7,
+        "mouthUpperUp_L": 0.32,
+        "mouthUpperUp_R": 0.32,
+        "mouthLowerDown_L": 0.08,
+        "mouthLowerDown_R": 0.08
+      },
+      "bounds": {
+        "min": [
+          -0.10882800663083525,
+          -0.5117057836984897,
+          0.6055613618153215
+        ],
+        "max": [
+          0.08939295228150557,
+          -0.3904511485244442,
+          0.7077763262588186
+        ]
+      }
+    }
+  ]
+}

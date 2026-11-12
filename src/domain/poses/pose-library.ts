@@ -320,12 +320,14 @@ export const phonemePoseMappings = [
     category: 'phoneme',
     description:
       'Tongue-tip stop with slightly parted lips and teeth just visible.',
+    // Real FaceCap search candidate 1130; geometry and appearance: docs/t-lip-tuning.md.
     weightsByProvider: weights({
-      jawOpen: 0.28,
-      mouthUpperUpLeft: 0.1,
-      mouthUpperUpRight: 0.1,
-      mouthLowerDownLeft: 0.06,
-      mouthLowerDownRight: 0.06,
+      jawOpen: 0.0025,
+      mouthUpperUpLeft: 0.16,
+      mouthUpperUpRight: 0.16,
+      mouthLowerDownLeft: 0.005,
+      mouthLowerDownRight: 0.005,
+      mouthRollUpper: 0.2,
     }),
   },
   {

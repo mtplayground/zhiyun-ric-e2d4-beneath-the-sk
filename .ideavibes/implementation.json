@@ -136,6 +136,11 @@
       "number": 147,
       "title": "Measure the T lip overlap against the neutral face in profile",
       "body": "## Scope\n\nOn the real default FaceCap mesh, capture the side (profile) view and measure the lip geometry for neutral and for the current T. Measure:\n- the smallest gap between the upper-lip and lower-lip surfaces, broken down by front, middle and corner of the mouth;\n- how far the upper lip sticks out past the lower lip;\n- whether the two surfaces actually intersect, or the upper lip only hides the lower lip from the side.\nRecord the results and both profile images in the physics/pose docs. State plainly whether neutral already has this overhang. If it does, later issues judge T by how much it improves on neutral, not by full separation.\n\n## Files\n\nNew measurement helper under `e2e/` (the posed-position calculation is already used by the lip-gap check), pose docs under `docs/`\n\n---\nUUID: fd15132a-8265-494e-ad52-2e54bcbef130"
+    },
+    {
+      "number": 148,
+      "title": "Tune T by searching weights against the measured lip gap",
+      "body": "## Scope\n\nStop hand-picking T. Add a script that tries combinations of `jawOpen`, `mouthUpperUp`, `mouthLowerDown` and `mouthRollUpper` on the real FaceCap mesh and measures each result with the measurements from the previous issue. Keep a combination only if:\n- no lip surfaces intersect;\n- the lips are at least 2 mm apart across the middle of the mouth, not just touching;\n- the upper lip sticks out past the lower lip no more than it does in neutral;\n- the mouth still reads as a T: lips slightly parted with the upper teeth just visible, and `jawOpen` small enough to look clearly different from AA.\nWrite the best combination into `phoneme-t` in the pose library, and record in the pose docs the values tried and the reason for the choice.\nIf no combination meets these limits on FaceCap, stop and report the closest result instead of committing a T that still overlaps.\n\n## Files\n\nNew tuning script under `scripts/`, `src/domain/poses/pose-library.ts`, pose docs under `docs/`\n\n## Dependencies\n\nDepends on: Measure the T lip overlap against the neutral face in profile\n\n---\nUUID: fa3f9c6b-cbc9-4b3e-87ed-c512a0632590"
     }
   ]
 }

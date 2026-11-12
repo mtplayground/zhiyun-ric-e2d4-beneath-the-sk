@@ -1,16 +1,20 @@
-# Neutral and current T: FaceCap profile measurements
+# Neutral and pre-tuning T: FaceCap profile measurements
+
+This is the archived issue #147 baseline (T jawOpen 0.28). The library now uses
+the search result documented in [T tuning](t-lip-tuning.md). These original
+measurements and images remain unchanged so later work can compare against them.
 
 **Neutral already has an upper-lip overhang.** In the selected lip surfaces,
 neutral's upper lip extends 26.576 mm farther forward than the lower lip.
 Their side projections overlap, but the actual 3D surfaces do not intersect.
-The current T also has no 3D intersection. It removes the projected overlap and
+The pre-tuning T also has no 3D intersection. It removes the projected overlap and
 increases surface clearance, while increasing forward overhang to 78.649 mm
 (52.073 mm more than neutral). Forward overhang and surface clearance describe
 different properties; neither alone establishes penetration.
 
 Later T issues should judge improvement relative to this neutral baseline,
 rather than requiring complete separation solely because neutral looks occluded
-in profile. The current T improves clearance and projected visibility, but does
+in profile. The pre-tuning T improves clearance and projected visibility, but does
 not improve the forward-extent measure.
 
 ## Profile images
@@ -26,7 +30,7 @@ that separate result.
 
 ![Neutral profile](lip-profile/neutral.svg)
 
-![Current T profile](lip-profile/phoneme-t.svg)
+![Pre-tuning T profile](lip-profile/phoneme-t.svg)
 
 ## Measurements
 
@@ -103,10 +107,11 @@ no build, test suite, or separate validation run was performed. Publisher checks
 remain pending. To reproduce the data capture, start `npm run dev` and then run:
 
 ```sh
-node e2e/capture-lip-profiles.mjs
+node e2e/capture-lip-profiles.mjs --archived
 ```
 
-The capture writes only requested artifacts beneath `docs/lip-profile/`, with
+The `--archived` option replays the weights recorded in the existing report;
+omitting it captures the current library T instead. The capture writes only requested artifacts beneath `docs/lip-profile/`, with
 SHA-256 byte hashes for the two SVGs and complete JSON report in `integrity.json`.
 It never copies the original-files directory. There is no content normalization:
 hashes cover the exact UTF-8 output bytes including trailing newlines.
@@ -120,7 +125,7 @@ npx playwright test e2e/lip-profile.spec.ts
 
 The integrity test hashes all three artifacts and checks every region/side,
 including the final corner record. The browser tests cover clipping, distinguish
-projection overlap from 3D penetration, and compare a fresh real-mesh capture to
+projection overlap from 3D penetration, and compare a fresh real-mesh capture using the archived explicit T weights to
 the complete committed measurements and both SVG image strings. Source changes,
 pose changes, omitted records, or changed image content require explicit review
 and a new capture; a missing asset fails instead of skipping.

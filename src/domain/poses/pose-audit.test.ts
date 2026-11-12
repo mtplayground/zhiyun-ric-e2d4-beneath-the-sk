@@ -66,6 +66,7 @@ describe('pose morph-target audit', () => {
     expect(audit.missingBlendshapeNames).toEqual([
       'mouthLowerDownLeft',
       'mouthLowerDownRight',
+      'mouthRollUpper',
       'mouthUpperUpLeft',
       'mouthUpperUpRight',
     ]);
@@ -95,14 +96,15 @@ describe('pose morph-target audit', () => {
   it('keeps T visibly parted without funneling, closure, or pressing', () => {
     const pose = phonemePoseMappings.find((pose) => pose.id === 'phoneme-t')!;
     const expectedWeights = {
-      jawOpen: 0.28,
-      mouthUpperUpLeft: 0.1,
-      mouthUpperUpRight: 0.1,
-      mouthLowerDownLeft: 0.06,
-      mouthLowerDownRight: 0.06,
+      jawOpen: 0.0025,
+      mouthUpperUpLeft: 0.16,
+      mouthUpperUpRight: 0.16,
+      mouthLowerDownLeft: 0.005,
+      mouthLowerDownRight: 0.005,
+      mouthRollUpper: 0.2,
     };
 
-    // Preserve a small tooth-revealing opening without forward lip rounding.
+    // Preserve reviewed search candidate 1130; real-mesh geometry is checked in e2e.
     for (const providerWeights of Object.values(pose.weightsByProvider)) {
       expect(providerWeights).toEqual(expectedWeights);
       expect(providerWeights).not.toHaveProperty('mouthFunnel');

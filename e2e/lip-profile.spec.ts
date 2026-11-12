@@ -29,14 +29,14 @@ test('regional clipping retains crossing triangles and preserves source ordinals
   expect(clipLipSlab([row], 3, 4)).toEqual([]);
 });
 
-test('real profile capture reproduces committed measurements and both images', async ({ page }) => {
+test('real profile capture reproduces the archived pose measurements and both images', async ({ page }) => {
   const { readFile } = await import('node:fs/promises');
   const baseline = JSON.parse(await readFile('docs/lip-profile/measurements.json', 'utf8'));
   await page.goto('/');
-  const capture = await page.evaluate(async () => {
+  const capture = await page.evaluate(async weights => {
     const path = '/e2e/lip-profile-measurement.ts';
-    return (await import(/* @vite-ignore */ path)).captureLipProfiles();
-  });
+    return (await import(/* @vite-ignore */ path)).captureLipProfiles(weights);
+  }, baseline.results.find((row: { id: string }) => row.id === 'phoneme-t').weights);
   expect(capture.report).toEqual(baseline);
   for (const image of capture.images) {
     expect(image.svg).toBe(await readFile(`docs/lip-profile/${image.id}.svg`, 'utf8'));
