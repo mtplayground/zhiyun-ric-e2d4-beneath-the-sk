@@ -1,0 +1,596 @@
+{
+  "source": "https://threejs.org/examples/models/gltf/facecap.glb",
+  "sourceHash": "6bfce6d0fcbb5839f5102b79733007859fef7c5df6d9eb49e2264542810b5f64",
+  "minimumOpenGapMetres": 0.002,
+  "neutralOverhangMetres": 0.026575514331788952,
+  "regions": {
+    "upper": [
+      2581,
+      2582,
+      2583,
+      2584,
+      2585,
+      2586,
+      2587,
+      2588,
+      2595,
+      2596,
+      2597,
+      2598,
+      2599,
+      2600,
+      2601,
+      2602,
+      2603,
+      2604,
+      2617,
+      2618,
+      2619,
+      2620,
+      2621,
+      2622,
+      2623,
+      2624,
+      2625,
+      2626,
+      2627,
+      2628,
+      2742,
+      2743,
+      2744,
+      2745,
+      2746,
+      2747,
+      2748,
+      2808,
+      2809,
+      2810
+    ],
+    "lower": [
+      1659,
+      1660,
+      1661,
+      1662,
+      1663,
+      1664,
+      1665,
+      1666,
+      1667,
+      1668,
+      1923,
+      1924,
+      1925,
+      1926,
+      1927,
+      1928,
+      1929,
+      1930,
+      1931,
+      1932,
+      1933,
+      1934,
+      1935,
+      1936,
+      1937,
+      1938,
+      1939,
+      1940,
+      2533,
+      2534,
+      2535,
+      2536
+    ]
+  },
+  "results": [
+    {
+      "id": "au-0-neutral",
+      "label": "AU 0 Neutral",
+      "weights": {},
+      "upperForwardExtentMinusLowerMetres": 0.026575514331788952,
+      "requiredGapMetres": 0,
+      "minimumGapMetres": 0.0011259218711440015,
+      "intersection": null
+    },
+    {
+      "id": "au-1-inner-brow-raiser",
+      "label": "AU 1 Inner Brow Raiser",
+      "weights": {
+        "browInnerUp": 0.92
+      },
+      "upperForwardExtentMinusLowerMetres": 0.026575514331788952,
+      "requiredGapMetres": 0,
+      "minimumGapMetres": 0.0011259218711440015,
+      "intersection": null
+    },
+    {
+      "id": "au-2-outer-brow-raiser",
+      "label": "AU 2 Outer Brow Raiser",
+      "weights": {
+        "browOuterUpLeft": 0.86,
+        "browOuterUpRight": 0.86
+      },
+      "upperForwardExtentMinusLowerMetres": 0.026575514331788952,
+      "requiredGapMetres": 0,
+      "minimumGapMetres": 0.0011259218711440015,
+      "intersection": null
+    },
+    {
+      "id": "au-4-brow-lowerer",
+      "label": "AU 4 Brow Lowerer",
+      "weights": {
+        "browDownLeft": 0.9,
+        "browDownRight": 0.9
+      },
+      "upperForwardExtentMinusLowerMetres": 0.026575514331788952,
+      "requiredGapMetres": 0,
+      "minimumGapMetres": 0.0011259218711440015,
+      "intersection": null
+    },
+    {
+      "id": "au-6-cheek-raiser",
+      "label": "AU 6 Cheek Raiser",
+      "weights": {
+        "cheekSquintLeft": 0.86,
+        "cheekSquintRight": 0.86,
+        "eyeSquintLeft": 0.32,
+        "eyeSquintRight": 0.32
+      },
+      "upperForwardExtentMinusLowerMetres": 0.026575514331788952,
+      "requiredGapMetres": 0,
+      "minimumGapMetres": 0.0011259218711440015,
+      "intersection": null
+    },
+    {
+      "id": "au-7-lid-tightener",
+      "label": "AU 7 Lid Tightener",
+      "weights": {
+        "eyeSquintLeft": 0.9,
+        "eyeSquintRight": 0.9,
+        "cheekSquintLeft": 0.18,
+        "cheekSquintRight": 0.18
+      },
+      "upperForwardExtentMinusLowerMetres": 0.026575514331788952,
+      "requiredGapMetres": 0,
+      "minimumGapMetres": 0.0011259218711440015,
+      "intersection": null
+    },
+    {
+      "id": "au-12-smile",
+      "label": "AU 12 Smile",
+      "weights": {
+        "mouthSmileLeft": 0.9,
+        "mouthSmileRight": 0.9,
+        "mouthDimpleLeft": 0.28,
+        "mouthDimpleRight": 0.28,
+        "cheekSquintLeft": 0.22,
+        "cheekSquintRight": 0.22
+      },
+      "upperForwardExtentMinusLowerMetres": 0.015981055171681913,
+      "requiredGapMetres": 0,
+      "minimumGapMetres": 0,
+      "intersection": {
+        "upper": 2581,
+        "lower": 2536,
+        "positionMetres": [
+          -0.15664744996286425,
+          -0.3570463664388358,
+          0.544553020528686
+        ]
+      }
+    },
+    {
+      "id": "au-22-lip-funneler",
+      "label": "AU 22 Lip Funneler",
+      "weights": {
+        "mouthFunnel": 0.94,
+        "mouthPucker": 0.4,
+        "jawOpen": 0.08
+      },
+      "upperForwardExtentMinusLowerMetres": 0.02835092617729762,
+      "requiredGapMetres": 0.002,
+      "minimumGapMetres": 0.10358097614406295,
+      "intersection": null
+    },
+    {
+      "id": "au-25-lips-part",
+      "label": "AU 25 Lips Part",
+      "weights": {
+        "jawOpen": 0.58,
+        "mouthFunnel": 0.08
+      },
+      "upperForwardExtentMinusLowerMetres": 0.13278051258514711,
+      "requiredGapMetres": 0.002,
+      "minimumGapMetres": 0.239964639713655,
+      "intersection": null
+    },
+    {
+      "id": "expression-smile",
+      "label": "Smile",
+      "weights": {
+        "mouthSmileLeft": 1,
+        "mouthSmileRight": 1,
+        "mouthDimpleLeft": 0.46,
+        "mouthDimpleRight": 0.46,
+        "cheekSquintLeft": 0.74,
+        "cheekSquintRight": 0.74,
+        "eyeSquintLeft": 0.36,
+        "eyeSquintRight": 0.36
+      },
+      "upperForwardExtentMinusLowerMetres": 0.015013317479232402,
+      "requiredGapMetres": 0.002,
+      "minimumGapMetres": 0,
+      "intersection": {
+        "upper": 2582,
+        "lower": 2534,
+        "positionMetres": [
+          -0.15018989592488086,
+          -0.3545174024629341,
+          0.5487476340763364
+        ]
+      }
+    },
+    {
+      "id": "expression-frown",
+      "label": "Frown",
+      "weights": {
+        "mouthFrownLeft": 0.9,
+        "mouthFrownRight": 0.9,
+        "browDownLeft": 0.52,
+        "browDownRight": 0.52,
+        "jawOpen": 0.08
+      },
+      "upperForwardExtentMinusLowerMetres": 0.03561315566607215,
+      "requiredGapMetres": 0.002,
+      "minimumGapMetres": 0.02771150471991396,
+      "intersection": null
+    },
+    {
+      "id": "expression-brow",
+      "label": "Brow",
+      "weights": {
+        "browInnerUp": 0.94,
+        "browOuterUpLeft": 0.72,
+        "browOuterUpRight": 0.72
+      },
+      "upperForwardExtentMinusLowerMetres": 0.026575514331788952,
+      "requiredGapMetres": 0,
+      "minimumGapMetres": 0.0011259218711440015,
+      "intersection": null
+    },
+    {
+      "id": "expression-mouth",
+      "label": "Mouth",
+      "weights": {
+        "jawOpen": 0.76,
+        "mouthUpperUpLeft": 0.34,
+        "mouthUpperUpRight": 0.34,
+        "mouthLowerDownLeft": 0.38,
+        "mouthLowerDownRight": 0.38,
+        "mouthFunnel": 0.12
+      },
+      "upperForwardExtentMinusLowerMetres": 0.1627169932653283,
+      "requiredGapMetres": 0.002,
+      "minimumGapMetres": 0.3772468896371845,
+      "intersection": null
+    },
+    {
+      "id": "expression-squint",
+      "label": "Squint",
+      "weights": {
+        "eyeSquintLeft": 0.94,
+        "eyeSquintRight": 0.94,
+        "cheekSquintLeft": 0.24,
+        "cheekSquintRight": 0.24,
+        "browDownLeft": 0.18,
+        "browDownRight": 0.18
+      },
+      "upperForwardExtentMinusLowerMetres": 0.026575514331788952,
+      "requiredGapMetres": 0,
+      "minimumGapMetres": 0.0011259218711440015,
+      "intersection": null
+    },
+    {
+      "id": "expression-cheek",
+      "label": "Cheek",
+      "weights": {
+        "cheekSquintLeft": 0.94,
+        "cheekSquintRight": 0.94,
+        "eyeSquintLeft": 0.34,
+        "eyeSquintRight": 0.34,
+        "mouthSmileLeft": 0.14,
+        "mouthSmileRight": 0.14
+      },
+      "upperForwardExtentMinusLowerMetres": 0.024866222889321055,
+      "requiredGapMetres": 0,
+      "minimumGapMetres": 0,
+      "intersection": {
+        "upper": 2581,
+        "lower": 2536,
+        "positionMetres": [
+          -0.11815960900372369,
+          -0.4060531220980315,
+          0.5930982379986772
+        ]
+      }
+    },
+    {
+      "id": "expression-pucker",
+      "label": "Pucker",
+      "weights": {
+        "mouthPucker": 0.98,
+        "mouthFunnel": 0.76,
+        "jawOpen": 0.12
+      },
+      "upperForwardExtentMinusLowerMetres": 0.02936316228980962,
+      "requiredGapMetres": 0.002,
+      "minimumGapMetres": 0.111905833580925,
+      "intersection": null
+    },
+    {
+      "id": "phoneme-neutral",
+      "label": "neutral",
+      "weights": {},
+      "upperForwardExtentMinusLowerMetres": 0.026575514331788952,
+      "requiredGapMetres": 0,
+      "minimumGapMetres": 0.0011259218711440015,
+      "intersection": null
+    },
+    {
+      "id": "phoneme-n",
+      "label": "N",
+      "weights": {
+        "jawOpen": 0.12,
+        "mouthUpperUpLeft": 0.08,
+        "mouthUpperUpRight": 0.08,
+        "mouthLowerDownLeft": 0.06,
+        "mouthLowerDownRight": 0.06
+      },
+      "upperForwardExtentMinusLowerMetres": 0.04908928272614688,
+      "requiredGapMetres": 0.002,
+      "minimumGapMetres": 0.06069716690707598,
+      "intersection": null
+    },
+    {
+      "id": "phoneme-aa",
+      "label": "AA",
+      "weights": {
+        "jawOpen": 0.9,
+        "mouthFunnel": 0.18,
+        "mouthLowerDownLeft": 0.18,
+        "mouthLowerDownRight": 0.18
+      },
+      "upperForwardExtentMinusLowerMetres": 0.19154852299730596,
+      "requiredGapMetres": 0.002,
+      "minimumGapMetres": 0.3913211308772209,
+      "intersection": null
+    },
+    {
+      "id": "phoneme-iy",
+      "label": "IY",
+      "weights": {
+        "jawOpen": 0.26,
+        "mouthSmileLeft": 0.42,
+        "mouthSmileRight": 0.42,
+        "mouthStretchLeft": 0.58,
+        "mouthStretchRight": 0.58,
+        "cheekSquintLeft": 0.12,
+        "cheekSquintRight": 0.12
+      },
+      "upperForwardExtentMinusLowerMetres": 0.09660257269007477,
+      "requiredGapMetres": 0.002,
+      "minimumGapMetres": 0.10675610767056534,
+      "intersection": null
+    },
+    {
+      "id": "phoneme-t",
+      "label": "T",
+      "weights": {
+        "jawOpen": 0.0025,
+        "mouthUpperUpLeft": 0.16,
+        "mouthUpperUpRight": 0.16,
+        "mouthLowerDownLeft": 0.005,
+        "mouthLowerDownRight": 0.005,
+        "mouthRollUpper": 0.2
+      },
+      "upperForwardExtentMinusLowerMetres": 0.012412204075622935,
+      "requiredGapMetres": 0.002,
+      "minimumGapMetres": 0.00988810928815187,
+      "intersection": null
+    },
+    {
+      "id": "phoneme-eh",
+      "label": "EH",
+      "weights": {
+        "jawOpen": 0.56,
+        "mouthStretchLeft": 0.42,
+        "mouthStretchRight": 0.42,
+        "mouthSmileLeft": 0.14,
+        "mouthSmileRight": 0.14
+      },
+      "upperForwardExtentMinusLowerMetres": 0.14793771032587166,
+      "requiredGapMetres": 0.002,
+      "minimumGapMetres": 0.23014465265733774,
+      "intersection": null
+    },
+    {
+      "id": "phoneme-uw",
+      "label": "UW",
+      "weights": {
+        "mouthPucker": 0.92,
+        "mouthFunnel": 0.72,
+        "jawOpen": 0.24,
+        "mouthClose": 0.12
+      },
+      "upperForwardExtentMinusLowerMetres": 0.032259247729524265,
+      "requiredGapMetres": 0.002,
+      "minimumGapMetres": 0.1080406534453576,
+      "intersection": null
+    },
+    {
+      "id": "phoneme-v",
+      "label": "V",
+      "weights": {
+        "mouthClose": 0.18,
+        "mouthRollLower": 0.55,
+        "jawOpen": 0.18,
+        "mouthFunnel": 0.12
+      },
+      "upperForwardExtentMinusLowerMetres": 0.03707247072144115,
+      "requiredGapMetres": 0,
+      "minimumGapMetres": 0,
+      "intersection": {
+        "upper": 2581,
+        "lower": 1930,
+        "positionMetres": [
+          -0.08313666165025754,
+          -0.4379441599171846,
+          0.5998470729904184
+        ]
+      }
+    },
+    {
+      "id": "phoneme-y",
+      "label": "Y",
+      "weights": {
+        "jawOpen": 0.24,
+        "mouthSmileLeft": 0.34,
+        "mouthSmileRight": 0.34,
+        "mouthStretchLeft": 0.38,
+        "mouthStretchRight": 0.38,
+        "cheekSquintLeft": 0.12,
+        "cheekSquintRight": 0.12
+      },
+      "upperForwardExtentMinusLowerMetres": 0.08530020184318499,
+      "requiredGapMetres": 0.002,
+      "minimumGapMetres": 0.09778952388867983,
+      "intersection": null
+    },
+    {
+      "id": "slider-0",
+      "label": "Sliders neutral",
+      "weights": {},
+      "upperForwardExtentMinusLowerMetres": 0.026575514331788952,
+      "requiredGapMetres": 0,
+      "minimumGapMetres": 0.0011259218711440015,
+      "intersection": null
+    },
+    {
+      "id": "slider-1",
+      "label": "Sliders AU 12",
+      "weights": {
+        "mouthSmileLeft": 0.9,
+        "mouthSmileRight": 0.9,
+        "mouthDimpleLeft": 0.28,
+        "mouthDimpleRight": 0.28,
+        "cheekSquintLeft": 0.22,
+        "cheekSquintRight": 0.22
+      },
+      "upperForwardExtentMinusLowerMetres": 0.015981055171681913,
+      "requiredGapMetres": 0,
+      "minimumGapMetres": 0,
+      "intersection": {
+        "upper": 2581,
+        "lower": 2536,
+        "positionMetres": [
+          -0.15664744996286425,
+          -0.3570463664388358,
+          0.544553020528686
+        ]
+      }
+    },
+    {
+      "id": "slider-2",
+      "label": "Sliders AU 22",
+      "weights": {
+        "mouthFunnel": 0.94,
+        "mouthPucker": 0.4,
+        "jawOpen": 0.08
+      },
+      "upperForwardExtentMinusLowerMetres": 0.02835092617729762,
+      "requiredGapMetres": 0,
+      "minimumGapMetres": 0.10358097614406295,
+      "intersection": null
+    },
+    {
+      "id": "slider-3",
+      "label": "Sliders AU 12 + AU 22",
+      "weights": {
+        "mouthSmileLeft": 0.9,
+        "mouthSmileRight": 0.9,
+        "mouthDimpleLeft": 0.28,
+        "mouthDimpleRight": 0.28,
+        "cheekSquintLeft": 0.22,
+        "cheekSquintRight": 0.22,
+        "mouthFunnel": 0.94,
+        "mouthPucker": 0.4,
+        "jawOpen": 0.08
+      },
+      "upperForwardExtentMinusLowerMetres": 0.02132466844833303,
+      "requiredGapMetres": 0,
+      "minimumGapMetres": 0.08871433158537108,
+      "intersection": null
+    },
+    {
+      "id": "slider-4",
+      "label": "Sliders AU 25",
+      "weights": {
+        "jawOpen": 0.58,
+        "mouthFunnel": 0.08
+      },
+      "upperForwardExtentMinusLowerMetres": 0.13278051258514711,
+      "requiredGapMetres": 0.002,
+      "minimumGapMetres": 0.239964639713655,
+      "intersection": null
+    },
+    {
+      "id": "slider-5",
+      "label": "Sliders AU 12 + AU 25",
+      "weights": {
+        "mouthSmileLeft": 0.9,
+        "mouthSmileRight": 0.9,
+        "mouthDimpleLeft": 0.28,
+        "mouthDimpleRight": 0.28,
+        "cheekSquintLeft": 0.22,
+        "cheekSquintRight": 0.22,
+        "jawOpen": 0.58,
+        "mouthFunnel": 0.08
+      },
+      "upperForwardExtentMinusLowerMetres": 0.1280709690323505,
+      "requiredGapMetres": 0.002,
+      "minimumGapMetres": 0.23163640877281416,
+      "intersection": null
+    },
+    {
+      "id": "slider-6",
+      "label": "Sliders AU 22 + AU 25",
+      "weights": {
+        "mouthFunnel": 1,
+        "mouthPucker": 0.4,
+        "jawOpen": 0.6599999999999999
+      },
+      "upperForwardExtentMinusLowerMetres": 0.12765267513109935,
+      "requiredGapMetres": 0.002,
+      "minimumGapMetres": 0.328559888580663,
+      "intersection": null
+    },
+    {
+      "id": "slider-7",
+      "label": "Sliders AU 12 + AU 22 + AU 25",
+      "weights": {
+        "mouthSmileLeft": 0.9,
+        "mouthSmileRight": 0.9,
+        "mouthDimpleLeft": 0.28,
+        "mouthDimpleRight": 0.28,
+        "cheekSquintLeft": 0.22,
+        "cheekSquintRight": 0.22,
+        "mouthFunnel": 1,
+        "mouthPucker": 0.4,
+        "jawOpen": 0.6599999999999999
+      },
+      "upperForwardExtentMinusLowerMetres": 0.1206264174021352,
+      "requiredGapMetres": 0.002,
+      "minimumGapMetres": 0.3196230207230117,
+      "intersection": null
+    }
+  ]
+}

@@ -18,7 +18,8 @@
     "generate:soft-tissue": "node scripts/generate-soft-tissue.mjs",
     "test:e2e:physics": "playwright test --config playwright.physics.config.ts",
     "benchmark:physics": "node scripts/benchmark-physics.mjs",
-    "verify:physics": "node scripts/verify-physics-asset.mjs"
+    "verify:physics": "node scripts/verify-physics-asset.mjs",
+    "test:lip": "vitest run src/domain/poses/pose-audit.test.ts && node --test scripts/lip-profile-integrity.test.mjs scripts/t-lip-search-policy.test.mjs scripts/t-lip-search-integrity.test.mjs scripts/lip-suite-integrity.test.mjs && playwright test e2e/lip-gap.spec.ts e2e/lip-profile.spec.ts e2e/t-lip-selection.spec.ts e2e/post-revert-visual.spec.ts"
   },
   "dependencies": {
     "@react-three/fiber": "^9.6.1",

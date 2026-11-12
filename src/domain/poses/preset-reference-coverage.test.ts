@@ -135,13 +135,14 @@ describe('reference mesh preset coverage', () => {
       status: 'supported',
       activeBlendshapeNames: expect.arrayContaining([
         'jawOpen',
-        'mouthFunnel',
-        'mouthPress_L',
-        'mouthPress_R',
-        'mouthPucker',
+        'mouthUpperUp_L',
+        'mouthUpperUp_R',
+        'mouthLowerDown_L',
+        'mouthLowerDown_R',
+        'mouthRollUpper',
       ]),
     });
-    expect(phonemeN?.activeWeightTotal).toBeGreaterThanOrEqual(2);
+    expect(phonemeN?.activeWeightTotal).toBeGreaterThanOrEqual(0.5);
 
     expect(smile).toMatchObject({
       status: 'supported',

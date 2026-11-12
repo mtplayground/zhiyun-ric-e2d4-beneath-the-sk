@@ -1,0 +1,36 @@
+{
+  "sourceHash": "6bfce6d0fcbb5839f5102b79733007859fef7c5df6d9eb49e2264542810b5f64",
+  "viewport": {
+    "width": 1440,
+    "height": 1100
+  },
+  "deviceScaleFactor": 1,
+  "threshold": 0.15,
+  "maxDiffPixels": 100,
+  "hashes": {
+    "phoneme-t-front-chromium-linux.png": "971d0e159903e787bcac5fd563ca303fb44e277c5a2cb8092890df66507bcd23",
+    "phoneme-t-profile-chromium-linux.png": "e19daadc08ca4b2f750636b38d9ac3e0099221f6ee749b26979e1d4d3e63c907"
+  },
+  "cameras": [
+    {
+      "view": "front",
+      "direction": [
+        0,
+        0,
+        1
+      ],
+      "canvasWidth": 970,
+      "canvasHeight": 480
+    },
+    {
+      "view": "profile",
+      "direction": [
+        1,
+        0,
+        0
+      ],
+      "canvasWidth": 970,
+      "canvasHeight": 480
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+test.use({ viewport: { width: 1440, height: 1100 }, deviceScaleFactor: 1 });
+
 const authorOrder = 'Zhiyun Peng, Michael Tao, Eugene Fiume';
 
 const removedViewportDiagnostics = [
@@ -53,10 +55,10 @@ test.describe('post-revert viewport verification', () => {
   });
 });
 
-test('captures T with clearly parted lips from the front and profile', async ({ page }, testInfo) => {
+test('T matches the parted-lip front and profile references', async ({ page }, testInfo) => {
   await page.goto('/');
   await expect(page.getByText('52 blendshapes', { exact: true })).toBeVisible({ timeout: 90_000 });
-  await page.getByLabel('Phoneme', { exact: true }).selectOption('phoneme-t');
+  await page.getByRole('combobox', { name: /^Phoneme/ }).selectOption('phoneme-t');
   await expect(page.getByText(/Current Pose: T \| Frame: \d+/)).toBeVisible();
   // Wait for the actual morph weights to settle, not just the dropdown/readout.
   const poseProbe = '/e2e/physics-browser-probe.ts';
@@ -70,8 +72,12 @@ test('captures T with clearly parted lips from the front and profile', async ({ 
     expect(camera.canvasWidth).toBeGreaterThan(0);
     expect(camera.canvasHeight).toBeGreaterThan(0);
     expect(camera.direction[view === 'profile' ? 0 : 2]).toBeCloseTo(1, 5);
+    await expect(page.locator('canvas').first()).toHaveScreenshot(`phoneme-t-${view}.png`, {
+      threshold: 0.15, maxDiffPixels: 100, animations: 'disabled', scale: 'css',
+      style: '[data-testid="three-viewport"] > .absolute { visibility: hidden !important; }',
+    });
     await testInfo.attach(`phoneme-t-${view}`, {
-      body: await page.locator('canvas').first().screenshot(), contentType: 'image/png',
+      body: await page.locator('canvas').first().screenshot({ style: '[data-testid="three-viewport"] > .absolute { visibility: hidden !important; }' }), contentType: 'image/png',
     });
   }
 });
