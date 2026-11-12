@@ -321,8 +321,7 @@ export const phonemePoseMappings = [
     description:
       'Tongue-tip stop with slightly parted lips and teeth just visible.',
     weightsByProvider: weights({
-      jawOpen: 0.14,
-      mouthFunnel: 0.08,
+      jawOpen: 0.28,
       mouthUpperUpLeft: 0.1,
       mouthUpperUpRight: 0.1,
       mouthLowerDownLeft: 0.06,
