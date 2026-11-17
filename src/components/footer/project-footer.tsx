@@ -27,6 +27,9 @@ export default function ProjectFooter() {
           </p>
         </div>
       </div>
+      <p className="mt-4 font-mono text-[0.7rem] text-muted-foreground/80">
+        {__BUILD_COMMIT__ ? `Build ${__BUILD_COMMIT__} · ${__BUILD_DATE__}` : 'Build unknown'}
+      </p>
     </footer>
   );
 }

@@ -15,6 +15,7 @@ npm run build:static
 
 - `dist/index.html` exists.
 - Compiled JavaScript and CSS bundles exist under `dist/assets/`.
+- `dist/release.json` records the full deployed commit hash and build date.
 - The default directory-safe asset URLs are valid.
 - Local configured assets such as `VITE_POSE_DATA_URL=./data/poses.json`
   resolve inside `dist/`.
@@ -45,6 +46,10 @@ example `/beneath-the-skin/`.
 ## Serve
 
 Copy the contents of `dist/` to the static document root.
+
+Keep `index.html` and `release.json` revalidated (or served with `Cache-Control:
+no-cache`) so browsers discover each deployment. Hashed files under `assets/`
+can use long-lived immutable caching.
 
 ```bash
 rsync -a --delete dist/ /var/www/beneath-the-skin/

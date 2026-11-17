@@ -1,5 +1,5 @@
 {
-  "batch_id": "d9a85068-ca04-4a80-9312-0c194e163cbb",
+  "batch_id": "c921b198-ada2-48c8-b1f9-0ea65d74dc49",
   "verification": "pending",
   "issues": [
     {
@@ -146,6 +146,11 @@
       "number": 149,
       "title": "Make the lip tests catch visible overlap",
       "body": "## Scope\n\nStrengthen the tests so this kind of overlap fails automatically.\n- **Unit test:** in the pose audit unit test, replace the check that locks T's exact weights with checks on intent: no `mouthClose`, no lip-press shapes, no funnel, and `jawOpen` inside the range the search found to work.\n- **Surface test:** in the lip surface test, raise the required gap for poses meant to show parted lips, including T, from 0.1 mm to the 2 mm used in the search. Also fail if the upper lip sticks out further than it does in neutral.\n- **Profile check:** add a real assertion to the existing front and profile screenshots of T, comparing each against a stored reference image within a tolerance. Today they are only saved.\nRun the full lip suite over every preset. If other presets fail the stricter limits, retune them with the same search script rather than loosening the test.\n\n## Files\n\n`src/domain/poses/pose-audit.test.ts`, `e2e/lip-gap.spec.ts`, `e2e/lip-gap-browser-probe.ts`, `e2e/post-revert-visual.spec.ts`, stored reference images under `e2e/`\n\n## Dependencies\n\nDepends on: Tune T by searching weights against the measured lip gap\n\n---\nUUID: a919e306-9128-4c2b-849e-39bf3fa3bfb7"
+    },
+    {
+      "number": 153,
+      "title": "Show the deployed commit on the site",
+      "body": "## Scope\n\nPut the short git commit hash and the build date into the static build, and show them in the footer as a small line in the form \"Build `<short hash>` · `<date>`\". Also write the full hash into a small release marker file in the build output so a script can check it. If the hash isn't available at build time, show \"Build unknown\" rather than failing the build.\nMake sure browsers check for a new version: the page itself (`index.html`) and the release marker file must not be cached long-term. The hashed asset files can keep long caching. Document this in `docs/self-hosting.md`.\n\n## Files\n\n`vite.config.ts`, `src/components/footer/project-footer.tsx`, `scripts/verify-static-build.mjs`, `docs/self-hosting.md`\n\n---\nUUID: 6109074c-98c4-4746-95da-22306d749b08"
     }
   ]
 }
