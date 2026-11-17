@@ -136,10 +136,21 @@ try {
 const env = loadViteEnv();
 const staticBasePath = normalizeBasePath(env.VITE_STATIC_BASE_PATH);
 const indexPath = path.join(distDir, 'index.html');
+const releasePath = path.join(distDir, 'release.json');
 const assetsDir = path.join(distDir, 'assets');
 
 if (!assertFile(indexPath, 'static entrypoint')) {
   process.exit();
+}
+
+if (assertFile(releasePath, 'release marker')) {
+  try {
+    const release = JSON.parse(readFileSync(releasePath, 'utf8'));
+    if (typeof release.commit !== 'string' || !release.commit) fail('release marker has no commit');
+    if (release.commit !== 'unknown' && !/^[0-9a-f]{40}$/i.test(release.commit)) fail('release marker commit must be a full git hash');
+  } catch (error) {
+    fail(`release marker is invalid JSON: ${error.message}`);
+  }
 }
 
 if (!assertFile(assetsDir, 'compiled assets directory')) {
