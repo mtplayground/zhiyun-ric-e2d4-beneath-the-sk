@@ -1,5 +1,5 @@
 {
-  "batch_id": "c921b198-ada2-48c8-b1f9-0ea65d74dc49",
+  "batch_id": "a324af92-6a3a-42aa-aca0-0eb2cbcb96c7",
   "verification": "pending",
   "issues": [
     {
@@ -151,6 +151,11 @@
       "number": 153,
       "title": "Show the deployed commit on the site",
       "body": "## Scope\n\nPut the short git commit hash and the build date into the static build, and show them in the footer as a small line in the form \"Build `<short hash>` · `<date>`\". Also write the full hash into a small release marker file in the build output so a script can check it. If the hash isn't available at build time, show \"Build unknown\" rather than failing the build.\nMake sure browsers check for a new version: the page itself (`index.html`) and the release marker file must not be cached long-term. The hashed asset files can keep long caching. Document this in `docs/self-hosting.md`.\n\n## Files\n\n`vite.config.ts`, `src/components/footer/project-footer.tsx`, `scripts/verify-static-build.mjs`, `docs/self-hosting.md`\n\n---\nUUID: 6109074c-98c4-4746-95da-22306d749b08"
+    },
+    {
+      "number": 154,
+      "title": "Redeploy the site from the latest main and verify it",
+      "body": "## Scope\n\nAfter the version stamp is merged, rebuild the Sprite deployment from the current tip of `main`, including the stamp and the T lip fixes, then restart the service.\nFollow the deployment flow documented in the repo: clean install, static build, capture the deploy URL with `scripts/capture-deploy-url.sh`, then run `scripts/verify-deployed-ui.mjs` against the live site.\nExtend the verification to:\n- fetch the live release marker and fail if its hash doesn't match the commit just deployed;\n- load the live site and confirm the footer shows the same hash;\n- select T on the live site and confirm the lips are parted, using the same lip check as the test suite.\nRecord the deployed commit, the live URL and the result in the deployment notes. If the Sprite service can't be rebuilt or restarted from the build environment, stop and report the exact blocker instead of reporting success.\n\n## Files\n\nSprite deployment, `scripts/capture-deploy-url.sh`, `scripts/verify-deployed-ui.mjs`, deployment notes under `docs/`\n\n## Dependencies\n\nDepends on: Show the deployed commit on the site\n\n---\nUUID: 0a0b9262-165a-4b8b-8651-7dd520aa086f"
     }
   ]
 }

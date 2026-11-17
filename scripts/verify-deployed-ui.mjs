@@ -6,6 +6,12 @@ const { chromium } = createRequire(import.meta.url)('playwright');
 (async () => {
   const url = fs.existsSync('.deploy_url') ? fs.readFileSync('.deploy_url', 'utf8').trim() : '';
   if (!url) throw new Error('.deploy_url empty or missing; run bash scripts/capture-deploy-url.sh');
+  const expectedCommit = process.env.DEPLOY_COMMIT || (await import('node:child_process')).execFileSync('git', ['rev-parse', 'HEAD'], {encoding:'utf8'}).trim();
+  assert.match(expectedCommit, /^[0-9a-f]{40}$/i, 'Expected deployed commit must be a full git hash');
+  const markerResponse = await fetch(new URL('/release.json', url));
+  assert(markerResponse.ok, `Live release marker failed: HTTP ${markerResponse.status}`);
+  const marker = await markerResponse.json();
+  assert.equal(marker.commit, expectedCommit, `Live release marker ${marker.commit} does not match ${expectedCommit}`);
   const errors = [];
   const browser = await chromium.launch({args:['--no-sandbox','--disable-setuid-sandbox']});
   try {
@@ -20,6 +26,7 @@ const { chromium } = createRequire(import.meta.url)('playwright');
     assert(response?.ok(),'Root page failed');
     await page.getByRole('heading',{name:'Beneath the Skin',exact:true}).waitFor();
     await page.getByText('52 blendshapes',{exact:true}).waitFor({timeout:90000});
+    await page.getByText(new RegExp(`Build ${expectedCommit.slice(0, 7)}\\b`)).waitFor();
     assert((await page.locator('body').innerText()).trim().length>100,'Page lacks meaningful content');
     assert(await page.evaluate(()=>document.styleSheets.length>0 && parseFloat(getComputedStyle(document.querySelector('h1')).fontSize)>=30),'Styling not applied');
     // This single-screen dashboard has no internal navigation or login flow.
@@ -35,6 +42,14 @@ const { chromium } = createRequire(import.meta.url)('playwright');
     await page.getByText(/Mode: preset \| Activations: 5/).waitFor({timeout:15000});
     await page.getByTestId('physics-toggle').click(); await telemetry.waitFor({state:'detached'});
     await page.getByRole('button',{name:'Reset to Neutral (Reopen Rest Pose)'}).click(); await pose('Neutral');
+    await page.getByRole('combobox',{name:/Expressions \/ Emotions/i}).selectOption('phoneme-t');
+    await pose('T');
+    const tLip = await page.evaluate(async () => {
+      const probe = await import('/scripts/t-lip-search-browser.ts');
+      return probe.measureCurrentT();
+    });
+    assert.equal(tLip.result.rejections.length, 0, `T lip check rejected: ${tLip.result.rejections.join(', ')}`);
+    for (const gap of tLip.result.centralGapsMetres) assert(gap >= 0.002, `T lip gap ${gap}m is below 0.002m`);
     await page.getByLabel('Enable keyboard mode').check(); await page.locator('canvas').first().click(); await page.keyboard.press('a'); await pose('AA');
     await page.getByRole('button',{name:'Reset to Neutral (Reopen Rest Pose)'}).click(); await pose('Neutral');
     const watermark=page.locator('#mctai-watermark'); assert.equal(await watermark.count(),1);
